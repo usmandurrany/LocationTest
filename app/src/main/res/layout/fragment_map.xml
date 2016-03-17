@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.design.widget.CoordinatorLayout android:layout_height="match_parent"
+    android:layout_width="match_parent"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:fab="http://schemas.android.com/apk/res-auto">
+
+    <com.fournodes.ud.locationtest.CustomFrameLayout
+        android:id="@+id/floatingMarker"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/btnFence"
+        >
+
+        <com.google.android.gms.maps.MapView
+            android:id="@+id/mapView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <ImageView
+                android:layout_width="65dp"
+                android:layout_height="65dp"
+                android:src="@drawable/pin"
+                android:layout_centerHorizontal="true"
+                android:layout_centerVertical="true"
+                android:paddingBottom="25dp"
+                android:id="@+id/imageView" />
+
+<com.github.clans.fab.FloatingActionMenu
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_alignParentBottom="true"
+    android:layout_alignParentRight="true"
+    android:src="@android:drawable/ic_input_add"
+    android:layout_margin="20dp"
+    android:id="@+id/fabMenu">
+    <com.github.clans.fab.FloatingActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/fabAddFence"
+        android:tint="#fff"
+        fab:fab_label="Add Fence"
+
+        android:src="@android:drawable/ic_menu_add"/>
+    <com.github.clans.fab.FloatingActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/fabMyLoc"
+        fab:fab_label="Locate Me"
+        android:src="@android:drawable/ic_menu_mylocation"/>
+
+    <com.github.clans.fab.FloatingActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/fabShowFences"
+        fab:fab_label="Show Fences"
+
+
+        android:src="@android:drawable/ic_menu_view"/>
+    <com.github.clans.fab.FloatingActionButton
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/fabTrackDevice"
+        fab:fab_label="Track Device"
+        android:src="@android:drawable/ic_menu_directions"/>
+</com.github.clans.fab.FloatingActionMenu>
+
+        </RelativeLayout>
+
+
+
+    </com.fournodes.ud.locationtest.CustomFrameLayout>
+
+
+    </android.support.design.widget.CoordinatorLayout>
