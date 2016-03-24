@@ -67,6 +67,12 @@ public class MainFragment extends Fragment implements FragmentInterface {
         return inflater.inflate(R.layout.fragment_main, container, false);
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        ((MainActivity) getActivity()).delegate = this;
+
+    }
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
@@ -79,6 +85,7 @@ public class MainFragment extends Fragment implements FragmentInterface {
         Button btnSetUpdateServer = (Button) getView().findViewById(R.id.btnSetUpdateServer);
         final AppCompatCheckBox chkPolling = (AppCompatCheckBox) getView().findViewById(R.id.chkPolling);
         final AppCompatCheckBox chkUpdateServer = (AppCompatCheckBox) getView().findViewById(R.id.chkUpdateServer);
+        final AppCompatCheckBox chkActiveMode = (AppCompatCheckBox) getView().findViewById(R.id.chkActiveMode);
         txtLat = (TextView) getView().findViewById(R.id.txtLat);
         txtLong = (TextView) getView().findViewById(R.id.txtLong);
         txtLastUpdated = (TextView) getView().findViewById(R.id.txtLastUpdated);
@@ -185,23 +192,33 @@ public class MainFragment extends Fragment implements FragmentInterface {
             public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
                 if (isChecked){
                     SharedPrefs.setPollingEnabled(true);
-                    LocalBroadcastManager.getInstance(getContext()).sendBroadcast(
-                            new Intent("ServiceMessenger")
-                                    .putExtra("Message",
-                                            "StartPolling"));
+                    serviceMessage("trackEnabled");
+
                     chkUpdateServer.setEnabled(true);
+                    chkActiveMode.setEnabled(true);
 
                 }else
                 {
-                    LocalBroadcastManager.getInstance(getContext()).sendBroadcast(
-                            new Intent("ServiceMessenger")
-                                    .putExtra("Message",
-                                            "StopPolling"));
+                    serviceMessage("trackDisabled");
                     SharedPrefs.setPollingEnabled(false);
                     chkUpdateServer.setEnabled(false);
                     chkUpdateServer.setChecked(false);
+                    chkActiveMode.setChecked(false);
+                    chkActiveMode.setEnabled(false);
 
                 }
+            }
+        });
+        chkActiveMode.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked && LocationService.isRunning){
+                    serviceMessage("switchToActiveMode");
+                }else if (!isChecked)
+                    serviceMessage("switchToPassiveMode");
+                else
+                    Toast.makeText(getContext(), "Service is not running", Toast.LENGTH_SHORT).show();
+
             }
         });
 
@@ -223,12 +240,12 @@ public class MainFragment extends Fragment implements FragmentInterface {
     }
 
     @Override
-    public void viewLiveLocation(LatLng coordinates, String device) {
+    public void viewLiveLocation(LatLng coordinates, String track_id) {
 
     }
 
     @Override
-    public void viewLocationHistory(JSONArray location, String device) {
+    public void viewLocationHistory(JSONArray location) {
 
     }
 
@@ -244,6 +261,20 @@ public class MainFragment extends Fragment implements FragmentInterface {
         btnService.setText("Start Service");
         isServiceRunning = false;
 
+    }
+
+    @Override
+    public void locationUpdated(String lat, String lng, String time) {
+        txtLastUpdated.append(time);
+        txtLat.append(lat);
+        txtLong.append(lng);
+    }
+
+    private void serviceMessage(String message) {
+        Log.d("Main Fragment", "Broadcasting message");
+        Intent intent = new Intent("LOCATION_TEST_SERVICE");
+        intent.putExtra("message", message);
+        LocalBroadcastManager.getInstance(getContext()).sendBroadcast(intent);
     }
 
 

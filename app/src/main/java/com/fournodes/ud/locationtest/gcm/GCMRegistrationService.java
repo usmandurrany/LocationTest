@@ -4,7 +4,7 @@ import android.app.IntentService;
 import android.content.Intent;
 import android.util.Log;
 
-import com.fournodes.ud.locationtest.InsertNewDevice;
+import com.fournodes.ud.locationtest.network.RegisterApi;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
@@ -34,7 +34,7 @@ public class GCMRegistrationService extends IntentService {
             if (SharedPrefs.pref == null)
                 new SharedPrefs(getApplicationContext()).initialize();
             SharedPrefs.setDeviceGcmId(token);
-            sendToServer();
+            //sendToServer();
 
         } catch (Exception e) {
             Log.d(TAG, "Failed to complete token refresh", e);
@@ -56,7 +56,7 @@ public class GCMRegistrationService extends IntentService {
 
     }
     public void sendToServer(){
-        new InsertNewDevice().execute();
+        new RegisterApi().execute();
     }
 
 }

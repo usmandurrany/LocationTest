@@ -1,10 +1,13 @@
-package com.fournodes.ud.locationtest;
+package com.fournodes.ud.locationtest.network;
 
 import android.content.Context;
 import android.net.TrafficStats;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.util.Log;
+
+import com.fournodes.ud.locationtest.Database;
+import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.RequestResult;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -18,20 +21,19 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
 
 /**
  * Created by Usman on 18/2/2016.
  */
-public class ApiHandler extends AsyncTask<Long,String,String> {
+public class LocationUpdateApi extends AsyncTask<Long,String,String> {
     private static final String TAG= "Api Handler";
-    public onCompleteListener delegate;
+    public RequestResult delegate;
     private long time;
     private Database db;
     private Context context;
     private JSONArray payload;
 
-    public ApiHandler(Context context) {
+    public LocationUpdateApi(Context context) {
         this.context = context;
     }
 
@@ -44,7 +46,7 @@ public class ApiHandler extends AsyncTask<Long,String,String> {
             TrafficStats.setThreadStatsTag(0xF00D);
 
             try {
-                String url = SharedPrefs.SERVER_ADDRESS + "location.php?device="+ SharedPrefs.getDeviceId();
+                String url = SharedPrefs.SERVER_ADDRESS + "incoming.php?type=location_update";
                 URL obj = new URL(url);
                 HttpURLConnection con = (HttpURLConnection) obj.openConnection();
                 con.setConnectTimeout(15000);
@@ -60,7 +62,7 @@ public class ApiHandler extends AsyncTask<Long,String,String> {
                 // Send post request
                 con.setDoOutput(true);
                 DataOutputStream wr = new DataOutputStream(con.getOutputStream());
-                wr.writeBytes(postParams);
+                wr.writeBytes(postParams+"&user_id="+SharedPrefs.getUserId());
                 wr.flush();
                 wr.close();
 
@@ -97,7 +99,7 @@ public class ApiHandler extends AsyncTask<Long,String,String> {
                 JSONObject response = new JSONObject(result);
                 if (response.getString("result").equals("1")){
                     db.removeLocEntries(time); //Remove from db after successfully sending to server
-                    delegate.success();
+                    delegate.success(null);
                 }else
                     delegate.failure();
 

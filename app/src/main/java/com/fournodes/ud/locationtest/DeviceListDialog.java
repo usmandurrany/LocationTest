@@ -4,17 +4,18 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.widget.ListView;
 
+import com.fournodes.ud.locationtest.network.TrackApi;
+
 import org.json.JSONArray;
-import org.json.JSONException;
 
 /**
  * Created by Usman on 14/3/2016.
  */
-public class DeviceListDialog implements RemoteDevice {
+public class DeviceListDialog implements TrackApiResult {
 private Dialog dialog;
     private Activity activity;
     private ListView lstDevices;
-    private DeviceLocator deviceLocator;
+    private TrackApi trackApi;
     public DeviceListDialog(Activity activity) {
         this.activity = activity;
         dialog = new Dialog(activity, android.R.style.Theme_DeviceDefault_Light_Dialog_NoActionBar);
@@ -22,34 +23,26 @@ private Dialog dialog;
 
     }
     public void show(){
-        deviceLocator = new DeviceLocator();
-        deviceLocator.delegate=this;
-        deviceLocator.execute("device_list");
+        trackApi = new TrackApi();
+        trackApi.delegate=this;
+        trackApi.execute("user_id="+SharedPrefs.getUserId(),"user_list");
         lstDevices = (ListView) dialog.findViewById(R.id.lstDevices);
 
     }
 
     @Override
-    public void liveLocationUpdate(String lat, String lng,String device) {
+    public void liveLocationUpdate(String lat, String lng,String track_id) {
 
     }
 
     @Override
-    public void locationHistory(JSONArray location,String device) {
+    public void locationHistory(JSONArray location) {
 
     }
 
     @Override
-    public void deviceList(final JSONArray devices) {
-        String[] temp = new String[devices.length()];
-        for(int i = 0; i < devices.length();i++){
-            try {
-                temp[i]=devices.getString(i);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-        lstDevices.setAdapter(new DeviceListAdapter(activity,this,temp));
+    public void userList(final JSONArray users) {
+        lstDevices.setAdapter(new UserAdapter(activity,this,R.layout.list_item_user_action,users));
         dialog.show();
     }
     public void close(){

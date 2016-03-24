@@ -1,7 +1,10 @@
-package com.fournodes.ud.locationtest;
+package com.fournodes.ud.locationtest.network;
 
 import android.os.AsyncTask;
+import android.os.Build;
 import android.util.Log;
+
+import com.fournodes.ud.locationtest.SharedPrefs;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -15,23 +18,17 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLEncoder;
 
 /**
- * Created by Usman on 14/3/2016.
+ * Created by Usman on 16/3/2016.
  */
-public class DeviceLocator extends AsyncTask<String, String, String> {
-    public RemoteDevice delegate;
-    private final String TAG = "Device Locator";
-    private String action;
-    private String device;
-
-
+public class NotificationApi extends AsyncTask<String, String,String> {
+    public static final String TAG = "Notify External Device";
     @Override
     protected String doInBackground(String... params) {
-        action = params[0];
-        device = (params.length>1?params[1]:"null");
         try {
-            String url = SharedPrefs.SERVER_ADDRESS + "location.php?action="+ params[0]+"&device="+device;
+            String url = SharedPrefs.SERVER_ADDRESS + "incoming.php?type="+params[0];
             URL obj = new URL(url);
             HttpURLConnection con = (HttpURLConnection) obj.openConnection();
             con.setConnectTimeout(15000);
@@ -42,16 +39,17 @@ public class DeviceLocator extends AsyncTask<String, String, String> {
             con.setRequestProperty("User-Agent", "Mozilla/5.0 ( compatible ) ");
             con.setRequestProperty("Accept", "*/*");
 
+
             // Send post request
             con.setDoOutput(true);
             DataOutputStream wr = new DataOutputStream(con.getOutputStream());
-           /* wr.writeBytes(postParams);
+            wr.writeBytes(params[1]);
             wr.flush();
             wr.close();
-            */
+
             int responseCode = con.getResponseCode();
             System.out.println("\nSending 'POST' request to URL : " + url);
-            //System.out.println("Post parameters : " + postParams);
+            System.out.println("Post parameters : " + params[1]);
             System.out.println("Response Code : " + responseCode);
 
             return convertStreamToString(con.getInputStream());
@@ -62,43 +60,24 @@ public class DeviceLocator extends AsyncTask<String, String, String> {
         } catch (IOException e) {
             e.printStackTrace();
             Log.e(TAG,"Network Error");
-            //delegate.failure();
         }
-
         return null;
     }
 
     @Override
     protected void onPostExecute(String s) {
         try {
-        if (s != null){
-            Log.e(TAG,s);
-            if (action != null){
-                switch (action){
-                    case "live":
-                        if (delegate!= null) {
-                            JSONObject result = new JSONObject(s);
-                            delegate.liveLocationUpdate(result.getString("latitude"),result.getString("longitude"),device);
-                        }
-                        break;
-                    case "history":
-                        if (delegate!= null) {
-                            delegate.locationHistory(new JSONArray(s),device);
-                        }
-                        break;
-                    case "device_list":
-                        if (delegate!= null) {
-                            delegate.deviceList(new JSONArray(s));
-                        }
-                        break;
-                }
+            if (s != null){
+                Log.e(TAG,s);
+                JSONObject result = new JSONObject(s);
+                Log.e("Success",result.getString("success"));
+                Log.e("Failure",result.getString("failure"));
             }
-        }
+
         } catch (JSONException e) {
             e.printStackTrace();
         }
     }
-
     private static String convertStreamToString(InputStream is) {
     /*
      * To convert the InputStream to String we use the BufferedReader.readLine()

@@ -35,7 +35,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:text="Send notification to:"
+        android:text="Create fence on:"
         android:padding="5dp" />
     <Spinner
         android:id="@+id/selectDevice"

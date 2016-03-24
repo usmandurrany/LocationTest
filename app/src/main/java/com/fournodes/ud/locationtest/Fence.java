@@ -14,22 +14,74 @@ public class Fence {
     private String title;
     private String description;
     private Marker centerMarker;
-    private Marker endMarker;
+    private Marker edgeMarker;
     private float radius;
     private Geofence area;
     private Circle visibleArea;
     private PendingIntent pendingIntent;
-    private boolean notifyEntry;
-    private boolean notifyExit;
-    private boolean notifyRoaming;
-    private String notifyDevice;
+    private int transitionType;
+    private String userId;
+    private int onDevice;
+    private double center_lat;
+    private double center_lng;
+    private double edge_lat;
+    private double edge_lng;
+    private String create_on;
 
-    public String getNotifyDevice() {
-        return notifyDevice;
+    public String getCreate_on() {
+        return create_on;
     }
 
-    public void setNotifyDevice(String notifyDevice) {
-        this.notifyDevice = notifyDevice;
+    public void setCreate_on(String create_on) {
+        this.create_on = create_on;
+    }
+
+    public double getCenter_lat() {
+        return center_lat;
+    }
+
+    public void setCenter_lat(double center_lat) {
+        this.center_lat = center_lat;
+    }
+
+    public double getCenter_lng() {
+        return center_lng;
+    }
+
+    public void setCenter_lng(double center_lng) {
+        this.center_lng = center_lng;
+    }
+
+    public double getEdge_lat() {
+        return edge_lat;
+    }
+
+    public void setEdge_lat(double edge_lat) {
+        this.edge_lat = edge_lat;
+    }
+
+    public double getEdge_lng() {
+        return edge_lng;
+    }
+
+    public void setEdge_lng(double edge_lng) {
+        this.edge_lng = edge_lng;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public int getOnDevice() {
+        return onDevice;
+    }
+
+    public void setOnDevice(int onDevice) {
+        this.onDevice = onDevice;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public int getId() {
@@ -72,12 +124,12 @@ public class Fence {
         this.area = area;
     }
 
-    public Marker getEndMarker() {
-        return endMarker;
+    public Marker getEdgeMarker() {
+        return edgeMarker;
     }
 
-    public void setEndMarker(Marker endMarker) {
-        this.endMarker = endMarker;
+    public void setEdgeMarker(Marker edgeMarker) {
+        this.edgeMarker = edgeMarker;
     }
 
     public PendingIntent getPendingIntent() {
@@ -104,62 +156,19 @@ public class Fence {
         this.pendingIntent = pendingIntent;
     }
 
-    public boolean isNotifyEntry() {
-        return notifyEntry;
+    public int getTransitionType() {
+        return transitionType;
     }
 
-    public void setNotifyEntry(boolean notifyEntry) {
-        this.notifyEntry = notifyEntry;
-    }
-
-    public boolean isNotifyExit() {
-        return notifyExit;
-    }
-
-    public void setNotifyExit(boolean notifyExit) {
-        this.notifyExit = notifyExit;
-    }
-
-    public boolean isNotifyRoaming() {
-        return notifyRoaming;
-    }
-
-    public void setNotifyRoaming(boolean notifyRoaming) {
-        this.notifyRoaming = notifyRoaming;
-    }
-
-    public void setNotifyAll(boolean notifyAll){
-        this.notifyRoaming = true;
-        this.notifyExit = true;
-        this.notifyEntry = true;
+    public void setTransitionType(int transitionType) {
+        this.transitionType = transitionType;
     }
 
     /**** Only removes the visible circle from the map, does not remove the actual geofence ***/
     public void removeFence() {
         centerMarker.remove();
-        endMarker.remove();
+        edgeMarker.remove();
         visibleArea.remove();
     }
-    public int getTransitionType(){
-        // 1 - Entry
-        // 2 - Exit
-        // 4 - Dwell
 
-        if (notifyEntry && notifyExit && notifyRoaming)
-            return (1 | 2 | 4);
-        else if (notifyEntry && notifyExit)
-            return 1 | 2;
-        else if (notifyEntry && notifyRoaming)
-            return 1 | 4;
-        else if(notifyExit && notifyRoaming)
-            return 2 | 4;
-        else if (notifyEntry)
-            return 1;
-        else if (notifyExit)
-            return 2;
-        else if (notifyRoaming)
-            return 4;
-        else
-            return -1; //Error
-    }
 }

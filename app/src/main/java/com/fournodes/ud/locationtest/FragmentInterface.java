@@ -11,9 +11,10 @@ public interface FragmentInterface {
     void mapDragStart();
     void mapDragStop();
     void moveToFence(LatLng fence);
-    void viewLiveLocation(LatLng coordinates, String device);
-    void viewLocationHistory(JSONArray location, String device);
+    void viewLiveLocation(LatLng coordinates, String track_id);
+    void viewLocationHistory(JSONArray location);
     void serviceStarted();
     void serviceStopped();
+    void locationUpdated(String lat, String lng, String time);
 
 }

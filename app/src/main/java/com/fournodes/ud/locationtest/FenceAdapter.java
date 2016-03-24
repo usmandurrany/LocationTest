@@ -9,6 +9,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.fournodes.ud.locationtest.network.FenceApi;
 import com.fournodes.ud.locationtest.service.LocationService;
 import com.google.android.gms.location.LocationServices;
 
@@ -56,10 +57,13 @@ public class FenceAdapter extends ArrayAdapter {
                 public void onClick(View v) {
                     if (LocationService.isGoogleApiConnected) {
                         Database db =new Database(getContext());
-                        LocationServices.GeofencingApi.removeGeofences(LocationService.mGoogleApiClient,
-                                fenceListOrig.get(position).getPendingIntent()); //Remove from GoogleApiGeofence
+              /*          LocationServices.GeofencingApi.removeGeofences(LocationService.mGoogleApiClient,
+                                fenceListOrig.get(position).getPendingIntent()); //Remove from GoogleApiGeofence*/
                         fenceListOrig.get(position).removeFence(); //Remove form map
                         db.removeFence(fenceListOrig.get(position).getId()); //Remove from database
+                        FenceApi fenceApi = new FenceApi();
+                        fenceApi.execute("user_id="+SharedPrefs.getUserId()+"&fence_id="+fenceListOrig.get(position).getId()+
+                                "&create_on="+fenceListOrig.get(position).getCreate_on(),"remove_fence");
                         fenceListOrig.remove(position); //Remove from list
                         notifyDataSetChanged();
                     }else

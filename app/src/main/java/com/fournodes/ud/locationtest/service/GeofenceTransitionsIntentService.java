@@ -13,19 +13,23 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.fournodes.ud.locationtest.MainActivity;
-import com.fournodes.ud.locationtest.NotifyExternalDevice;
+import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.network.NotificationApi;
 import com.fournodes.ud.locationtest.R;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofenceStatusCodes;
 import com.google.android.gms.location.GeofencingEvent;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
 public class GeofenceTransitionsIntentService extends IntentService {
 
     protected static final String TAG = "GeofenceTransitionsIS";
-    private String device;
+    private String notify_id;
+    private boolean remote;
     private int geofenceTransition;
 
     /**
@@ -50,7 +54,8 @@ public class GeofenceTransitionsIntentService extends IntentService {
      */
     @Override
     protected void onHandleIntent(Intent intent) {
-        device=intent.getStringExtra("device");
+        notify_id =intent.getStringExtra("notify_id");
+        remote=intent.getBooleanExtra("remote",false);
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
         if (geofencingEvent.hasError()) {
             String errorMessage = GeofenceErrorMessages.getErrorString(this,
@@ -116,32 +121,41 @@ public class GeofenceTransitionsIntentService extends IntentService {
      * If the user clicks the notification, control goes to the MainActivity.
      */
     private void sendNotification(String notificationDetails) {
-        new NotifyExternalDevice().execute(device,notificationDetails);
-        // Create an explicit content Intent that starts the main Activity.
-        PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(),0,new Intent(getApplicationContext(), MainActivity.class),0);
-        // Get a notification builder that's compatible with platform versions >= 4
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
+        try{
+            if (SharedPrefs.pref == null)
+                new SharedPrefs(getApplicationContext()).initialize();
+            new NotificationApi().execute("notification","user_id="
+                    +SharedPrefs.getUserId()+"&notify_id="+notify_id
+                    +"&sender="+URLEncoder.encode(SharedPrefs.getUserName(),"UTF-8")
+                    +"&message="+URLEncoder.encode(notificationDetails,"UTF-8"));
+        }catch (UnsupportedEncodingException e){e.printStackTrace();}
+        if (!remote) {
+            // Create an explicit content Intent that starts the main Activity.
+            PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), 0, new Intent(getApplicationContext(), MainActivity.class), 0);
+            // Get a notification builder that's compatible with platform versions >= 4
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
 
-        // Define the notification settings.
-        builder.setSmallIcon(R.mipmap.ic_launcher)
-                // In a real app, you may want to use a library like Volley
-                // to decode the Bitmap.
-                .setLargeIcon(BitmapFactory.decodeResource(getResources(),
-                        R.mipmap.ic_launcher))
-                .setColor(Color.RED)
-                .setContentTitle("Alert")
-                .setContentText(notificationDetails)
-                .setContentIntent(piActivityIntent);
+            // Define the notification settings.
+            builder.setSmallIcon(R.mipmap.ic_launcher)
+                    // In a real app, you may want to use a library like Volley
+                    // to decode the Bitmap.
+                    .setLargeIcon(BitmapFactory.decodeResource(getResources(),
+                            R.mipmap.ic_launcher))
+                    .setColor(Color.RED)
+                    .setContentTitle("Alert")
+                    .setContentText(notificationDetails)
+                    .setContentIntent(piActivityIntent);
 
-        // Dismiss notification once the user touches it.
-        builder.setAutoCancel(true);
+            // Dismiss notification once the user touches it.
+            builder.setAutoCancel(true);
 
-        // Get an instance of the Notification manager
-        NotificationManager mNotificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            // Get an instance of the Notification manager
+            NotificationManager mNotificationManager =
+                    (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
-        // Issue the notification
-        mNotificationManager.notify((int)System.currentTimeMillis(), builder.build());
+            // Issue the notification
+            mNotificationManager.notify((int) System.currentTimeMillis(), builder.build());
+        }
     }
 
     /**

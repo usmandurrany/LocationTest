@@ -151,9 +151,21 @@
         android:textSize="12sp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:text="Active Mode"
+        android:id="@+id/chkActiveMode"
+        android:layout_below="@+id/chkPolling"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:layout_toRightOf="@+id/btnSetDisplacement"
+        android:layout_toEndOf="@+id/btnSetDisplacement" />
+
+    <android.support.v7.widget.AppCompatCheckBox
+        android:textSize="12sp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:text="Send To Server"
         android:id="@+id/chkUpdateServer"
-        android:layout_below="@+id/chkPolling"
+        android:layout_below="@+id/chkActiveMode"
         android:layout_alignParentRight="true"
         android:layout_alignParentEnd="true"
         android:layout_toRightOf="@+id/btnSetDisplacement"

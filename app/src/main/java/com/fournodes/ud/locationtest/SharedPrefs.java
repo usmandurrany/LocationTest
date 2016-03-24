@@ -25,7 +25,10 @@ public class SharedPrefs {
     private static int updateServerInterval;
     private static boolean updateServerEnabled;
     private static String deviceGcmId;
-    private static String deviceId;
+    private static String userId;
+    private static String userName;
+    private static String userEmail;
+    private static String userPicture;
 
 
 
@@ -39,7 +42,11 @@ public class SharedPrefs {
         updateServerInterval = pref.getInt("updateServerInterval", 300000); //5 Min
         updateServerEnabled = pref.getBoolean("updateServerEnabled", false);
         deviceGcmId = pref.getString("deviceGcmId",null);
-        deviceId = pref.getString("deviceId",null);
+        userId = pref.getString("userId",null);
+        userName = pref.getString("userName", null);
+        userEmail = pref.getString("userEmail",null);
+        userPicture = pref.getString("userPicture",null);
+
 
     }
 
@@ -124,12 +131,42 @@ public class SharedPrefs {
         SharedPrefs.deviceGcmId = deviceGcmId;
     }
 
-    public static String getDeviceId() {
-        return deviceId;
+    public static String getUserId() {
+        return userId;
     }
 
-    public static void setDeviceId(String deviceId) {
-        pref.edit().putString("deviceId", deviceId).apply();
-        SharedPrefs.deviceId = deviceId;
+    public static void setUserId(String userId) {
+        pref.edit().putString("userId", userId).apply();
+        SharedPrefs.userId = userId;
+    }
+
+    public static String getUserName() {
+        return userName;
+    }
+
+    public static void setUserName(String userName) {
+        pref.edit().putString("userName", userName).apply();
+
+        SharedPrefs.userName = userName;
+    }
+
+    public static String getUserEmail() {
+        return userEmail;
+    }
+
+    public static void setUserEmail(String userEmail) {
+        pref.edit().putString("userEmail", userEmail).apply();
+
+        SharedPrefs.userEmail = userEmail;
+    }
+
+    public static String getUserPicture() {
+        return userPicture;
+    }
+
+    public static void setUserPicture(String userPicture) {
+        pref.edit().putString("userPicture", userPicture).apply();
+
+        SharedPrefs.userPicture = userPicture;
     }
 }

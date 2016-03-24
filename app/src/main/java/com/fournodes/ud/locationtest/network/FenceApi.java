@@ -1,10 +1,11 @@
-package com.fournodes.ud.locationtest;
+package com.fournodes.ud.locationtest.network;
 
 import android.os.AsyncTask;
-import android.os.Build;
 import android.util.Log;
 
-import org.json.JSONArray;
+import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.RequestResult;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -16,17 +17,23 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
 
 /**
- * Created by Usman on 16/3/2016.
+ * Created by Usman on 17/3/2016.
  */
-public class InsertNewDevice extends AsyncTask<String, String,String> {
-    public static final String TAG = "Insert New Device";
+public class FenceApi extends AsyncTask<String, String, String> {
+    public RequestResult delegate;
+    private final String TAG = "Fence Api";
+    private String payload;
+    private String type;
+
+
     @Override
     protected String doInBackground(String... params) {
+        payload = params[0];
+        type = (params.length>1?params[1]:"null");
         try {
-            String url = SharedPrefs.SERVER_ADDRESS + "newdevice.php?device="+ URLEncoder.encode(Build.MODEL,"UTF-8")+"&gcm="+SharedPrefs.getDeviceGcmId();
+            String url = SharedPrefs.SERVER_ADDRESS + "fence.php?type="+type;
             URL obj = new URL(url);
             HttpURLConnection con = (HttpURLConnection) obj.openConnection();
             con.setConnectTimeout(15000);
@@ -37,17 +44,15 @@ public class InsertNewDevice extends AsyncTask<String, String,String> {
             con.setRequestProperty("User-Agent", "Mozilla/5.0 ( compatible ) ");
             con.setRequestProperty("Accept", "*/*");
 
-
-/*            // Send post request
+            //Send post request
             con.setDoOutput(true);
             DataOutputStream wr = new DataOutputStream(con.getOutputStream());
-            wr.writeBytes(postParams);
+            wr.writeBytes(payload);
             wr.flush();
-            wr.close();*/
-
+            wr.close();
             int responseCode = con.getResponseCode();
             System.out.println("\nSending 'POST' request to URL : " + url);
-            //System.out.println("Post parameters : " + postParams);
+            System.out.println("Post parameters : " + payload);
             System.out.println("Response Code : " + responseCode);
 
             return convertStreamToString(con.getInputStream());
@@ -58,7 +63,9 @@ public class InsertNewDevice extends AsyncTask<String, String,String> {
         } catch (IOException e) {
             e.printStackTrace();
             Log.e(TAG,"Network Error");
+            //delegate.failure();
         }
+
         return null;
     }
 
@@ -68,13 +75,15 @@ public class InsertNewDevice extends AsyncTask<String, String,String> {
             if (s != null){
                 Log.e(TAG,s);
                 JSONObject result = new JSONObject(s);
-                SharedPrefs.setDeviceId(result.getString("id"));
-                }
+                if (result.has("fence_id"))
+                    delegate.success(String.valueOf(result.getInt("fence_id")));
 
+            }
         } catch (JSONException e) {
             e.printStackTrace();
         }
     }
+
     private static String convertStreamToString(InputStream is) {
     /*
      * To convert the InputStream to String we use the BufferedReader.readLine()

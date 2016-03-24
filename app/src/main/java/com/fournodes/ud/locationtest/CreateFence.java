@@ -1,23 +1,17 @@
 package com.fournodes.ud.locationtest;
 
+import android.app.Activity;
 import android.app.Dialog;
-import android.app.PendingIntent;
-import android.content.Context;
-import android.content.Intent;
 import android.graphics.Color;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
-import com.fournodes.ud.locationtest.service.GeofenceTransitionsIntentService;
-import com.fournodes.ud.locationtest.service.LocationService;
-import com.google.android.gms.location.Geofence;
-import com.google.android.gms.location.GeofencingRequest;
-import com.google.android.gms.location.LocationServices;
+import com.fournodes.ud.locationtest.network.TrackApi;
+import com.fournodes.ud.locationtest.network.FenceApi;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.Circle;
@@ -27,15 +21,17 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URLEncoder;
 import java.util.List;
 
 /**
  * Created by Usman on 17/2/2016.
  */
-public class NewFenceDialog implements RemoteDevice {
-    private Context context;
+public class CreateFence implements TrackApiResult, RequestResult {
+    private Activity activity;
     private LatLng center;
     private Dialog dialog;
     private int radius;
@@ -48,16 +44,17 @@ public class NewFenceDialog implements RemoteDevice {
     private EditText edtTitle;
     private EditText edtDescription;
     private Spinner selectDevice;
-    private DeviceLocator deviceLocator;
+    private TrackApi trackApi;
+    private Fence fence;
 
 
-    public NewFenceDialog(Context context, LatLng center, int radius, List<Fence> mGeofenceList, GoogleMap map) {
-        this.context = context;
+    public CreateFence(Activity activity, LatLng center, int radius, List<Fence> mGeofenceList, GoogleMap map) {
+        this.activity = activity;
         this.center = center;
         this.radius = radius;
         this.map=map;
         this.mGeofenceList=mGeofenceList;
-        dialog = new Dialog(context, android.R.style.Theme_DeviceDefault_Light_Dialog_NoActionBar);
+        dialog = new Dialog(activity, android.R.style.Theme_DeviceDefault_Light_Dialog_NoActionBar);
         dialog.setContentView(R.layout.dialog_new_fence);
     }
 
@@ -71,9 +68,9 @@ public class NewFenceDialog implements RemoteDevice {
         chkExit = (CheckBox) dialog.findViewById(R.id.chkExit);
         selectDevice = (Spinner) dialog.findViewById(R.id.selectDevice);
 
-        deviceLocator = new DeviceLocator();
-        deviceLocator.delegate=this;
-        deviceLocator.execute("device_list");
+        trackApi = new TrackApi();
+        trackApi.delegate=this;
+        trackApi.execute("user_id="+SharedPrefs.getUserId(),"user_list");
 
         btnCancelFence.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -86,24 +83,18 @@ public class NewFenceDialog implements RemoteDevice {
             public void onClick(View view) {
                 if (edtTitle.getText().length()>0 && !edtTitle.getText().toString().equals("My Device") && edtDescription.getText().length()>0 && (chkEntry.isChecked() || chkExit.isChecked() || chkRoaming.isChecked())){
                     if (getFenceId(edtTitle.getText().toString())==-1) {
-                        db = new Database(context);
+                        db = new Database(activity);
                         Fence fence = createFence(center, radius);
                         mGeofenceList.add(fence);
 
-                  //((MainActivity)context).updateFenceCount();
-                    LocationServices.GeofencingApi.addGeofences(
-                            LocationService.mGoogleApiClient,
-                            getGeofencingRequest(fence.getArea()),
-                            fence.getPendingIntent());
-
                         dialog.dismiss();
                     }else
-                        Toast.makeText(context, "You already have a fence called "+edtTitle.getText().toString(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(activity, "You already have a fence called "+edtTitle.getText().toString(), Toast.LENGTH_SHORT).show();
                 }
                 else if (edtTitle.getText().toString().equals("My Device"))
-                    Toast.makeText(context, "Title can not be My Device", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity, "Title can not be My Device", Toast.LENGTH_SHORT).show();
                 else
-                    Toast.makeText(context, "All fields are required", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(activity, "All fields are required", Toast.LENGTH_SHORT).show();
             }
         });
         dialog.show();
@@ -117,7 +108,7 @@ public class NewFenceDialog implements RemoteDevice {
                 .position(center)
                 .snippet(edtDescription.getText().toString())
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-        .title(edtTitle.getText().toString()));
+                .title(edtTitle.getText().toString()));
 
         Marker end = map.addMarker(new MarkerOptions()
                 .position(toRadiusLatLng(center, radius))
@@ -134,53 +125,40 @@ public class NewFenceDialog implements RemoteDevice {
                 .strokeWidth(3f)
         );
 
-        Geofence geofence = new Geofence.Builder()
-                .setRequestId(edtTitle.getText().toString())
-                .setCircularRegion(
-                        center.latitude,
-                        center.longitude,
-                        radius)
-                .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                .setTransitionTypes(getTransitionType())
-                .setLoiteringDelay(500)
-                .build();
 
-
-        Fence fence = new Fence();
-        fence.setArea(geofence);
+        fence = new Fence();
+        fence.setOnDevice(0);
         fence.setVisibleArea(circle);
         fence.setCenterMarker(centerMarker);
-        fence.setEndMarker(end);
+        fence.setEdgeMarker(end);
         fence.setRadius(radius);
         fence.setTitle(edtTitle.getText().toString());
         fence.setDescription(edtDescription.getText().toString());
-        fence.setNotifyEntry(chkEntry.isChecked());
-        fence.setNotifyExit(chkExit.isChecked());
-        fence.setNotifyRoaming(chkRoaming.isChecked());
-        fence.setNotifyDevice(selectDevice.getSelectedItem().toString());
+        fence.setTransitionType(getTransitionType());
+        fence.setUserId(SharedPrefs.getUserId());
+        fence.setCreate_on(String.valueOf(selectDevice.getSelectedItemId()));
 
-        int id=(int)db.saveFence(fence);
-        fence.setId(id);
-        fence.setPendingIntent(getGeofencePendingIntent(id));
+        StringBuilder fenceDetails = new StringBuilder();
+        try {
+            fenceDetails
+                    .append("title=").append(URLEncoder.encode(fence.getTitle(), "UTF-8"))
+                    .append("&description=").append(URLEncoder.encode(fence.getDescription(), "UTF-8"))
+                    .append("&center_latitude=").append(center.latitude)
+                    .append("&center_longitude=").append(center.longitude)
+                    .append("&radius=").append(radius)
+                    .append("&edge_latitude=").append(toRadiusLatLng(center, radius).latitude)
+                    .append("&edge_longitude=").append(toRadiusLatLng(center, radius).longitude)
+                    .append("&transition_type=").append(fence.getTransitionType())
+                    .append("&user_id=").append(SharedPrefs.getUserId())
+                    .append("&create_on=").append(selectDevice.getSelectedItemId());
 
+
+            FenceApi fenceApi = new FenceApi();
+            fenceApi.delegate = this;
+            fenceApi.execute(fenceDetails.toString(), "create_fence");
+        }catch (UnsupportedEncodingException e){e.printStackTrace();}
         return fence;
 
-    }
-    private PendingIntent getGeofencePendingIntent(int id) {
-        // Reuse the PendingIntent if we already have it.
-
-        Intent intent = new Intent(context, GeofenceTransitionsIntentService.class);
-        intent.putExtra("device",selectDevice.getSelectedItem().toString());
-        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
-        // calling addGeofences() and removeGeofences().
-        return PendingIntent.getService(context, id, intent, PendingIntent.
-                FLAG_UPDATE_CURRENT);
-    }
-    private GeofencingRequest getGeofencingRequest(Geofence geofence) {
-        GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
-        builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER);
-        builder.addGeofence(geofence);
-        return builder.build();
     }
 
     private static LatLng toRadiusLatLng(LatLng center, double radius) {
@@ -189,13 +167,52 @@ public class NewFenceDialog implements RemoteDevice {
         return new LatLng(center.latitude, center.longitude + radiusAngle);
     }
 
+    public int getFenceId(String title) {
+        for (int i = 0; i < mGeofenceList.size(); i++) {
+            if (mGeofenceList.get(i).getTitle().equals(title))
+                return mGeofenceList.indexOf(mGeofenceList.get(i));
+        }
+        return -1; //Error
+    }
+
+    @Override
+    public void liveLocationUpdate(String lat, String lng, String track_id) {
+
+    }
+
+    @Override
+    public void locationHistory(JSONArray location) {
+
+    }
+
+    @Override
+    public void userList(JSONArray users) {
+        UserAdapter userAdapter = new UserAdapter(activity,null,R.layout.list_item_user, users);
+        selectDevice.setAdapter(userAdapter);
+
+    }
+
+    @Override
+    public void success(String result) {
+        if (fence!= null) {
+            fence.setId(Integer.parseInt(result));
+            db.saveFence(fence);
+        }
+    }
+
+    @Override
+    public void failure() {
+        Toast.makeText(activity, "Fence not created on remote device", Toast.LENGTH_SHORT).show();
+
+    }
+
     public int getTransitionType(){
         // 1 - Entry
         // 2 - Exit
         // 4 - Dwell
 
         if (chkEntry.isChecked() && chkExit.isChecked() && chkRoaming.isChecked())
-            return 1 | 2 | 4;
+            return (1 | 2 | 4);
         else if (chkEntry.isChecked() && chkExit.isChecked())
             return 1 | 2;
         else if (chkEntry.isChecked() && chkRoaming.isChecked())
@@ -209,38 +226,6 @@ public class NewFenceDialog implements RemoteDevice {
         else if (chkRoaming.isChecked())
             return 4;
         else
-            return -1;
-    }
-
-    public int getFenceId(String title) {
-        for (int i = 0; i < mGeofenceList.size(); i++) {
-            if (mGeofenceList.get(i).getTitle().equals(title))
-                return mGeofenceList.indexOf(mGeofenceList.get(i));
-        }
-        return -1; //Error
-    }
-
-    @Override
-    public void liveLocationUpdate(String lat, String lng, String device) {
-
-    }
-
-    @Override
-    public void locationHistory(JSONArray location, String device) {
-
-    }
-
-    @Override
-    public void deviceList(JSONArray devices) {
-        String[] temp = new String[devices.length()];
-        for(int i = 0; i < devices.length();i++){
-            try {
-                temp[i]=devices.getString(i);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-    selectDevice.setAdapter(new ArrayAdapter<>(context,android.R.layout.simple_list_item_1,temp));
-
+            return -1; //Error
     }
 }

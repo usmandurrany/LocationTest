@@ -18,14 +18,13 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
-import com.fournodes.ud.locationtest.ApiHandler;
+import com.fournodes.ud.locationtest.ServiceMessage;
+import com.fournodes.ud.locationtest.network.LocationUpdateApi;
 import com.fournodes.ud.locationtest.Database;
 import com.fournodes.ud.locationtest.FileLog;
-import com.fournodes.ud.locationtest.MainActivity;
-import com.fournodes.ud.locationtest.Messenger;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
-import com.fournodes.ud.locationtest.onCompleteListener;
+import com.fournodes.ud.locationtest.RequestResult;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
@@ -43,11 +42,12 @@ import java.util.Date;
 
 public class LocationService extends Service implements
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
-    public com.fournodes.ud.locationtest.Messenger delegate;
+    public ServiceMessage delegate;
 
     private static final String TAG = "Location Service";
     public static GoogleApiClient mGoogleApiClient;
-    private LocationRequest mLocationRequest;
+    private LocationRequest activeLocationRequest;
+    private LocationRequest passiveLocationRequest;
     public static boolean isGoogleApiConnected = false;
     public static NotificationManager mNotificationManager;
     private Runnable update;
@@ -56,6 +56,33 @@ public class LocationService extends Service implements
     private String action;
     public static boolean isRunning=false;
 
+    private static LocationService self = null;
+    public static LocationService getServiceObject(){
+        return self;
+    }
+
+    private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.e(TAG,"Broadcast Received");
+            switch (intent.getStringExtra("message")){
+                case "switchToPassiveMode":
+                    switchToPassiveMode();
+                    mNotificationManager.cancel(0);
+
+                    break;
+                case "switchToActiveMode":
+                    switchToActiveMode();
+                    break;
+                case "trackEnabled":
+                    startPassiveLocationUpdates();
+                    break;
+                case "trackDisabled":
+                    stopLocationUpdates();
+                    break;
+            }
+        }
+    };
 
 
     public LocationService() {}
@@ -72,19 +99,64 @@ public class LocationService extends Service implements
                     .addApi(LocationServices.API)
                     .build();
         }
+        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver,
+                new IntentFilter("LOCATION_TEST_SERVICE"));
     }
 
-    protected void createLocationRequest() {
+    protected void createPassiveLocationRequest() {
         Log.e(TAG, "Location Request Created");
 
-        mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(SharedPrefs.getLocUpdateInterval());
-        mLocationRequest.setFastestInterval(5000);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mLocationRequest.setSmallestDisplacement(SharedPrefs.getMinDisplacement());
+        passiveLocationRequest = new LocationRequest();
+        passiveLocationRequest.setInterval(60000);//1 min
+        passiveLocationRequest.setFastestInterval(5000);//5 sec
+        passiveLocationRequest.setPriority(LocationRequest.PRIORITY_NO_POWER);
+        passiveLocationRequest.setSmallestDisplacement(10);//200 meters
 
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
-                .addLocationRequest(mLocationRequest);
+                .addLocationRequest(passiveLocationRequest);
+
+        PendingResult<LocationSettingsResult> result =
+                LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient,
+                        builder.build());
+
+        result.setResultCallback(new ResultCallback<LocationSettingsResult>() {
+            @Override
+            public void onResult(LocationSettingsResult result) {
+                final Status status = result.getStatus();
+                switch (status.getStatusCode()) {
+                    case LocationSettingsStatusCodes.SUCCESS:
+                        // All location settings are satisfied. The client can
+                        // initialize location requests here.
+                        Log.e(TAG, "Location Settings Are Correct");
+                        break;
+                    case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+                        // Location settings are not satisfied, but this can be fixed
+                        // by showing the user a dialog.
+                        Log.e(TAG, "Location Settings Needs To Be Resolved");
+
+                        break;
+                    case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+                        // Location settings are not satisfied. However, we have no way
+                        // to fix the settings so we won't show the dialog.
+                        Log.e(TAG, "Location Settings Unresolvable");
+                        break;
+                }
+            }
+        });
+
+
+    }
+    public void createActiveLocationRequest(){
+        Log.e(TAG, "Active Location Request Created");
+
+        activeLocationRequest = new LocationRequest();
+        activeLocationRequest.setInterval(SharedPrefs.getLocUpdateInterval());//2 min
+        activeLocationRequest.setFastestInterval(5000);//5 sec
+        activeLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        activeLocationRequest.setSmallestDisplacement(SharedPrefs.getMinDisplacement());//200 meters
+
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
+                .addLocationRequest(passiveLocationRequest);
 
         PendingResult<LocationSettingsResult> result =
                 LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient,
@@ -117,37 +189,60 @@ public class LocationService extends Service implements
 
     }
 
-    protected void startLocationUpdates() {
-        createLocationRequest();
-        Log.e(TAG,"Polling Started");
+    protected void startActiveLocationUpdates() {
+        createActiveLocationRequest();
+        activeLocationUpdateNotify();
         LocationServices.FusedLocationApi.requestLocationUpdates(
-                mGoogleApiClient, mLocationRequest, this);
+                mGoogleApiClient, activeLocationRequest, this);
+        Log.e(TAG, "Active Location Update Started");
     }
 
     protected void stopLocationUpdates() {
-        Log.e(TAG,"Polling Stopped");
+        Log.e(TAG, "All Location Updates Stopped");
         LocationServices.FusedLocationApi.removeLocationUpdates(
                 mGoogleApiClient, this);
+
     }
+    public void switchToPassiveMode(){
+        Log.e(TAG, "Switching To Passive Mode");
+        stopLocationUpdates();
+        startPassiveLocationUpdates();
+    }
+
+    public void switchToActiveMode(){
+        Log.e(TAG, "Switching To Active Mode");
+        stopLocationUpdates();
+        startActiveLocationUpdates();
+    }
+    private void startPassiveLocationUpdates(){
+        createPassiveLocationRequest();
+        LocationServices.FusedLocationApi.requestLocationUpdates(
+                mGoogleApiClient, passiveLocationRequest, this);
+        Log.e(TAG, "Passive Location Update Started");
+    }
+
+
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         // Get an instance of the Notification manager
         mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        if (intent.getAction() != null) {
+        if (intent != null) {
             action = intent.getAction();
         }
-        if (action != null && action.equals("STOP")) {
-            stopSelf();
+        if (action != null && action.equals("switchToPassiveMode")) {
+            if (activeLocationRequest!= null)
+                switchToPassiveMode();
+
             mNotificationManager.cancel(0);
         }else {
             Log.e(TAG, "Service Started");
-            isRunningNotify();
             mGoogleApiClient.connect();
             isRunning=true;
             if (delegate != null)
                 delegate.serviceStarted();
         }
+        self = this;
         return super.onStartCommand(intent, START_STICKY, startId);
     }
 
@@ -159,6 +254,7 @@ public class LocationService extends Service implements
         if (delegate!=null)
             delegate.serviceStopped();
         Log.e(TAG, "Service Destroyed");
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
         super.onDestroy();
     }
 
@@ -173,7 +269,7 @@ public class LocationService extends Service implements
         isGoogleApiConnected = true;
         Log.e(TAG, "Google API Connected");
         if (SharedPrefs.isPollingEnabled()) {
-            startLocationUpdates();
+            startPassiveLocationUpdates();
         }
     }
 
@@ -195,6 +291,9 @@ public class LocationService extends Service implements
             SharedPrefs.setLastDeviceLatitude(String.valueOf(location.getLatitude()));
             SharedPrefs.setLastDeviceLongitude(String.valueOf(location.getLongitude()));
             SharedPrefs.setLastLocUpdateTime(mLastUpdateTime);
+
+            if (delegate!=null)
+                delegate.locationUpdated(String.valueOf(location.getLatitude()),String.valueOf(location.getLongitude()),mLastUpdateTime);
 
             fileLog.e(TAG, "Lat: " + String.valueOf(location.getLatitude()) +
                     " Long: " + String.valueOf(location.getLongitude()));
@@ -224,12 +323,10 @@ public class LocationService extends Service implements
 
     }
 
-    private void isRunningNotify() {
-        // Create an explicit content Intent that starts the main Activity.
-        PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(),0,new Intent(getApplicationContext(), MainActivity.class),0);
-        // Get a notification builder that's compatible with platform versions >= 4
+    private void activeLocationUpdateNotify() {
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
-        PendingIntent piStopService = PendingIntent.getService(getApplicationContext(),0,new Intent(getApplicationContext(),LocationService.class).setAction("STOP"),0);
+        PendingIntent piSwitchToPassiveMode = PendingIntent.getService(getApplicationContext(), 0, new Intent(getApplicationContext(), LocationService.class).setAction("switchToPassiveMode"), 0);
 
         // Define the notification settings.
         builder.setSmallIcon(R.mipmap.ic_launcher)
@@ -238,10 +335,9 @@ public class LocationService extends Service implements
                 .setLargeIcon(BitmapFactory.decodeResource(getResources(),
                         R.mipmap.ic_launcher))
                 .setColor(Color.RED)
-                .setContentTitle("Location Service")
-                .setContentText("Location service is running in the background")
-                .setContentIntent(piActivityIntent)
-                .addAction(android.R.drawable.ic_dialog_alert,"Stop Service",piStopService);
+                .setContentTitle("Tracking Active")
+                .setContentText("Sending location data to server. Click to stop")
+                .setContentIntent(piSwitchToPassiveMode);
 
         // Dismiss notification once the user touches it.
         builder.setAutoCancel(false);
@@ -249,6 +345,8 @@ public class LocationService extends Service implements
         // Issue the notification
         mNotificationManager.notify(0, builder.build());
     }
+
+
     public void updServerAfterInterval(){
         if (SharedPrefs.isUpdateServerEnabled()){
             updateServer = new Handler();
@@ -256,10 +354,10 @@ public class LocationService extends Service implements
             update = new Runnable() {
                 @Override
                 public void run() {
-                    ApiHandler apiHandler = new ApiHandler(getApplicationContext());
-                    apiHandler.delegate = new onCompleteListener() {
+                    LocationUpdateApi locationUpdateApi = new LocationUpdateApi(getApplicationContext());
+                    locationUpdateApi.delegate = new RequestResult() {
                         @Override
-                        public void success() {
+                        public void success(String result) {
                             updateServer.postDelayed(update,SharedPrefs.getUpdateServerInterval());
                             Log.e(TAG,"Update Success");
 
@@ -272,7 +370,7 @@ public class LocationService extends Service implements
 
                         }
                     };
-                    apiHandler.execute(System.currentTimeMillis());
+                    locationUpdateApi.execute(System.currentTimeMillis());
                 }
             };
             updateServer.post(update);
@@ -281,10 +379,10 @@ public class LocationService extends Service implements
     }
     public void updServerOnRowCount(){
         if (SharedPrefs.isUpdateServerEnabled()){
-            ApiHandler apiHandler = new ApiHandler(getApplicationContext());
-            apiHandler.delegate = new onCompleteListener() {
+            LocationUpdateApi locationUpdateApi = new LocationUpdateApi(getApplicationContext());
+            locationUpdateApi.delegate = new RequestResult() {
                 @Override
-                public void success() {
+                public void success(String result) {
                     Log.e(TAG,"Update Success On Row Count");
                 }
 
@@ -294,7 +392,7 @@ public class LocationService extends Service implements
 
                 }
             };
-            apiHandler.execute(System.currentTimeMillis());        }
+            locationUpdateApi.execute(System.currentTimeMillis());        }
 
     }
 

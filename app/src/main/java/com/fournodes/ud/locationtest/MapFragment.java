@@ -1,8 +1,6 @@
 package com.fournodes.ud.locationtest;
 
-import android.app.PendingIntent;
 import android.content.Context;
-import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.location.Location;
@@ -11,6 +9,7 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,15 +17,13 @@ import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
 import android.widget.Toast;
 
-import com.fournodes.ud.locationtest.service.GeofenceTransitionsIntentService;
+import com.fournodes.ud.locationtest.network.TrackApi;
+import com.fournodes.ud.locationtest.network.FenceApi;
 import com.fournodes.ud.locationtest.service.LocationService;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
 import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.location.Geofence;
-import com.google.android.gms.location.GeofencingRequest;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
@@ -47,7 +44,7 @@ import org.json.JSONException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MapFragment extends Fragment implements OnMapReadyCallback, ResultCallback, FragmentInterface, View.OnClickListener {
+public class MapFragment extends Fragment implements OnMapReadyCallback, ResultCallback, FragmentInterface, View.OnClickListener, RequestResult {
 
     MapView mMapView;
     private GoogleMap map;
@@ -142,24 +139,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                 float radius = toRadiusMeters(mGeofenceList.get(dragMarkerID).getCenterMarker().getPosition(),
                         marker.getPosition());
 
-                LocationServices.GeofencingApi.removeGeofences(
-                        LocationService.mGoogleApiClient,
-                        mGeofenceList.get(dragMarkerID).getPendingIntent());
 
                 mGeofenceList.get(dragMarkerID).getVisibleArea().remove();
-
-                Geofence geofence = new Geofence.Builder()
-                        .setRequestId(mGeofenceList.get(dragMarkerID).getTitle())
-                        .setCircularRegion(
-                                center.latitude,
-                                center.longitude,
-                                radius)
-
-                        .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                        .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER |
-                                Geofence.GEOFENCE_TRANSITION_EXIT | Geofence.GEOFENCE_TRANSITION_DWELL)
-                        .setLoiteringDelay(500)
-                        .build();
 
 
                 Circle circle = map.addCircle(new CircleOptions()
@@ -170,42 +151,35 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                         .strokeWidth(3f)
                 );
 
-                mGeofenceList.get(dragMarkerID).setEndMarker(marker);
-                mGeofenceList.get(dragMarkerID).setArea(geofence);
+                mGeofenceList.get(dragMarkerID).setEdgeMarker(marker);
                 mGeofenceList.get(dragMarkerID).setRadius(radius);
                 mGeofenceList.get(dragMarkerID).setVisibleArea(circle);
 
                 db = new Database(getContext());
                 db.updateFence(mGeofenceList.get(dragMarkerID));
 
-                LocationServices.GeofencingApi.addGeofences(
-                        LocationService.mGoogleApiClient,
-                        getGeofencingRequest(mGeofenceList.get(dragMarkerID).getArea()),
-                        getGeofencePendingIntent(mGeofenceList.get(dragMarkerID).getNotifyDevice()))
-                        .setResultCallback(MapFragment.this);
+                StringBuilder fenceDetails = new StringBuilder();
+                      fenceDetails
+                            .append("title=").append( mGeofenceList.get(dragMarkerID).getTitle())
+                            .append("&description=").append(mGeofenceList.get(dragMarkerID).getDescription())
+                            .append("&center_latitude=").append(center.latitude)
+                            .append("&center_longitude=").append(center.longitude)
+                            .append("&radius=").append(radius)
+                            .append("&edge_latitude=").append(toRadiusLatLng(center, radius).latitude)
+                            .append("&edge_longitude=").append(toRadiusLatLng(center, radius).longitude)
+                            .append("&transition_type=").append(mGeofenceList.get(dragMarkerID).getTransitionType())
+                            .append("&user_id=").append(SharedPrefs.getUserId())
+                            .append("&create_on=").append(mGeofenceList.get(dragMarkerID).getCreate_on())
+                            .append("&fence_id=").append(mGeofenceList.get(dragMarkerID).getId());
+
+
+                FenceApi fenceApi = new FenceApi();
+                fenceApi.delegate=MapFragment.this;
+                fenceApi.execute(fenceDetails.toString(),"edit_fence");
 
 
             }
         });
-    }
-
-    private GeofencingRequest getGeofencingRequest(Geofence geofence) {
-        GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
-        builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER);
-        builder.addGeofence(geofence);
-        return builder.build();
-    }
-
-    private PendingIntent getGeofencePendingIntent(String device) {
-        // Reuse the PendingIntent if we already have it.
-
-        Intent intent = new Intent(getContext(), GeofenceTransitionsIntentService.class);
-        intent.putExtra("device", device);
-
-        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
-        // calling addGeofences() and removeGeofences().
-        return PendingIntent.getService(getContext(), mGeofenceList.size(), intent, PendingIntent.
-                FLAG_UPDATE_CURRENT);
     }
 
 
@@ -231,7 +205,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     }
 
     @Override
-    public void viewLiveLocation(LatLng coordinates, final String device) {
+    public void viewLiveLocation(LatLng coordinates,String track_id) {
         if (map != null) {
             //map.clear();
             if (currPos != null) {
@@ -244,9 +218,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
             Runnable update = new Runnable() {
                 @Override
                 public void run() {
-                    DeviceLocator deviceLocator = new DeviceLocator();
-                    deviceLocator.delegate = ((MainActivity) getActivity());
-                    deviceLocator.execute("live", device);
+                    TrackApi trackApi = new TrackApi();
+                    trackApi.delegate = ((MainActivity) getActivity());
+                    trackApi.execute("user_id="+SharedPrefs.getUserId()+"&track_id=" ,"track_user");
                 }
             };
             updateLocation.postDelayed(update, 10000);
@@ -254,10 +228,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     }
 
     @Override
-    public void viewLocationHistory(JSONArray location, String device) {
+    public void viewLocationHistory(JSONArray location) {
         if (map != null) {
             map.clear();
             try {
+                Log.e("asdas","asdas");
                 PolylineOptions lineOptions = new PolylineOptions();
                 for (int i = 0; i < location.length(); i++) {
 
@@ -271,7 +246,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
 
             } catch (JSONException e) {
                 e.printStackTrace();
-            }
+            }catch (NullPointerException e){e.printStackTrace();}
         }
     }
 
@@ -280,6 +255,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
 
     @Override
     public void serviceStopped() {}
+
+    @Override
+    public void locationUpdated(String lat, String lng, String time) {
+        moveToLocation(new LatLng(Double.parseDouble(lat),Double.parseDouble(lng)),15);
+    }
 
     private static LatLng toRadiusLatLng(LatLng center, double radius) {
         double radiusAngle = Math.toDegrees(radius / 6371009) / //Radius of earth in meters 6371009
@@ -298,6 +278,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     @Override
     public void onResume() {
         super.onResume();
+        ((MainActivity) getActivity()).delegate = this;
         mMapView.onResume();
     }
 
@@ -371,8 +352,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
         switch (v.getId()) {
             case R.id.fabAddFence:
                 if (LocationService.isGoogleApiConnected && markerSelected == null) {
-                    NewFenceDialog newFenceDialog = new NewFenceDialog(
-                            getContext(),
+                    CreateFence newFenceDialog = new CreateFence(
+                            getActivity(),
                             map.getCameraPosition().target,
                             300,
                             mGeofenceList, map);
@@ -397,5 +378,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                 break;
         }
         fabMenu.close(true);
+    }
+
+    @Override
+    public void success(String result) {
+
+    }
+
+    @Override
+    public void failure() {
+
     }
 }
