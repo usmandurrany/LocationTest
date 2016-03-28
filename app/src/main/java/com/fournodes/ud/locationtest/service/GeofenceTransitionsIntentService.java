@@ -8,14 +8,16 @@ import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.media.RingtoneManager;
 import android.support.v4.app.NotificationCompat;
-import android.text.TextUtils;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
+import com.fournodes.ud.locationtest.FileLogger;
 import com.fournodes.ud.locationtest.MainActivity;
+import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.network.NotificationApi;
-import com.fournodes.ud.locationtest.R;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofenceStatusCodes;
 import com.google.android.gms.location.GeofencingEvent;
@@ -31,6 +33,9 @@ public class GeofenceTransitionsIntentService extends IntentService {
     private String notify_id;
     private boolean remote;
     private int geofenceTransition;
+    private Context context;
+    private String fenceId;
+    private String fenceTitle;
 
     /**
      * This constructor is required, and calls the super IntentService(String)
@@ -54,8 +59,12 @@ public class GeofenceTransitionsIntentService extends IntentService {
      */
     @Override
     protected void onHandleIntent(Intent intent) {
-        notify_id =intent.getStringExtra("notify_id");
-        remote=intent.getBooleanExtra("remote",false);
+        context = this;
+
+        notify_id = intent.getStringExtra("notify_id");
+        remote = intent.getBooleanExtra("remote", false);
+        fenceTitle = intent.getStringExtra("title");
+
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
         if (geofencingEvent.hasError()) {
             String errorMessage = GeofenceErrorMessages.getErrorString(this,
@@ -99,10 +108,7 @@ public class GeofenceTransitionsIntentService extends IntentService {
      * @param triggeringGeofences The geofence(s) triggered.
      * @return The transition details formatted as String.
      */
-    private String getGeofenceTransitionDetails(
-            Context context,
-            int geofenceTransition,
-            List<Geofence> triggeringGeofences) {
+    private String getGeofenceTransitionDetails(Context context, int geofenceTransition, List<Geofence> triggeringGeofences) {
 
         String geofenceTransitionString = getTransitionString(geofenceTransition);
 
@@ -110,10 +116,17 @@ public class GeofenceTransitionsIntentService extends IntentService {
         ArrayList triggeringGeofencesIdsList = new ArrayList();
         for (Geofence geofence : triggeringGeofences) {
             triggeringGeofencesIdsList.add(geofence.getRequestId());
+            fenceId=geofence.getRequestId();
         }
-        String triggeringGeofencesIdsString = TextUtils.join(", ", triggeringGeofencesIdsList);
+        //String triggeringGeofencesIdsString = TextUtils.join(", ", triggeringGeofencesIdsList);
+        String triggeredMessage = geofenceTransitionString + ": " + fenceTitle;
+        FileLogger.e("Geofence ","Fence: "+fenceId);
+        FileLogger.e("Geofence ","Action: Triggered");
+        FileLogger.e("Geofence ","Triggered: "+triggeredMessage);
+        serviceMessage(triggeredMessage);
 
-        return geofenceTransitionString + ": " + triggeringGeofencesIdsString;
+
+        return triggeredMessage;
     }
 
     /**
@@ -121,14 +134,6 @@ public class GeofenceTransitionsIntentService extends IntentService {
      * If the user clicks the notification, control goes to the MainActivity.
      */
     private void sendNotification(String notificationDetails) {
-        try{
-            if (SharedPrefs.pref == null)
-                new SharedPrefs(getApplicationContext()).initialize();
-            new NotificationApi().execute("notification","user_id="
-                    +SharedPrefs.getUserId()+"&notify_id="+notify_id
-                    +"&sender="+URLEncoder.encode(SharedPrefs.getUserName(),"UTF-8")
-                    +"&message="+URLEncoder.encode(notificationDetails,"UTF-8"));
-        }catch (UnsupportedEncodingException e){e.printStackTrace();}
         if (!remote) {
             // Create an explicit content Intent that starts the main Activity.
             PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), 0, new Intent(getApplicationContext(), MainActivity.class), 0);
@@ -144,7 +149,8 @@ public class GeofenceTransitionsIntentService extends IntentService {
                     .setColor(Color.RED)
                     .setContentTitle("Alert")
                     .setContentText(notificationDetails)
-                    .setContentIntent(piActivityIntent);
+                    .setContentIntent(piActivityIntent)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION));
 
             // Dismiss notification once the user touches it.
             builder.setAutoCancel(true);
@@ -155,6 +161,17 @@ public class GeofenceTransitionsIntentService extends IntentService {
 
             // Issue the notification
             mNotificationManager.notify((int) System.currentTimeMillis(), builder.build());
+        }else{
+            try {
+                if (SharedPrefs.pref == null)
+                    new SharedPrefs(getApplicationContext()).initialize();
+                new NotificationApi().execute("notification", "user_id="
+                        + SharedPrefs.getUserId() + "&notify_id=" + notify_id
+                        + "&sender=" + URLEncoder.encode(SharedPrefs.getUserName(), "UTF-8")
+                        + "&message=" + URLEncoder.encode(notificationDetails, "UTF-8"));
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -177,18 +194,17 @@ public class GeofenceTransitionsIntentService extends IntentService {
         }
     }
 
+    private void serviceMessage(String message) {
+        Log.d("Main Fragment", "Broadcasting message");
+        Intent intent = new Intent("LOCATION_TEST_SERVICE");
+        intent.putExtra("message", message);
+        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+    }
+
 }
 
 class GeofenceErrorMessages {
-    /**
-     * Prevents instantiation.
-     */
-    private GeofenceErrorMessages() {
-    }
 
-    /**
-     * Returns the error string for a geofencing error code.
-     */
     public static String getErrorString(Context context, int errorCode) {
         Resources mResources = context.getResources();
         switch (errorCode) {
@@ -202,4 +218,6 @@ class GeofenceErrorMessages {
                 return "What?";
         }
     }
+
+
 }

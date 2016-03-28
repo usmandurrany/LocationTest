@@ -1,46 +1,36 @@
 package com.fournodes.ud.locationtest;
 
-import android.app.AlertDialog;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v7.widget.AppCompatCheckBox;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.support.v7.widget.AppCompatCheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.fournodes.ud.locationtest.service.LocationService;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
 
-import org.json.JSONArray;
-
-import java.util.ArrayList;
+import java.io.File;
+import java.io.FileReader;
+import java.io.InputStream;
 import java.util.List;
 
 
-public class MainFragment extends Fragment implements FragmentInterface {
+public class MainFragment extends Fragment implements MainFragmentInterface {
 
     private TextView txtLastUpdated;
-    private TextView txtLat;
+    private TextView txtLog;
     private TextView txtLong;
     private List<Fence> mGeofenceList;
     private boolean isServiceRunning = false;
@@ -49,15 +39,19 @@ public class MainFragment extends Fragment implements FragmentInterface {
     private EditText edtMinDisplacement;
     private EditText edtUpdateServer;
     private Button btnService;
+    private Button btnShareLogFile;
+    private Button btnClearLogFile;
+    private ScrollView lytScrollLog;
 
 
-    public MainFragment() {}
+
+    public MainFragment() { }
 
 
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        ((MainActivity) getActivity()).delegate = this;
+        ((MainActivity) getActivity()).mainDelegate = this;
     }
 
     @Override
@@ -70,7 +64,7 @@ public class MainFragment extends Fragment implements FragmentInterface {
     @Override
     public void onResume() {
         super.onResume();
-        ((MainActivity) getActivity()).delegate = this;
+        ((MainActivity) getActivity()).mainDelegate = this;
 
     }
 
@@ -86,9 +80,8 @@ public class MainFragment extends Fragment implements FragmentInterface {
         final AppCompatCheckBox chkPolling = (AppCompatCheckBox) getView().findViewById(R.id.chkPolling);
         final AppCompatCheckBox chkUpdateServer = (AppCompatCheckBox) getView().findViewById(R.id.chkUpdateServer);
         final AppCompatCheckBox chkActiveMode = (AppCompatCheckBox) getView().findViewById(R.id.chkActiveMode);
-        txtLat = (TextView) getView().findViewById(R.id.txtLat);
-        txtLong = (TextView) getView().findViewById(R.id.txtLong);
-        txtLastUpdated = (TextView) getView().findViewById(R.id.txtLastUpdated);
+        txtLog = (TextView) getView().findViewById(R.id.txtLog);
+
 
         edtUpdateInterval = (EditText) getView().findViewById(R.id.edtUpdateInterval);
         edtMinDisplacement = (EditText) getView().findViewById(R.id.edtDisplacement);
@@ -98,8 +91,12 @@ public class MainFragment extends Fragment implements FragmentInterface {
         edtMinDisplacement.setText(String.valueOf(SharedPrefs.getMinDisplacement()));
         edtUpdateServer.setText(String.valueOf(SharedPrefs.getUpdateServerInterval()));
 
+        btnShareLogFile = (Button) getView().findViewById(R.id.btnShareLogFile);
+        btnClearLogFile = (Button) getView().findViewById(R.id.btnClearLogFile);
+        lytScrollLog = (ScrollView) getView().findViewById(R.id.lytScrollLog);
 
-        if(LocationService.isRunning){
+
+        if (LocationService.isRunning) {
             isServiceRunning = true;
             btnService.setText("Stop Service");
         }
@@ -107,18 +104,16 @@ public class MainFragment extends Fragment implements FragmentInterface {
         btnSetUpdateServer.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (edtUpdateServer.getText().length()>0 &&(Integer.parseInt(edtUpdateServer.getText().toString()) >= 60000)) {
+                if (edtUpdateServer.getText().length() > 0 && (Integer.parseInt(edtUpdateServer.getText().toString()) >= 60000)) {
                     SharedPrefs.setUpdateServerInterval(Integer.parseInt(edtUpdateServer.getText().toString()));
-                    Toast.makeText(getContext(), "Value updated to "+String.valueOf(SharedPrefs.getUpdateServerInterval()), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Value updated to " + String.valueOf(SharedPrefs.getUpdateServerInterval()), Toast.LENGTH_SHORT).show();
 
-                }
-                else if (Integer.parseInt(edtUpdateServer.getText().toString()) < 60000)
+                } else if (Integer.parseInt(edtUpdateServer.getText().toString()) < 60000)
                     Toast.makeText(getContext(), "Minimum interval for server update is 60000 (1 Minute)", Toast.LENGTH_SHORT).show();
                 else
                     Toast.makeText(getContext(), "Field is empty", Toast.LENGTH_SHORT).show();
             }
         });
-
 
 
         btnService.setOnClickListener(new View.OnClickListener() {
@@ -139,14 +134,37 @@ public class MainFragment extends Fragment implements FragmentInterface {
             }
         });
 
+        btnClearLogFile.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                File file = new File("sdcard/location_log.txt");
+                if (file.exists() && !LocationService.isRunning)
+                    file.delete();
+                else if(LocationService.isRunning)
+                    Toast.makeText(getActivity(), "Cant clear log while service is running", Toast.LENGTH_SHORT).show();
+                else if(!file.exists())
+                    Toast.makeText(getActivity(), "File doesn't exists", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnShareLogFile.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent sendIntent = new Intent();
+                sendIntent.setAction(Intent.ACTION_SEND);
+                sendIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(new File("sdcard/location_log.txt")));
+                sendIntent.setType("text/plain");
+                startActivity(sendIntent);
+            }
+        });
+
         btnSetUpdateInterval.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (edtUpdateInterval.getText().length() > 0){
+                if (edtUpdateInterval.getText().length() > 0) {
                     SharedPrefs.setLocUpdateInterval(Integer.parseInt(edtUpdateInterval.getText().toString()));
                     Toast.makeText(getContext(), "Value Updated to " + String.valueOf(SharedPrefs.getLocUpdateInterval()), Toast.LENGTH_SHORT).show();
-                }
-                else
+                } else
                     Toast.makeText(getContext(), "Field is empty", Toast.LENGTH_SHORT).show();
             }
         });
@@ -157,8 +175,7 @@ public class MainFragment extends Fragment implements FragmentInterface {
                 if (edtMinDisplacement.getText().length() > 0) {
                     SharedPrefs.setMinDisplacement(Integer.parseInt(edtMinDisplacement.getText().toString()));
                     Toast.makeText(getContext(), "Value Updated to " + String.valueOf(SharedPrefs.getMinDisplacement()), Toast.LENGTH_SHORT).show();
-                }
-                else
+                } else
                     Toast.makeText(getContext(), "Field is empty", Toast.LENGTH_SHORT).show();
             }
         });
@@ -177,10 +194,9 @@ public class MainFragment extends Fragment implements FragmentInterface {
         chkUpdateServer.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
-                if (isChecked){
+                if (isChecked) {
                     SharedPrefs.setUpdateServerEnabled(true);
-                }else
-                {
+                } else {
                     SharedPrefs.setUpdateServerEnabled(false);
                 }
 
@@ -190,15 +206,14 @@ public class MainFragment extends Fragment implements FragmentInterface {
         chkPolling.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
-                if (isChecked){
+                if (isChecked) {
                     SharedPrefs.setPollingEnabled(true);
                     serviceMessage("trackEnabled");
 
                     chkUpdateServer.setEnabled(true);
                     chkActiveMode.setEnabled(true);
 
-                }else
-                {
+                } else {
                     serviceMessage("trackDisabled");
                     SharedPrefs.setPollingEnabled(false);
                     chkUpdateServer.setEnabled(false);
@@ -212,9 +227,9 @@ public class MainFragment extends Fragment implements FragmentInterface {
         chkActiveMode.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked && LocationService.isRunning){
+                if (isChecked && LocationService.isRunning) {
                     serviceMessage("switchToActiveMode");
-                }else if (!isChecked)
+                } else if (!isChecked)
                     serviceMessage("switchToPassiveMode");
                 else
                     Toast.makeText(getContext(), "Service is not running", Toast.LENGTH_SHORT).show();
@@ -234,20 +249,6 @@ public class MainFragment extends Fragment implements FragmentInterface {
 
     }
 
-    @Override
-    public void moveToFence(LatLng fence) {
-
-    }
-
-    @Override
-    public void viewLiveLocation(LatLng coordinates, String track_id) {
-
-    }
-
-    @Override
-    public void viewLocationHistory(JSONArray location) {
-
-    }
 
     @Override
     public void serviceStarted() {
@@ -264,10 +265,31 @@ public class MainFragment extends Fragment implements FragmentInterface {
     }
 
     @Override
+    public void fenceTriggered(String data) {
+        StringBuilder fenceLog = new StringBuilder()
+                .append("Fence: ").append(data).append("\n");
+        txtLog.append(fenceLog.toString());
+        lytScrollLog.scrollTo(0,View.FOCUS_DOWN);
+
+    }
+
+    @Override
     public void locationUpdated(String lat, String lng, String time) {
-        txtLastUpdated.append(time);
-        txtLat.append(lat);
-        txtLong.append(lng);
+        StringBuilder locationLog = new StringBuilder()
+                .append("Time: ").append(time).append("\n")
+                .append("Lat: ").append(lat).append(" - ")
+                .append("Lng: ").append(lng).append("\n");
+        txtLog.append(locationLog.toString());
+        lytScrollLog.scrollTo(0,View.FOCUS_DOWN);
+
+    }
+
+    @Override
+    public void updateServer(String result) {
+        StringBuilder updateLog = new StringBuilder()
+                .append("Network: ").append(result).append("\n");
+        txtLog.append(updateLog.toString());
+        lytScrollLog.scrollTo(0,View.FOCUS_DOWN);
     }
 
     private void serviceMessage(String message) {

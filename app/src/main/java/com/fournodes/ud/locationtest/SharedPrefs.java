@@ -10,7 +10,8 @@ public class SharedPrefs {
     public static SharedPreferences pref;
     private static final String SHARED_PREF_FILE = "LocationTest";
     //public static final String SERVER_ADDRESS = "http://192.168.1.110/locationtest/";
-    public static final String SERVER_ADDRESS = "http://studentspot.pk/locationtest/";
+    public static final String SERVER_ADDRESS = "http://www.studentspot.pk/locationtest/";
+    //public static final String SERVER_ADDRESS = "http://52.34.131.77/locationtest/";
 
     public SharedPrefs(Context context) {
         pref = context.getSharedPreferences(SharedPrefs.SHARED_PREF_FILE, 0);
@@ -31,21 +32,20 @@ public class SharedPrefs {
     private static String userPicture;
 
 
-
     public void initialize() {
         locUpdateInterval = pref.getInt("locUpdateInterval", 60000); //1 Min
         lastDeviceLatitude = pref.getString("lastDeviceLatitude", null);
         lastDeviceLongitude = pref.getString("lastDeviceLongitude", null);
         lastLocUpdateTime = pref.getString("lastLocUpdateTime", null);
-        minDisplacement = pref.getInt("minDisplacement", 500);// 500 Meters
-        pollingEnabled = pref.getBoolean("pollingEnabled", false);
-        updateServerInterval = pref.getInt("updateServerInterval", 300000); //5 Min
-        updateServerEnabled = pref.getBoolean("updateServerEnabled", false);
-        deviceGcmId = pref.getString("deviceGcmId",null);
-        userId = pref.getString("userId",null);
+        minDisplacement = pref.getInt("minDisplacement", 200);// 500 Meters
+        pollingEnabled = pref.getBoolean("pollingEnabled", true);
+        updateServerInterval = pref.getInt("updateServerInterval", 120000); //5 Min 300000
+        updateServerEnabled = pref.getBoolean("updateServerEnabled", true);
+        deviceGcmId = pref.getString("deviceGcmId", null);
+        userId = pref.getString("userId", null);
         userName = pref.getString("userName", null);
-        userEmail = pref.getString("userEmail",null);
-        userPicture = pref.getString("userPicture",null);
+        userEmail = pref.getString("userEmail", null);
+        userPicture = pref.getString("userPicture", null);
 
 
     }
@@ -109,7 +109,7 @@ public class SharedPrefs {
     }
 
     public static void setUpdateServerInterval(int updateServerInterval) {
-        pref.edit().putInt("updateServerInterval",updateServerInterval).apply();
+        pref.edit().putInt("updateServerInterval", updateServerInterval).apply();
         SharedPrefs.updateServerInterval = updateServerInterval;
     }
 

@@ -3,8 +3,8 @@ package com.fournodes.ud.locationtest.network;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.RequestResult;
+import com.fournodes.ud.locationtest.SharedPrefs;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -31,9 +31,9 @@ public class FenceApi extends AsyncTask<String, String, String> {
     @Override
     protected String doInBackground(String... params) {
         payload = params[0];
-        type = (params.length>1?params[1]:"null");
+        type = (params.length > 1 ? params[1] : "null");
         try {
-            String url = SharedPrefs.SERVER_ADDRESS + "fence.php?type="+type;
+            String url = SharedPrefs.SERVER_ADDRESS + "fence.php?type=" + type;
             URL obj = new URL(url);
             HttpURLConnection con = (HttpURLConnection) obj.openConnection();
             con.setConnectTimeout(15000);
@@ -62,8 +62,9 @@ public class FenceApi extends AsyncTask<String, String, String> {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-            Log.e(TAG,"Network Error");
-            //delegate.failure();
+            Log.e(TAG, "Network Error");
+            if (delegate!=null)
+                delegate.onFailure();
         }
 
         return null;
@@ -72,12 +73,16 @@ public class FenceApi extends AsyncTask<String, String, String> {
     @Override
     protected void onPostExecute(String s) {
         try {
-            if (s != null){
-                Log.e(TAG,s);
+            if (s != null) {
+                Log.e(TAG, s);
                 JSONObject result = new JSONObject(s);
-                if (result.has("fence_id"))
-                    delegate.success(String.valueOf(result.getInt("fence_id")));
-
+                if (result.has("fence_id")) {
+                    if (delegate!=null)
+                        delegate.onSuccess(String.valueOf(result.getInt("fence_id")));
+                }else {
+                    if (delegate!=null)
+                        delegate.onFailure();
+                }
             }
         } catch (JSONException e) {
             e.printStackTrace();

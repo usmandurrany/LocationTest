@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.design.widget.CoordinatorLayout android:layout_height="match_parent"
+<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:fab="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:fab="http://schemas.android.com/apk/res-auto">
+    android:layout_height="match_parent">
 
     <com.fournodes.ud.locationtest.CustomFrameLayout
         android:id="@+id/floatingMarker"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@+id/btnFence"
-        >
+        android:layout_below="@+id/btnFence">
 
         <com.google.android.gms.maps.MapView
             android:id="@+id/mapView"
@@ -21,58 +20,93 @@
             android:layout_height="match_parent">
 
             <ImageView
+                android:id="@+id/imageView"
                 android:layout_width="65dp"
                 android:layout_height="65dp"
-                android:src="@drawable/pin"
                 android:layout_centerHorizontal="true"
                 android:layout_centerVertical="true"
                 android:paddingBottom="25dp"
-                android:id="@+id/imageView" />
+                android:src="@drawable/pin" />
 
-<com.github.clans.fab.FloatingActionMenu
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_alignParentBottom="true"
-    android:layout_alignParentRight="true"
-    android:src="@android:drawable/ic_input_add"
-    android:layout_margin="20dp"
-    android:id="@+id/fabMenu">
-    <com.github.clans.fab.FloatingActionButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/fabAddFence"
-        android:tint="#fff"
-        fab:fab_label="Add Fence"
+            <com.github.clans.fab.FloatingActionMenu
+                android:id="@+id/fabMenu"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_alignParentRight="true"
+                android:layout_margin="20dp"
+                fab:menu_colorNormal="@color/colorPrimary"
+                fab:menu_colorPressed="@color/colorPrimaryDark">
 
-        android:src="@android:drawable/ic_menu_add"/>
-    <com.github.clans.fab.FloatingActionButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/fabMyLoc"
-        fab:fab_label="Locate Me"
-        android:src="@android:drawable/ic_menu_mylocation"/>
+                <com.github.clans.fab.FloatingActionButton
+                    android:id="@+id/fabAddFence"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_add_location_white_24dp"
+                    fab:fab_label="Add Fence"
+                    fab:fab_size="mini"
+                    fab:fab_colorNormal="@color/colorPrimary"
+                    fab:fab_colorPressed="@color/colorPrimaryDark" />
 
-    <com.github.clans.fab.FloatingActionButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/fabShowFences"
-        fab:fab_label="Show Fences"
+                <com.github.clans.fab.FloatingActionButton
+                    android:id="@+id/fabMyLoc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_my_location_white_24dp"
+                    fab:fab_label="Locate Me"
+                    fab:fab_size="mini"
+                    fab:fab_colorNormal="@color/colorPrimary"
+                    fab:fab_colorPressed="@color/colorPrimaryDark" />
 
+                <com.github.clans.fab.FloatingActionButton
+                    android:id="@+id/fabShowFences"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_group_work_white_24dp"
+                    fab:fab_label="Show Fences"
+                    fab:fab_size="mini"
+                    fab:fab_colorNormal="@color/colorPrimary"
+                    fab:fab_colorPressed="@color/colorPrimaryDark" />
 
-        android:src="@android:drawable/ic_menu_view"/>
-    <com.github.clans.fab.FloatingActionButton
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/fabTrackDevice"
-        fab:fab_label="Track Device"
-        android:src="@android:drawable/ic_menu_directions"/>
-</com.github.clans.fab.FloatingActionMenu>
+                <com.github.clans.fab.FloatingActionButton
+                    android:id="@+id/fabTrackDevice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_person_pin_white_24dp"
+                    fab:fab_label="Track Device"
+                    fab:fab_size="mini"
+                    fab:fab_colorNormal="@color/colorPrimary"
+                    fab:fab_colorPressed="@color/colorPrimaryDark" />
+            </com.github.clans.fab.FloatingActionMenu>
 
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/fabStopTrack"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_margin="20dp"
+                android:src="@drawable/ic_location_off_white_24dp"
+                android:visibility="gone"
+                fab:fab_label="Stop Track"
+                fab:fab_size="mini"
+                fab:fab_colorNormal="@color/colorPrimary"
+                fab:fab_colorPressed="@color/colorPrimaryDark" />
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/fabDeleteHistory"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentBottom="true"
+                android:layout_margin="20dp"
+                android:src="@drawable/ic_delete_forever_white_24dp"
+                android:visibility="gone"
+                fab:fab_label="Delete History"
+                fab:fab_size="mini"
+                fab:fab_colorNormal="@color/colorPrimary"
+                fab:fab_colorPressed="@color/colorPrimaryDark" />
         </RelativeLayout>
-
 
 
     </com.fournodes.ud.locationtest.CustomFrameLayout>
 
 
-    </android.support.design.widget.CoordinatorLayout>
+</android.support.design.widget.CoordinatorLayout>

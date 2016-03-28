@@ -6,62 +6,56 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.media.RingtoneManager;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.fournodes.ud.locationtest.Database;
 import com.fournodes.ud.locationtest.Fence;
+import com.fournodes.ud.locationtest.FileLogger;
+import com.fournodes.ud.locationtest.GeofenceWrapper;
 import com.fournodes.ud.locationtest.MainActivity;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.network.NotificationApi;
-import com.fournodes.ud.locationtest.service.GeofenceTransitionsIntentService;
-import com.fournodes.ud.locationtest.service.LocationService;
+import com.google.android.gms.common.api.Result;
+import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.gcm.GcmListenerService;
-import com.google.android.gms.location.Geofence;
-import com.google.android.gms.location.GeofencingRequest;
-import com.google.android.gms.location.LocationServices;
 
 /**
  * Created by Usman on 11/23/2015.
  */
 public class GCMBroadcastReceiver extends GcmListenerService {
-    private static final String TAG = "GCMBroadcastReceiver";
+    private static final String TAG = "GCM Receiver";
+    private Fence fence;
+    private GeofenceWrapper geofenceWrapper;
+    private Database db;
 
 
     @Override
     public void onMessageReceived(String from, Bundle data) { // Prank received will trigger this
-        if (SharedPrefs.pref == null) {
-            new SharedPrefs(getApplicationContext());
-        }
+        if (SharedPrefs.pref != null)
+            new SharedPrefs(getApplicationContext()).initialize();
+        db = new Database(getApplicationContext());
+        geofenceWrapper = new GeofenceWrapper(getApplicationContext());
 
         Log.e("GCM Message", data.getString("type"));
-        // Log.e("sender", data.getString("sender"));
         switch (data.getString("type")) {
             case "create_fence":
-
                 createFenceOnDevice(data);
-
                 break;
+
             case "edit_fence":
-               editFence(data);
-
+                editFence(data);
                 break;
+
             case "remove_fence":
-                Database db = new Database(getApplicationContext());
-                Fence fence = db.getFence(data.getString("fence_id"));
-                Log.e("Fence Title", fence.getTitle());
-                LocationServices.GeofencingApi.removeGeofences(LocationService.mGoogleApiClient,fence.getPendingIntent()); //Remove from GoogleApiGeofence
-                db.removeFence(fence.getId());
-                NotificationApi notificationApi = new NotificationApi();
-                notificationApi.execute("response",
-                        "response=success&user_id="+SharedPrefs.getUserId()+"&action=remove_fence&fence_id="+data.getString("fence_id"));
-
-
+                removeFence(data);
                 break;
             case "notification":
-                sendNotification(data.getString("sender"), data.getString("message"));
+                createNotification(data.getString("sender"), data.getString("message"));
                 break;
 
         }
@@ -69,29 +63,10 @@ public class GCMBroadcastReceiver extends GcmListenerService {
 
     }
 
-    private GeofencingRequest getGeofencingRequest(Geofence geofence) {
-        GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
-        builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER);
-        builder.addGeofence(geofence);
-        return builder.build();
-    }
 
-    private void createFenceOnDevice(Bundle data) {
-        Database db = new Database(getApplicationContext());
-        Geofence geofence = new Geofence.Builder()
-                .setRequestId(data.getString("title"))
-                .setCircularRegion(
-                        Double.parseDouble(data.getString("center_latitude")),
-                        Double.parseDouble(data.getString("center_longitude")),
-                        Float.parseFloat(data.getString("radius")))
-                .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                .setTransitionTypes(Integer.parseInt(data.getString("transition_type")))
-                .setLoiteringDelay(500)
-                .build();
+    private void createFenceOnDevice(final Bundle data) {
 
-
-        Fence fence = new Fence();
-        fence.setArea(geofence);
+        fence = new Fence();
         fence.setOnDevice(1);
         fence.setTransitionType(Integer.parseInt(data.getString("transition_type")));
         fence.setCenter_lat(Double.parseDouble(data.getString("center_latitude")));
@@ -103,96 +78,120 @@ public class GCMBroadcastReceiver extends GcmListenerService {
         fence.setTitle(data.getString("title"));
         fence.setUserId(data.getString("user_id"));
         fence.setCreate_on(data.getString("create_on"));
-
-
         fence.setId(Integer.parseInt(data.getString("fence_id")));
-        db.saveFence(fence);
-        fence.setPendingIntent(getGeofencePendingIntent(fence.getId(), data.getString("user_id")));
 
+        geofenceWrapper.create(fence, new ResultCallback<Result>() {
+            @Override
+            public void onResult(Result result) {
+                FileLogger.e(TAG, "Fence: " + data.getString("fence_id"));
+                FileLogger.e(TAG, "Action: Create");
+                FileLogger.e(TAG, "Title: " + data.getString("title"));
+                FileLogger.e(TAG, "Description: " + data.getString("description"));
+                FileLogger.e(TAG, "Center: Lat: " + data.getString("center_latitude") + " Long: " + data.getString("center_longitude"));
+                FileLogger.e(TAG, "Radius: " + data.getString("radius"));
 
-        LocationServices.GeofencingApi.addGeofences(
-                LocationService.mGoogleApiClient,
-                getGeofencingRequest(fence.getArea()),
-                fence.getPendingIntent());
+                if (result.getStatus().isSuccess()) {
+                    db.saveFence(fence);
+                    FileLogger.e(TAG, "Result: Success");
+
+                } else {
+                    FileLogger.e(TAG,"Error: "+ result.getStatus().getStatusCode());
+                    FileLogger.e(TAG, "Result: Failed");
+                    serviceMessage("Error creating fence: "+result.getStatus().getStatusCode());
+                }
+            }
+        });
+
 
         NotificationApi notificationApi = new NotificationApi();
         notificationApi.execute("response",
-                "response=success&user_id="+SharedPrefs.getUserId()+"&action=create_fence&fence_id="+data.getString("fence_id"));
+                "response=success&user_id=" + SharedPrefs.getUserId() + "&action=create_fence&fence_id=" + data.getString("fence_id"));
 
     }
 
-    private void sendNotification(String from, String message) {
-        // Create an explicit content Intent that starts the main Activity.
-        PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), 0, new Intent(getApplicationContext(), MainActivity.class), 0);
-        // Get a notification builder that's compatible with platform versions >= 4
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
-
-        // Define the notification settings.
-        builder.setSmallIcon(R.mipmap.ic_launcher)
-                // In a real app, you may want to use a library like Volley
-                // to decode the Bitmap.
-                .setLargeIcon(BitmapFactory.decodeResource(getResources(),
-                        R.mipmap.ic_launcher))
-                .setColor(Color.RED)
-                .setContentTitle(from)
-                .setContentText(message)
-                .setContentIntent(piActivityIntent);
-
-        // Dismiss notification once the user touches it.
-        builder.setAutoCancel(true);
-
-        // Get an instance of the Notification manager
-        NotificationManager mNotificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-
-        // Issue the notification
-        mNotificationManager.notify((int) System.currentTimeMillis(), builder.build());
-    }
-
-    private PendingIntent getGeofencePendingIntent(int id, String notify_id) {
-        // Reuse the PendingIntent if we already have it.
-
-        Intent intent = new Intent(getApplicationContext(), GeofenceTransitionsIntentService.class);
-        intent.putExtra("notify_id", notify_id);
-        intent.putExtra("remote", true);
-        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
-        // calling addGeofences() and removeGeofences().
-        return PendingIntent.getService(getApplicationContext(), id, intent, PendingIntent.
-                FLAG_UPDATE_CURRENT);
-    }
-
-    public void editFence(Bundle data){
-        Database db = new Database(getApplicationContext());
-        Fence fence = db.getFence(data.getString("fence_id"));
+    public void editFence(final Bundle data) {
 
 
-        Geofence geofence = new Geofence.Builder()
-                .setRequestId(data.getString("title"))
-                .setCircularRegion(
-                        Double.parseDouble(data.getString("center_latitude")),
-                        Double.parseDouble(data.getString("center_longitude")),
-                        Float.parseFloat(data.getString("radius")))
-                .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                .setTransitionTypes(Integer.parseInt(data.getString("transition_type")))
-                .setLoiteringDelay(500)
-                .build();
-
-
+        fence = db.getFence(data.getString("fence_id"));
         fence.setEdge_lat(Double.parseDouble(data.getString("edge_latitude")));
         fence.setEdge_lng(Double.parseDouble(data.getString("edge_longitude")));
         fence.setRadius(Float.parseFloat(data.getString("radius")));
-        fence.setArea(geofence);
 
-        db.updateFence(fence);
+        geofenceWrapper.create(fence, new ResultCallback<Result>() {
+            @Override
+            public void onResult(Result result) {
+                FileLogger.e(TAG, "Fence: " + data.getString("fence_id"));
+                FileLogger.e(TAG, "Action: Edit");
+                FileLogger.e(TAG, "Radius: " + data.getString("radius"));
+                if (result.getStatus().isSuccess()) {
+                    db.updateFence(fence);
+                    FileLogger.e(TAG, "Result: Success");
 
-         LocationServices.GeofencingApi.addGeofences(
-                LocationService.mGoogleApiClient,
-                getGeofencingRequest(fence.getArea()),
-                fence.getPendingIntent());
+                } else {
+                    FileLogger.e(TAG,"Error: "+ result.getStatus().getStatusCode());
+                    FileLogger.e(TAG, "Result: Failed");
+                    serviceMessage("Error editing fence: "+result.getStatus().getStatusCode());
+
+                }
+            }
+        });
+
 
         NotificationApi notificationApi = new NotificationApi();
         notificationApi.execute("response",
-                "response=success&user_id="+SharedPrefs.getUserId()+"&action=edit_fence&fence_id="+data.getString("fence_id"));
+                "response=success&user_id=" + SharedPrefs.getUserId() + "&action=edit_fence&fence_id=" + data.getString("fence_id"));
+    }
+
+    public void removeFence(final Bundle data) {
+        fence = db.getFence(data.getString("fence_id"));
+
+        geofenceWrapper.remove(fence, new ResultCallback<Result>() {
+            @Override
+            public void onResult(Result result) {
+                FileLogger.e(TAG, "Fence: " + data.getString("fence_id"));
+                FileLogger.e(TAG, "Action: Remove");
+                if (result.getStatus().isSuccess()) {
+                    db.removeFenceFromDatabase(fence.getId());
+                    FileLogger.e(TAG, "Result: Success");
+
+                } else {
+                    FileLogger.e(TAG,"Error: "+ result.getStatus().getStatusCode());
+                    FileLogger.e(TAG, "Result: Failed");
+                    serviceMessage("Error removing fence: "+result.getStatus().getStatusCode());
+
+                }
+            }
+        });
+
+        NotificationApi notificationApi = new NotificationApi();
+        notificationApi.execute("response",
+                "response=success&user_id=" + SharedPrefs.getUserId() + "&action=remove_fence&fence_id=" + data.getString("fence_id"));
+
+
+    }
+
+    private void createNotification(String from, String message) {
+        PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), 0, new Intent(getApplicationContext(), MainActivity.class), 0);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
+        builder.setSmallIcon(R.mipmap.ic_launcher)
+                .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher))
+                .setColor(Color.BLUE)
+                .setContentTitle(from)
+                .setContentText(message)
+                .setContentIntent(piActivityIntent)
+                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION));
+
+        builder.setAutoCancel(true);
+        NotificationManager mNotificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        mNotificationManager.notify((int) System.currentTimeMillis(), builder.build());
+    }
+    private void serviceMessage(String message) {
+        Log.d("Main Fragment", "Broadcasting message");
+        Intent intent = new Intent("LOCATION_TEST_SERVICE");
+        intent.putExtra("message", "GCMReceiver");
+        intent.putExtra("body",message);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
 }

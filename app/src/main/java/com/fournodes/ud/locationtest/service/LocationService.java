@@ -18,13 +18,13 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
-import com.fournodes.ud.locationtest.ServiceMessage;
-import com.fournodes.ud.locationtest.network.LocationUpdateApi;
 import com.fournodes.ud.locationtest.Database;
-import com.fournodes.ud.locationtest.FileLog;
+import com.fournodes.ud.locationtest.FileLogger;
 import com.fournodes.ud.locationtest.R;
-import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.RequestResult;
+import com.fournodes.ud.locationtest.ServiceMessage;
+import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.network.LocationUpdateApi;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
@@ -36,6 +36,7 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
+import com.google.android.gms.maps.model.LatLng;
 
 import java.text.DateFormat;
 import java.util.Date;
@@ -43,7 +44,6 @@ import java.util.Date;
 public class LocationService extends Service implements
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
     public ServiceMessage delegate;
-
     private static final String TAG = "Location Service";
     public static GoogleApiClient mGoogleApiClient;
     private LocationRequest activeLocationRequest;
@@ -52,20 +52,22 @@ public class LocationService extends Service implements
     public static NotificationManager mNotificationManager;
     private Runnable update;
     private Handler updateServer;
-    private FileLog fileLog;
     private String action;
-    public static boolean isRunning=false;
+    public static boolean isRunning = false;
+    public boolean isModeActive = false;
+
 
     private static LocationService self = null;
-    public static LocationService getServiceObject(){
+
+    public static LocationService getServiceObject() {
         return self;
     }
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            Log.e(TAG,"Broadcast Received");
-            switch (intent.getStringExtra("message")){
+            Log.e(TAG, "Broadcast Received");
+            switch (intent.getStringExtra("message")) {
                 case "switchToPassiveMode":
                     switchToPassiveMode();
                     mNotificationManager.cancel(0);
@@ -80,17 +82,25 @@ public class LocationService extends Service implements
                 case "trackDisabled":
                     stopLocationUpdates();
                     break;
+                case "GCMReceiver":
+                    if (delegate != null)
+                        delegate.fenceTriggered(intent.getStringExtra("body"));
+                    break;
+                default:
+                    if (delegate != null)
+                        delegate.fenceTriggered(intent.getStringExtra("message"));
+                    break;
             }
         }
     };
 
 
-    public LocationService() {}
+    public LocationService() {
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
-        fileLog = new FileLog();
         // Create an instance of GoogleAPIClient.
         if (mGoogleApiClient == null) {
             mGoogleApiClient = new GoogleApiClient.Builder(this)
@@ -146,7 +156,8 @@ public class LocationService extends Service implements
 
 
     }
-    public void createActiveLocationRequest(){
+
+    public void createActiveLocationRequest() {
         Log.e(TAG, "Active Location Request Created");
 
         activeLocationRequest = new LocationRequest();
@@ -195,6 +206,7 @@ public class LocationService extends Service implements
         LocationServices.FusedLocationApi.requestLocationUpdates(
                 mGoogleApiClient, activeLocationRequest, this);
         Log.e(TAG, "Active Location Update Started");
+        isModeActive = true;
     }
 
     protected void stopLocationUpdates() {
@@ -203,24 +215,26 @@ public class LocationService extends Service implements
                 mGoogleApiClient, this);
 
     }
-    public void switchToPassiveMode(){
+
+    public void switchToPassiveMode() {
         Log.e(TAG, "Switching To Passive Mode");
         stopLocationUpdates();
         startPassiveLocationUpdates();
     }
 
-    public void switchToActiveMode(){
+    public void switchToActiveMode() {
         Log.e(TAG, "Switching To Active Mode");
         stopLocationUpdates();
         startActiveLocationUpdates();
     }
-    private void startPassiveLocationUpdates(){
+
+    private void startPassiveLocationUpdates() {
         createPassiveLocationRequest();
         LocationServices.FusedLocationApi.requestLocationUpdates(
                 mGoogleApiClient, passiveLocationRequest, this);
         Log.e(TAG, "Passive Location Update Started");
+        isModeActive = false;
     }
-
 
 
     @Override
@@ -231,14 +245,14 @@ public class LocationService extends Service implements
             action = intent.getAction();
         }
         if (action != null && action.equals("switchToPassiveMode")) {
-            if (activeLocationRequest!= null)
+            if (activeLocationRequest != null)
                 switchToPassiveMode();
 
             mNotificationManager.cancel(0);
-        }else {
+        } else {
             Log.e(TAG, "Service Started");
             mGoogleApiClient.connect();
-            isRunning=true;
+            isRunning = true;
             if (delegate != null)
                 delegate.serviceStarted();
         }
@@ -249,9 +263,9 @@ public class LocationService extends Service implements
     @Override
     public void onDestroy() {
         isGoogleApiConnected = false;
-        isRunning=false;
+        isRunning = false;
         mGoogleApiClient.disconnect();
-        if (delegate!=null)
+        if (delegate != null)
             delegate.serviceStopped();
         Log.e(TAG, "Service Destroyed");
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
@@ -279,9 +293,25 @@ public class LocationService extends Service implements
 
     }
 
+    private static float toRadiusMeters(LatLng center, LatLng radius) {
+        float[] result = new float[1];
+        Location.distanceBetween(center.latitude, center.longitude,
+                radius.latitude, radius.longitude, result);
+        return result[0];
+    }
+
     @Override
     public void onLocationChanged(Location location) {
-        if(location.hasAccuracy() && location.getAccuracy() <= 50){
+/*        float displacement = toRadiusMeters(new LatLng(Double.parseDouble(SharedPrefs.getLastDeviceLatitude()),Double.parseDouble(SharedPrefs.getLastDeviceLongitude())),
+                new LatLng(location.getLatitude(),location.getLongitude()));*/
+
+        FileLogger.e(TAG, "Lat: " + String.valueOf(location.getLatitude()) +
+                " Long: " + String.valueOf(location.getLongitude()));
+        FileLogger.e(TAG, "Accuracy: " + String.valueOf(location.getAccuracy()));
+        FileLogger.e(TAG, "Location Provider: " + String.valueOf(location.getProvider()));
+        FileLogger.e(TAG, "Location Time: " + String.valueOf(DateFormat.getTimeInstance().format(location.getTime())));
+
+        if (location.hasAccuracy() && location.getAccuracy() <= 60) {
             if (SharedPrefs.pref == null)
                 new SharedPrefs(getApplicationContext()).initialize();
             String mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
@@ -292,27 +322,19 @@ public class LocationService extends Service implements
             SharedPrefs.setLastDeviceLongitude(String.valueOf(location.getLongitude()));
             SharedPrefs.setLastLocUpdateTime(mLastUpdateTime);
 
-            if (delegate!=null)
-                delegate.locationUpdated(String.valueOf(location.getLatitude()),String.valueOf(location.getLongitude()),mLastUpdateTime);
-
-            fileLog.e(TAG, "Lat: " + String.valueOf(location.getLatitude()) +
-                    " Long: " + String.valueOf(location.getLongitude()));
-            fileLog.e(TAG, "Accuracy: " + String.valueOf(location.getAccuracy()));
-            fileLog.e(TAG, "Location Provider: " + String.valueOf(location.getProvider()));
-            if(location.getExtras() != null)
-                fileLog.e(TAG, "Satellites: " + location.getExtras().getString("satellites"));
-            fileLog.e(TAG, "Location Time: " + String.valueOf(DateFormat.getTimeInstance().format(location.getTime())));
-            fileLog.e(TAG, "System Time: " + mLastUpdateTime);
+            if (delegate != null)
+                delegate.locationUpdated(String.valueOf(location.getLatitude()), String.valueOf(location.getLongitude()), mLastUpdateTime);
 
             int rowCount = db.getLocEntriesCount();
-            fileLog.e(TAG, "Row Count " + String.valueOf(db.getLocEntriesCount()));
 
-
-            if (updateServer == null)
+            if (updateServer == null && update == null)
                 updServerAfterInterval();
-            if (rowCount >= 10 && updateServer != null && update != null) {
+            else if (rowCount >= 5 && updateServer != null && update != null && !isModeActive)
                 updateServer.post(update);
-            }
+            else if (isModeActive && updateServer != null && update != null)
+                updateServer.post(update);
+
+
             //updServerOnRowCount();
         }
     }
@@ -347,8 +369,8 @@ public class LocationService extends Service implements
     }
 
 
-    public void updServerAfterInterval(){
-        if (SharedPrefs.isUpdateServerEnabled()){
+    public void updServerAfterInterval() {
+        if (SharedPrefs.isUpdateServerEnabled()) {
             updateServer = new Handler();
 
             update = new Runnable() {
@@ -357,16 +379,18 @@ public class LocationService extends Service implements
                     LocationUpdateApi locationUpdateApi = new LocationUpdateApi(getApplicationContext());
                     locationUpdateApi.delegate = new RequestResult() {
                         @Override
-                        public void success(String result) {
-                            updateServer.postDelayed(update,SharedPrefs.getUpdateServerInterval());
-                            Log.e(TAG,"Update Success");
-
+                        public void onSuccess(String result) {
+                            updateServer.postDelayed(update, SharedPrefs.getUpdateServerInterval());
+                            if (delegate != null)
+                                delegate.updateServer("Update Server Successful");
                         }
 
                         @Override
-                        public void failure() {
-                            updateServer.postDelayed(update,SharedPrefs.getUpdateServerInterval());
-                            Log.e(TAG,"Update Failed");
+                        public void onFailure() {
+                            updateServer.postDelayed(update, SharedPrefs.getUpdateServerInterval());
+                            if (delegate != null)
+                                delegate.updateServer("Update Server Failed");
+
 
                         }
                     };
@@ -377,22 +401,24 @@ public class LocationService extends Service implements
         }
 
     }
-    public void updServerOnRowCount(){
-        if (SharedPrefs.isUpdateServerEnabled()){
+
+    public void updServerOnRowCount() {
+        if (SharedPrefs.isUpdateServerEnabled()) {
             LocationUpdateApi locationUpdateApi = new LocationUpdateApi(getApplicationContext());
             locationUpdateApi.delegate = new RequestResult() {
                 @Override
-                public void success(String result) {
-                    Log.e(TAG,"Update Success On Row Count");
+                public void onSuccess(String result) {
+                    Log.e(TAG, "Update Success On Row Count");
                 }
 
                 @Override
-                public void failure() {
-                    Log.e(TAG,"Update Failed On Row Count");
+                public void onFailure() {
+                    Log.e(TAG, "Update Failed On Row Count");
 
                 }
             };
-            locationUpdateApi.execute(System.currentTimeMillis());        }
+            locationUpdateApi.execute(System.currentTimeMillis());
+        }
 
     }
 

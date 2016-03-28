@@ -10,8 +10,8 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
-import com.fournodes.ud.locationtest.network.TrackApi;
 import com.fournodes.ud.locationtest.network.FenceApi;
+import com.fournodes.ud.locationtest.network.TrackApi;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.Circle;
@@ -23,7 +23,6 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import org.json.JSONArray;
 
 import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.net.URLEncoder;
 import java.util.List;
 
@@ -52,13 +51,14 @@ public class CreateFence implements TrackApiResult, RequestResult {
         this.activity = activity;
         this.center = center;
         this.radius = radius;
-        this.map=map;
-        this.mGeofenceList=mGeofenceList;
+        this.map = map;
+        this.mGeofenceList = mGeofenceList;
         dialog = new Dialog(activity, android.R.style.Theme_DeviceDefault_Light_Dialog_NoActionBar);
         dialog.setContentView(R.layout.dialog_new_fence);
+        db = new Database(activity);
     }
 
-    public void details(){
+    public void details() {
         Button btnCancelFence = (Button) dialog.findViewById(R.id.btnCancelFence);
         Button btnSaveFence = (Button) dialog.findViewById(R.id.btnSaveFence);
         edtTitle = (EditText) dialog.findViewById(R.id.edtTitle);
@@ -69,8 +69,8 @@ public class CreateFence implements TrackApiResult, RequestResult {
         selectDevice = (Spinner) dialog.findViewById(R.id.selectDevice);
 
         trackApi = new TrackApi();
-        trackApi.delegate=this;
-        trackApi.execute("user_id="+SharedPrefs.getUserId(),"user_list");
+        trackApi.delegate = this;
+        trackApi.execute("user_id=" + SharedPrefs.getUserId(), "user_list");
 
         btnCancelFence.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -81,17 +81,12 @@ public class CreateFence implements TrackApiResult, RequestResult {
         btnSaveFence.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (edtTitle.getText().length()>0 && !edtTitle.getText().toString().equals("My Device") && edtDescription.getText().length()>0 && (chkEntry.isChecked() || chkExit.isChecked() || chkRoaming.isChecked())){
-                    if (getFenceId(edtTitle.getText().toString())==-1) {
-                        db = new Database(activity);
-                        Fence fence = createFence(center, radius);
-                        mGeofenceList.add(fence);
-
-                        dialog.dismiss();
-                    }else
-                        Toast.makeText(activity, "You already have a fence called "+edtTitle.getText().toString(), Toast.LENGTH_SHORT).show();
-                }
-                else if (edtTitle.getText().toString().equals("My Device"))
+                if (edtTitle.getText().length() > 0 && !edtTitle.getText().toString().equals("My Device") && edtDescription.getText().length() > 0 && (chkEntry.isChecked() || chkExit.isChecked() || chkRoaming.isChecked())) {
+                    if (getFenceId(edtTitle.getText().toString()) == -1) {
+                        createFence(center, radius);
+                    } else
+                        Toast.makeText(activity, "You already have a fence called " + edtTitle.getText().toString(), Toast.LENGTH_SHORT).show();
+                } else if (edtTitle.getText().toString().equals("My Device"))
                     Toast.makeText(activity, "Title can not be My Device", Toast.LENGTH_SHORT).show();
                 else
                     Toast.makeText(activity, "All fields are required", Toast.LENGTH_SHORT).show();
@@ -100,6 +95,7 @@ public class CreateFence implements TrackApiResult, RequestResult {
         dialog.show();
 
     }
+
     public Fence createFence(LatLng center, int radius) {
         if (radius == 0)
             radius = 1000;
@@ -156,7 +152,9 @@ public class CreateFence implements TrackApiResult, RequestResult {
             FenceApi fenceApi = new FenceApi();
             fenceApi.delegate = this;
             fenceApi.execute(fenceDetails.toString(), "create_fence");
-        }catch (UnsupportedEncodingException e){e.printStackTrace();}
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
         return fence;
 
     }
@@ -176,37 +174,33 @@ public class CreateFence implements TrackApiResult, RequestResult {
     }
 
     @Override
-    public void liveLocationUpdate(String lat, String lng, String track_id) {
-
-    }
+    public void liveLocationUpdate(String lat, String lng, String track_id) {}
 
     @Override
-    public void locationHistory(JSONArray location) {
-
-    }
+    public void locationHistory(JSONArray location) {}
 
     @Override
     public void userList(JSONArray users) {
-        UserAdapter userAdapter = new UserAdapter(activity,null,R.layout.list_item_user, users);
+        UserAdapter userAdapter = new UserAdapter(activity, null, R.layout.list_item_user, users);
         selectDevice.setAdapter(userAdapter);
-
     }
 
     @Override
-    public void success(String result) {
-        if (fence!= null) {
+    public void onSuccess(String result) {
+        if (fence != null) {
             fence.setId(Integer.parseInt(result));
             db.saveFence(fence);
+            mGeofenceList.add(fence);
+            dialog.dismiss();
         }
     }
 
     @Override
-    public void failure() {
-        Toast.makeText(activity, "Fence not created on remote device", Toast.LENGTH_SHORT).show();
-
+    public void onFailure() {
+        Toast.makeText(activity, "Fence not created. Try again", Toast.LENGTH_SHORT).show();
     }
 
-    public int getTransitionType(){
+    public int getTransitionType() {
         // 1 - Entry
         // 2 - Exit
         // 4 - Dwell
@@ -217,7 +211,7 @@ public class CreateFence implements TrackApiResult, RequestResult {
             return 1 | 2;
         else if (chkEntry.isChecked() && chkRoaming.isChecked())
             return 1 | 4;
-        else if(chkExit.isChecked() && chkRoaming.isChecked())
+        else if (chkExit.isChecked() && chkRoaming.isChecked())
             return 2 | 4;
         else if (chkEntry.isChecked())
             return 1;

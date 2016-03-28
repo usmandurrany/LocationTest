@@ -164,7 +164,9 @@ public class Fence {
         this.transitionType = transitionType;
     }
 
-    /**** Only removes the visible circle from the map, does not remove the actual geofence ***/
+    /****
+     * Only removes the visible circle from the map, does not remove the actual geofence
+     ***/
     public void removeFence() {
         centerMarker.remove();
         edgeMarker.remove();

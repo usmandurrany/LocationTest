@@ -4,9 +4,9 @@ import android.app.IntentService;
 import android.content.Intent;
 import android.util.Log;
 
-import com.fournodes.ud.locationtest.network.RegisterApi;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.network.RegisterApi;
 import com.google.android.gms.gcm.GoogleCloudMessaging;
 import com.google.android.gms.iid.InstanceID;
 
@@ -55,7 +55,8 @@ public class GCMRegistrationService extends IntentService {
         }*/
 
     }
-    public void sendToServer(){
+
+    public void sendToServer() {
         new RegisterApi().execute();
     }
 

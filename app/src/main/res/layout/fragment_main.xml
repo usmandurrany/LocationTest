@@ -29,38 +29,40 @@
         android:text="Set"
         android:id="@+id/btnSetUpdateInterval"
         android:layout_centerHorizontal="true" />
-
-    <TextView
+    <Button
+        android:id="@+id/btnShareLogFile"
+        android:text="Share Log File"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:text="Long: "
-        android:id="@+id/txtLong"
-        android:layout_below="@+id/btnSetUpdateServer"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+         />
+    <Button
+        android:id="@+id/btnClearLogFile"
+        android:text="Clear Log File"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
         android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true" />
+ />
+    <ScrollView
+        android:id="@+id/lytScrollLog"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/btnSetUpdateServer"
+        android:layout_above="@id/btnShareLogFile"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:text="Lat: "
-        android:id="@+id/txtLat"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/txtLong"
-        android:layout_alignParentLeft="true" />
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text=""
+            android:id="@+id/txtLog" />
+    </ScrollView>
 
 
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:text="Last Updated: "
-        android:id="@+id/txtLastUpdated"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/txtLat"
-        android:layout_alignParentLeft="true" />
 
     <Button
         style="?android:attr/buttonStyleSmall"
@@ -73,6 +75,7 @@
         android:layout_below="@+id/btnSetUpdateInterval"
         android:layout_alignLeft="@+id/btnSetUpdateInterval"
         android:layout_alignStart="@+id/btnSetUpdateInterval" />
+
     <Button
         style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
@@ -84,6 +87,7 @@
         android:layout_below="@+id/btnSetDisplacement"
         android:layout_alignLeft="@+id/btnSetDisplacement"
         android:layout_alignStart="@+id/btnSetDisplacement" />
+
     <android.support.v7.widget.AppCompatCheckBox
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -97,56 +101,59 @@
         android:layout_alignEnd="@+id/btnFence" />
 
 
-<android.support.design.widget.TextInputLayout
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_alignParentTop="true"
-    android:layout_toLeftOf="@+id/btnSetUpdateInterval"
-    android:layout_toStartOf="@+id/btnSetUpdateInterval"
-    android:layout_alignBottom="@+id/btnSetUpdateInterval" >
-    <android.support.design.widget.TextInputEditText
-        style="?android:attr/textAppearanceSmall"
-
+    <android.support.design.widget.TextInputLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:inputType="number"
-        android:ems="10"
-        android:hint="Update Interval"
-        android:id="@+id/edtUpdateInterval"
-        />
-</android.support.design.widget.TextInputLayout>
+        android:layout_alignParentTop="true"
+        android:layout_toLeftOf="@+id/btnSetUpdateInterval"
+        android:layout_toStartOf="@+id/btnSetUpdateInterval"
+        android:layout_alignBottom="@+id/btnSetUpdateInterval">
+
+        <android.support.design.widget.TextInputEditText
+            style="?android:attr/textAppearanceSmall"
+
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:ems="10"
+            android:hint="Update Interval"
+            android:id="@+id/edtUpdateInterval" />
+    </android.support.design.widget.TextInputLayout>
+
     <android.support.design.widget.TextInputLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_toLeftOf="@+id/btnSetDisplacement"
         android:layout_toStartOf="@+id/btnSetDisplacement"
-        android:layout_alignBottom="@+id/btnSetDisplacement" >
-    <android.support.design.widget.TextInputEditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:inputType="number"
-        android:ems="10"
-        android:id="@+id/edtDisplacement"
-        android:hint="Displacement"
-        style="?android:attr/textAppearanceSmall"
-      />
+        android:layout_alignBottom="@+id/btnSetDisplacement">
+
+        <android.support.design.widget.TextInputEditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:ems="10"
+            android:id="@+id/edtDisplacement"
+            android:hint="Displacement"
+            style="?android:attr/textAppearanceSmall" />
     </android.support.design.widget.TextInputLayout>
+
     <android.support.design.widget.TextInputLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_toLeftOf="@+id/btnSetUpdateServer"
         android:layout_toStartOf="@+id/btnSetUpdateServer"
-        android:layout_alignBottom="@+id/btnSetUpdateServer" >
-    <android.support.design.widget.TextInputEditText
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:inputType="number"
-        android:ems="10"
-        android:id="@+id/edtUpdateServer"
-        android:hint="Server Update Interval"
-        style="?android:attr/textAppearanceSmall"
-       />
-</android.support.design.widget.TextInputLayout>
+        android:layout_alignBottom="@+id/btnSetUpdateServer">
+
+        <android.support.design.widget.TextInputEditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:ems="10"
+            android:id="@+id/edtUpdateServer"
+            android:hint="Server Update Interval"
+            style="?android:attr/textAppearanceSmall" />
+    </android.support.design.widget.TextInputLayout>
+
     <android.support.v7.widget.AppCompatCheckBox
         android:textSize="12sp"
         android:layout_width="wrap_content"

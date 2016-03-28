@@ -17,11 +17,11 @@ public class CustomFrameLayout extends FrameLayout {
     public boolean dispatchTouchEvent(MotionEvent ev) {
         switch (ev.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                ((MainActivity) getContext()).delegate.mapDragStart();
+                ((MainActivity) getContext()).mainDelegate.mapDragStart();
                 break;
 
             case MotionEvent.ACTION_UP:
-                ((MainActivity) getContext()).delegate.mapDragStop();
+                ((MainActivity) getContext()).mainDelegate.mapDragStop();
                 break;
         }
 

@@ -6,8 +6,9 @@ import android.os.AsyncTask;
 import android.util.Log;
 
 import com.fournodes.ud.locationtest.Database;
-import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.FileLogger;
 import com.fournodes.ud.locationtest.RequestResult;
+import com.fournodes.ud.locationtest.SharedPrefs;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -25,8 +26,8 @@ import java.net.URL;
 /**
  * Created by Usman on 18/2/2016.
  */
-public class LocationUpdateApi extends AsyncTask<Long,String,String> {
-    private static final String TAG= "Api Handler";
+public class LocationUpdateApi extends AsyncTask<Long, String, String> {
+    private static final String TAG = "Network";
     public RequestResult delegate;
     private long time;
     private Database db;
@@ -42,7 +43,7 @@ public class LocationUpdateApi extends AsyncTask<Long,String,String> {
         time = longs[0]; // Time sent by LocationService.updServerAfterInterval()
         db = new Database(context);
         payload = db.getLocEntries(time);
-        if (payload.length()>0) {
+        if (payload.length() > 0) {
             TrafficStats.setThreadStatsTag(0xF00D);
 
             try {
@@ -62,7 +63,7 @@ public class LocationUpdateApi extends AsyncTask<Long,String,String> {
                 // Send post request
                 con.setDoOutput(true);
                 DataOutputStream wr = new DataOutputStream(con.getOutputStream());
-                wr.writeBytes(postParams+"&user_id="+SharedPrefs.getUserId());
+                wr.writeBytes(postParams + "&user_id=" + SharedPrefs.getUserId());
                 wr.flush();
                 wr.close();
 
@@ -78,34 +79,41 @@ public class LocationUpdateApi extends AsyncTask<Long,String,String> {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
-                Log.e(TAG,"Network Error");
-                delegate.failure();
-            }
-            finally {
+                FileLogger.e(TAG, "Result: Network Error");
+                delegate.onFailure();
+            } finally {
                 TrafficStats.clearThreadStatsTag();
 
             }
-        }else
-             this.cancel(true);
+        } else
+            this.cancel(true);
 
-    //Log.e("Server Resp",result);
-    return null;
+        //Log.e("Server Resp",result);
+        return null;
     }
 
     @Override
     protected void onPostExecute(String result) {
-        if (result != null){
-            try{
+        if (result != null) {
+            try {
                 JSONObject response = new JSONObject(result);
-                if (response.getString("result").equals("1")){
+                FileLogger.e(TAG, "Command: location_update");
+                FileLogger.e(TAG, "Data: Row Count: "+String.valueOf(payload.length()));
+                if (response.getString("result").equals("1")) {
                     db.removeLocEntries(time); //Remove from db after successfully sending to server
-                    delegate.success(null);
-                }else
-                    delegate.failure();
+                    delegate.onSuccess(null);
+                    FileLogger.e(TAG, "Result: Success");
 
-            }catch (JSONException e){e.printStackTrace();}
-        }else {
-            Log.e(TAG,"Result is null");
+                } else {
+                    delegate.onFailure();
+                    FileLogger.e(TAG, "Result: Failure");
+
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        } else {
+            Log.e(TAG, "Result is null");
         }
         super.onPostExecute(result);
     }

@@ -3,8 +3,8 @@ package com.fournodes.ud.locationtest.network;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.fournodes.ud.locationtest.TrackApiResult;
 import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.TrackApiResult;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -32,7 +32,7 @@ public class TrackApi extends AsyncTask<String, String, String> {
     protected String doInBackground(String... params) {
         type = params[1];
         try {
-            String url = SharedPrefs.SERVER_ADDRESS + "incoming.php?type="+type;
+            String url = SharedPrefs.SERVER_ADDRESS + "incoming.php?type=" + type;
             URL obj = new URL(url);
             HttpURLConnection con = (HttpURLConnection) obj.openConnection();
             con.setConnectTimeout(15000);
@@ -62,8 +62,8 @@ public class TrackApi extends AsyncTask<String, String, String> {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-            Log.e(TAG,"Network Error");
-            //delegate.failure();
+            Log.e(TAG, "Network Error");
+            //delegate.onFailure();
         }
 
         return null;
@@ -72,29 +72,29 @@ public class TrackApi extends AsyncTask<String, String, String> {
     @Override
     protected void onPostExecute(String s) {
         try {
-        if (s != null){
-            Log.e(TAG,s);
-            if (type != null){
-                switch (type){
-                    case "track_user":
-                        if (delegate!= null) {
-                            JSONObject result = new JSONObject(s);
-                            delegate.liveLocationUpdate(result.getString("latitude"),result.getString("longitude"),result.getString("track_id"));
-                        }
-                        break;
-                    case "location_history":
-                        if (delegate!= null) {
-                            delegate.locationHistory(new JSONArray(s));
-                        }
-                        break;
-                    case "user_list":
-                        if (delegate!= null) {
-                            delegate.userList(new JSONArray(s));
-                        }
-                        break;
+            if (s != null) {
+                Log.e(TAG, s);
+                if (type != null) {
+                    switch (type) {
+                        case "track_user":
+                            if (delegate != null) {
+                                JSONObject result = new JSONObject(s);
+                                delegate.liveLocationUpdate(result.getString("latitude"), result.getString("longitude"), result.getString("track_id"));
+                            }
+                            break;
+                        case "location_history":
+                            if (delegate != null) {
+                                delegate.locationHistory(new JSONArray(s));
+                            }
+                            break;
+                        case "user_list":
+                            if (delegate != null) {
+                                delegate.userList(new JSONArray(s));
+                            }
+                            break;
+                    }
                 }
             }
-        }
         } catch (JSONException e) {
             e.printStackTrace();
         }

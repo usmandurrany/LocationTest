@@ -17,8 +17,9 @@ import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
 import android.widget.Toast;
 
-import com.fournodes.ud.locationtest.network.TrackApi;
 import com.fournodes.ud.locationtest.network.FenceApi;
+import com.fournodes.ud.locationtest.network.NotificationApi;
+import com.fournodes.ud.locationtest.network.TrackApi;
 import com.fournodes.ud.locationtest.service.LocationService;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
@@ -44,15 +45,16 @@ import org.json.JSONException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MapFragment extends Fragment implements OnMapReadyCallback, ResultCallback, FragmentInterface, View.OnClickListener, RequestResult {
-
+public class MapFragment extends Fragment implements OnMapReadyCallback, ResultCallback, MapFragmentInterface, View.OnClickListener, RequestResult {
     MapView mMapView;
     private GoogleMap map;
     private FloatingActionButton fabAddFence;
     private FloatingActionMenu fabMenu;
     private FloatingActionButton fabShowFences;
     private FloatingActionButton fabMyLoc;
+    private FloatingActionButton fabStopTrack;
     private FloatingActionButton fabTrackDevice;
+    private FloatingActionButton fabDeleteHistory;
     private Marker markerSelected;
     private Marker currPos;
 
@@ -60,13 +62,33 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     private List<Fence> mGeofenceList;
     private Database db;
 
+    private Handler updateLocation;
+    private Runnable update;
+    private Polyline polyline;
 
-    public MapFragment() {}
 
+    public MapFragment() {
+    }
+
+    public void onSaveInstanceState(Bundle outState) {
+        //This MUST be done before saving any of your own or your base class's variables
+        final Bundle mapViewSaveState = new Bundle(outState);
+        mMapView.onSaveInstanceState(mapViewSaveState);
+        outState.putBundle("mapViewSaveState", mapViewSaveState);
+        //Add any other variables here.
+        super.onSaveInstanceState(outState);
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+
+
+        if (savedInstanceState != null) {
+            Bundle mapViewSavedInstanceState = savedInstanceState.getBundle("mapViewSaveState");
+            mMapView.onCreate(mapViewSavedInstanceState);
+        }
+
         View v = inflater.inflate(R.layout.fragment_map, container, false);
         new SharedPrefs(getContext()).initialize();
         db = new Database(getContext());
@@ -77,11 +99,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
         fabMyLoc = (FloatingActionButton) v.findViewById(R.id.fabMyLoc);
         fabTrackDevice = (FloatingActionButton) v.findViewById(R.id.fabTrackDevice);
         fabAddFence = (FloatingActionButton) v.findViewById(R.id.fabAddFence);
+        fabStopTrack = (FloatingActionButton) v.findViewById(R.id.fabStopTrack);
+        fabDeleteHistory = (FloatingActionButton) v.findViewById(R.id.fabDeleteHistory);
 
         fabMyLoc.setOnClickListener(this);
         fabShowFences.setOnClickListener(this);
         fabAddFence.setOnClickListener(this);
         fabTrackDevice.setOnClickListener(this);
+        fabStopTrack.setOnClickListener(this);
+        fabDeleteHistory.setOnClickListener(this);
 
         mMapView = (MapView) v.findViewById(R.id.mapView);
         mMapView.getMapAsync(this);
@@ -96,7 +122,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        ((MainActivity) getActivity()).delegate = this;
+        ((MainActivity) getActivity()).mapDelegate = this;
     }
 
 
@@ -107,7 +133,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     @Override
     public void onMapReady(final GoogleMap googleMap) {
         map = googleMap;
-        mGeofenceList = db.getFences(map);
+        mGeofenceList = db.drawOffDeviceFences(map);
         map.getUiSettings().setMyLocationButtonEnabled(false);
         map.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
             @Override
@@ -159,23 +185,23 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                 db.updateFence(mGeofenceList.get(dragMarkerID));
 
                 StringBuilder fenceDetails = new StringBuilder();
-                      fenceDetails
-                            .append("title=").append( mGeofenceList.get(dragMarkerID).getTitle())
-                            .append("&description=").append(mGeofenceList.get(dragMarkerID).getDescription())
-                            .append("&center_latitude=").append(center.latitude)
-                            .append("&center_longitude=").append(center.longitude)
-                            .append("&radius=").append(radius)
-                            .append("&edge_latitude=").append(toRadiusLatLng(center, radius).latitude)
-                            .append("&edge_longitude=").append(toRadiusLatLng(center, radius).longitude)
-                            .append("&transition_type=").append(mGeofenceList.get(dragMarkerID).getTransitionType())
-                            .append("&user_id=").append(SharedPrefs.getUserId())
-                            .append("&create_on=").append(mGeofenceList.get(dragMarkerID).getCreate_on())
-                            .append("&fence_id=").append(mGeofenceList.get(dragMarkerID).getId());
+                fenceDetails
+                        .append("title=").append(mGeofenceList.get(dragMarkerID).getTitle())
+                        .append("&description=").append(mGeofenceList.get(dragMarkerID).getDescription())
+                        .append("&center_latitude=").append(center.latitude)
+                        .append("&center_longitude=").append(center.longitude)
+                        .append("&radius=").append(radius)
+                        .append("&edge_latitude=").append(toRadiusLatLng(center, radius).latitude)
+                        .append("&edge_longitude=").append(toRadiusLatLng(center, radius).longitude)
+                        .append("&transition_type=").append(mGeofenceList.get(dragMarkerID).getTransitionType())
+                        .append("&user_id=").append(SharedPrefs.getUserId())
+                        .append("&create_on=").append(mGeofenceList.get(dragMarkerID).getCreate_on())
+                        .append("&fence_id=").append(mGeofenceList.get(dragMarkerID).getId());
 
 
                 FenceApi fenceApi = new FenceApi();
-                fenceApi.delegate=MapFragment.this;
-                fenceApi.execute(fenceDetails.toString(),"edit_fence");
+                fenceApi.delegate = MapFragment.this;
+                fenceApi.execute(fenceDetails.toString(), "edit_fence");
 
 
             }
@@ -192,47 +218,44 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     }
 
     @Override
-    public void mapDragStart() {
-        markerSelected = null;
-    }
-
-    @Override
-    public void mapDragStop() {}
-
-    @Override
     public void moveToFence(LatLng fence) {
         moveToLocation(fence, 15);
     }
 
     @Override
-    public void viewLiveLocation(LatLng coordinates,String track_id) {
+    public void viewLiveLocation(LatLng coordinates, final String track_id) {
         if (map != null) {
-            //map.clear();
+            if (updateLocation != null && update != null){
+                updateLocation.removeCallbacks(update);
+                updateLocation = null;
+            }
             if (currPos != null) {
                 animateMarker(currPos, coordinates, false);
             } else {
-                currPos = map.addMarker(new MarkerOptions().position(coordinates));
+                currPos = map.addMarker(new MarkerOptions()
+                        .position(coordinates)
+                        .title("Tracking Id: " + track_id)
+                        .snippet("Current Position"));
             }
             moveToLocation(coordinates, 15);
-            Handler updateLocation = new Handler();
-            Runnable update = new Runnable() {
+            updateLocation = new Handler();
+            update = new Runnable() {
                 @Override
                 public void run() {
                     TrackApi trackApi = new TrackApi();
                     trackApi.delegate = ((MainActivity) getActivity());
-                    trackApi.execute("user_id="+SharedPrefs.getUserId()+"&track_id=" ,"track_user");
+                    trackApi.execute("user_id=" + SharedPrefs.getUserId() + "&track_id=" + track_id, "track_user");
                 }
             };
-            updateLocation.postDelayed(update, 10000);
+            updateLocation.postDelayed(update, 30000);
         }
     }
 
     @Override
     public void viewLocationHistory(JSONArray location) {
         if (map != null) {
-            map.clear();
+            //map.clear();
             try {
-                Log.e("asdas","asdas");
                 PolylineOptions lineOptions = new PolylineOptions();
                 for (int i = 0; i < location.length(); i++) {
 
@@ -240,25 +263,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                             Double.parseDouble(location.getJSONObject(i).getString("longitude"))));
 
                 }
-                Polyline polyline = map.addPolyline(lineOptions);
+                polyline = map.addPolyline(lineOptions);
                 moveToLocation(new LatLng(Double.parseDouble(location.getJSONObject(0).getString("latitude")),
                         Double.parseDouble(location.getJSONObject(0).getString("longitude"))), 15);
 
             } catch (JSONException e) {
                 e.printStackTrace();
-            }catch (NullPointerException e){e.printStackTrace();}
+            } catch (NullPointerException e) {
+                e.printStackTrace();
+            }
         }
-    }
-
-    @Override
-    public void serviceStarted() {}
-
-    @Override
-    public void serviceStopped() {}
-
-    @Override
-    public void locationUpdated(String lat, String lng, String time) {
-        moveToLocation(new LatLng(Double.parseDouble(lat),Double.parseDouble(lng)),15);
     }
 
     private static LatLng toRadiusLatLng(LatLng center, double radius) {
@@ -278,7 +292,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     @Override
     public void onResume() {
         super.onResume();
-        ((MainActivity) getActivity()).delegate = this;
+        ((MainActivity) getActivity()).mapDelegate = this;
         mMapView.onResume();
     }
 
@@ -355,7 +369,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                     CreateFence newFenceDialog = new CreateFence(
                             getActivity(),
                             map.getCameraPosition().target,
-                            300,
+                            150,
                             mGeofenceList, map);
                     newFenceDialog.details();
                 } else
@@ -373,20 +387,41 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                 fenceListDialog.show();
                 break;
             case R.id.fabTrackDevice:
-                DeviceListDialog deviceListDialog = new DeviceListDialog(getActivity());
-                deviceListDialog.show();
+                UserListDialog userListDialog = new UserListDialog(getActivity(), this);
+                userListDialog.show();
+                break;
+            case R.id.fabStopTrack:
+                fabStopTrack.setVisibility(View.GONE);
+                if (updateLocation != null && update != null)
+                    updateLocation.removeCallbacks(update);
+
+                break;
+            case R.id.fabDeleteHistory:
+                fabDeleteHistory.setVisibility(View.GONE);
+                if (polyline != null)
+                    polyline.remove();
+
+                NotificationApi notificationApi = new NotificationApi();
+                notificationApi.execute("delete_history","user_id="+SharedPrefs.getUserId());
                 break;
         }
         fabMenu.close(true);
     }
 
     @Override
-    public void success(String result) {
-
-    }
+    public void onSuccess(String result) {}
 
     @Override
-    public void failure() {
+    public void onFailure() {}
 
+    public void showFabStopTrack() {
+        fabStopTrack.setVisibility(View.VISIBLE);
+        if (polyline != null)
+            polyline.remove();
+    }
+    public void showFabDeleteHistory() {
+       fabDeleteHistory.setVisibility(View.VISIBLE);
+        if (updateLocation != null && update != null)
+            updateLocation.removeCallbacks(update);
     }
 }

@@ -4,8 +4,8 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.util.Log;
 
-import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.RequestResult;
+import com.fournodes.ud.locationtest.SharedPrefs;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -23,13 +23,14 @@ import java.net.URLEncoder;
 /**
  * Created by Usman on 16/3/2016.
  */
-public class RegisterApi extends AsyncTask<String, String,String> {
+public class RegisterApi extends AsyncTask<String, String, String> {
     public static final String TAG = "Insert New Device";
     public RequestResult delegate;
+
     @Override
     protected String doInBackground(String... params) {
         try {
-            String url = SharedPrefs.SERVER_ADDRESS + "register.php?device="+ URLEncoder.encode(Build.MODEL,"UTF-8")+"&gcm_id="+SharedPrefs.getDeviceGcmId();
+            String url = SharedPrefs.SERVER_ADDRESS + "register.php?gcm_id=" + SharedPrefs.getDeviceGcmId();
             URL obj = new URL(url);
             HttpURLConnection con = (HttpURLConnection) obj.openConnection();
             con.setConnectTimeout(15000);
@@ -60,7 +61,7 @@ public class RegisterApi extends AsyncTask<String, String,String> {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-            Log.e(TAG,"Network Error");
+            Log.e(TAG, "Network Error");
         }
         return null;
     }
@@ -68,18 +69,19 @@ public class RegisterApi extends AsyncTask<String, String,String> {
     @Override
     protected void onPostExecute(String s) {
         try {
-            if (s != null){
-                Log.e(TAG,s);
+            if (s != null) {
+                Log.e(TAG, s);
                 JSONObject result = new JSONObject(s);
                 SharedPrefs.setUserId(result.getString("user_id"));
-                if (delegate!=null)
-                    delegate.success(null);
-                }
+                if (delegate != null)
+                    delegate.onSuccess(null);
+            }
 
         } catch (JSONException e) {
             e.printStackTrace();
         }
     }
+
     private static String convertStreamToString(InputStream is) {
     /*
      * To convert the InputStream to String we use the BufferedReader.readLine()

@@ -7,6 +7,7 @@ import android.support.design.widget.TabLayout;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.view.ViewPager;
+import android.util.Log;
 
 import com.fournodes.ud.locationtest.gcm.GCMInitiate;
 import com.fournodes.ud.locationtest.service.LocationService;
@@ -18,7 +19,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends FragmentActivity implements TrackApiResult, ServiceMessage {
-    public FragmentInterface delegate;
+    public MainFragmentInterface mainDelegate;
+    public MapFragmentInterface mapDelegate;
+
     private static final String TAG = "Main Activity";
 
 
@@ -36,19 +39,23 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
         new SharedPrefs(this).initialize();
         if (SharedPrefs.getUserId() == null)
             new UserRegisterDialog(this).show();
-        startService(new Intent(this,LocationService.class));
+        else
+            Log.e("User Id: ", SharedPrefs.getUserId());
+
+
+        startService(new Intent(this, LocationService.class));
         handler = new Handler();
         check = new Runnable() {
             @Override
             public void run() {
-                if (LocationService.isRunning){
+                if (LocationService.isRunning && LocationService.getServiceObject().delegate == null) {
                     locationService = LocationService.getServiceObject();
                     locationService.delegate = MainActivity.this;
-                }else
-                    handler.postDelayed(check,2000);
+                } else
+                    handler.postDelayed(check, 2000);
             }
         };
-        handler.postDelayed(check,2000);
+        handler.postDelayed(check, 2000);
 
         if (SharedPrefs.getDeviceGcmId() == null && SharedPrefs.getUserId() == null) {
             new GCMInitiate(this).run();
@@ -98,12 +105,14 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
 
 
     @Override
-    public void liveLocationUpdate(String lat, String lng, String track_id) {
+    public void liveLocationUpdate(String lat, String lng, final String track_id) {
         if (fragmentAdapter.getItem(viewPager.getCurrentItem()) instanceof MapFragment) {
             try {
-                if (delegate != null)
-                    delegate.viewLiveLocation(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)), track_id);
-            }catch (NumberFormatException e){e.printStackTrace();}
+                if (mapDelegate != null)
+                    mapDelegate.viewLiveLocation(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)), track_id);
+            } catch (NumberFormatException e) {
+                e.printStackTrace();
+            }
         }
 
     }
@@ -111,8 +120,8 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
     @Override
     public void locationHistory(JSONArray location) {
         if (fragmentAdapter.getItem(viewPager.getCurrentItem()) instanceof MapFragment) {
-            if (delegate != null)
-                delegate.viewLocationHistory(location);
+            if (mapDelegate != null)
+                mapDelegate.viewLocationHistory(location);
         }
     }
 
@@ -123,21 +132,33 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
 
     @Override
     public void serviceStarted() {
-        if (delegate != null)
-            delegate.serviceStarted();
-
+        if (mainDelegate != null)
+            mainDelegate.serviceStarted();
     }
 
     @Override
     public void serviceStopped() {
-        if (delegate != null)
-            delegate.serviceStopped();
+        if (mainDelegate != null)
+            mainDelegate.serviceStopped();
+    }
 
+    @Override
+    public void fenceTriggered(String data) {
+        if (mainDelegate != null)
+            mainDelegate.fenceTriggered(data);
     }
 
     @Override
     public void locationUpdated(String lat, String lng, String time) {
-        if (delegate != null)
-            delegate.locationUpdated(lat,lng,time);
+        if (mainDelegate != null)
+            mainDelegate.locationUpdated(lat, lng, time);
     }
+
+    @Override
+    public void updateServer(String result) {
+        if (mainDelegate != null)
+            mainDelegate.updateServer(result);
+    }
+
+
 }

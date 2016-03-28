@@ -1,12 +1,11 @@
 package com.fournodes.ud.locationtest.network;
 
 import android.os.AsyncTask;
-import android.os.Build;
 import android.util.Log;
 
+import com.fournodes.ud.locationtest.FileLogger;
 import com.fournodes.ud.locationtest.SharedPrefs;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -18,17 +17,22 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLEncoder;
 
 /**
  * Created by Usman on 16/3/2016.
  */
-public class NotificationApi extends AsyncTask<String, String,String> {
-    public static final String TAG = "Notify External Device";
+public class NotificationApi extends AsyncTask<String, String, String> {
+    private String postData;
+    private String getData;
+    
+    public static final String TAG = "Network";
+
     @Override
     protected String doInBackground(String... params) {
         try {
-            String url = SharedPrefs.SERVER_ADDRESS + "incoming.php?type="+params[0];
+            getData = params[0];
+            postData = params[1];
+            String url = SharedPrefs.SERVER_ADDRESS + "incoming.php?type=" + params[0];
             URL obj = new URL(url);
             HttpURLConnection con = (HttpURLConnection) obj.openConnection();
             con.setConnectTimeout(15000);
@@ -59,7 +63,7 @@ public class NotificationApi extends AsyncTask<String, String,String> {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-            Log.e(TAG,"Network Error");
+            FileLogger.e(TAG, "Result: Network Error");
         }
         return null;
     }
@@ -67,17 +71,24 @@ public class NotificationApi extends AsyncTask<String, String,String> {
     @Override
     protected void onPostExecute(String s) {
         try {
-            if (s != null){
-                Log.e(TAG,s);
+            if (s != null) {
+                Log.e(TAG, s);
                 JSONObject result = new JSONObject(s);
-                Log.e("Success",result.getString("success"));
-                Log.e("Failure",result.getString("failure"));
-            }
+                FileLogger.e(TAG, "Command: " + getData);
+                FileLogger.e(TAG, "Data: " + postData);
+                if (result.getString("success").equals("1"))
+                    FileLogger.e(TAG, "Result: Success");
+                else
+                    FileLogger.e(TAG, "Result: Failure");
+            } else
+                new NotificationApi().execute(getData, postData);
+
 
         } catch (JSONException e) {
             e.printStackTrace();
         }
     }
+
     private static String convertStreamToString(InputStream is) {
     /*
      * To convert the InputStream to String we use the BufferedReader.readLine()
