@@ -95,6 +95,10 @@ public class UserAdapter extends BaseAdapter {
         return convertView;
     }
 
+    public View getMultiSelectionView(){
+        return  null;
+    }
+
     @Override
     public long getItemId(int position) {
         return userList.get(position).id;
@@ -109,6 +113,8 @@ public class UserAdapter extends BaseAdapter {
     public int getCount() {
         return userList.size();
     }
+
+
 
     public static class viewHolder {
         TextView txtName;

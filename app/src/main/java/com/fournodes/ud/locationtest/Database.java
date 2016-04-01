@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Color;
 import android.location.Location;
+import android.os.Bundle;
 import android.util.Log;
 
 import com.google.android.gms.common.api.Result;
@@ -31,7 +32,7 @@ public class Database extends SQLiteOpenHelper {
     private static final String TAG = "Database";
     private Context context;
     public static final String DATABASE_NAME = "LocationTest";
-    public static final int DATABASE_VERSION = 7;
+    public static final int DATABASE_VERSION = 8;
 
     public static final String COLUMN_ID = "id";
 
@@ -55,6 +56,11 @@ public class Database extends SQLiteOpenHelper {
     public static final String COLUMN_DISPLACEMENT = "displacement";
     public static final String COLUMN_TIME = "time";
 
+    public static final String TABLE_GEOFENCE_EVENT = "geofence_event";
+    public static final String COLUMN_REQUEST_ID = "request_id";
+    public static final String COLUMN_IS_VERIFIED = "is_verified";
+    public static final String COLUMN_RETRY_COUNT = "retry_count";
+
 
     // Database creation sql statement
     private static final String SQL_CREATE_TABLE_GEOFENCE = "create table if not exists "
@@ -73,7 +79,7 @@ public class Database extends SQLiteOpenHelper {
             + COLUMN_CREATE_ON + " text not null,"
             + COLUMN_TRANSITION_TYPE + " integer not null);";
 
-    private static final String SQL_CREATE_TABLE_LOC = "create table if not exists "
+    private static final String SQL_CREATE_TABLE_LOCATION = "create table if not exists "
             + TABLE_LOCATION + "("
             + COLUMN_ID + " integer primary key autoincrement, "
             + COLUMN_LOC_LAT + " double not null, "
@@ -81,6 +87,14 @@ public class Database extends SQLiteOpenHelper {
             + COLUMN_DISPLACEMENT + " float not null,"
             + COLUMN_TIME + " bigint not null);";
 
+
+    private static final String SQL_CREATE_TABLE_GEOFENCE_EVENT = "create table if not exists "
+            + TABLE_GEOFENCE_EVENT + "("
+            + COLUMN_ID + " integer primary key autoincrement, "
+            + COLUMN_REQUEST_ID + " integer not null, "
+            + COLUMN_TRANSITION_TYPE + " integer not null, "
+            + COLUMN_IS_VERIFIED + " integer not null, "
+            + COLUMN_RETRY_COUNT + " integer not null);";
 
     public Database(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -91,7 +105,8 @@ public class Database extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase database) {
 
         database.execSQL(SQL_CREATE_TABLE_GEOFENCE);
-        database.execSQL(SQL_CREATE_TABLE_LOC);
+        database.execSQL(SQL_CREATE_TABLE_LOCATION);
+        database.execSQL(SQL_CREATE_TABLE_GEOFENCE_EVENT);
     }
 
     @Override
@@ -123,6 +138,8 @@ public class Database extends SQLiteOpenHelper {
     }
 
     public void registerOnDeviceFences() {
+        FileLogger.e(TAG, "-- Begin Fences Recreate --");
+
         SQLiteDatabase db = this.getWritableDatabase();
         GeofenceWrapper geofenceWrapper = new GeofenceWrapper(context);
 
@@ -147,23 +164,23 @@ public class Database extends SQLiteOpenHelper {
             fence.setTransitionType(cursor.getInt(cursor.getColumnIndex(COLUMN_TRANSITION_TYPE)));
 
 
-
             geofenceWrapper.create(fence, new ResultCallback() {
                 @Override
                 public void onResult(Result result) {
-                    FileLogger.e(TAG,"Fence: " + String.valueOf(id));
-                    FileLogger.e(TAG,"Title: " + title);
-                    FileLogger.e(TAG,"Action: Register after reboot");
+                    FileLogger.e(TAG, "Fence: " + String.valueOf(id));
+                    FileLogger.e(TAG, "Title: " + title);
+                    FileLogger.e(TAG, "Action: Register after reboot");
 
-                    if (result.getStatus().isSuccess()){
-                        FileLogger.e(TAG,"Result: Success");
-                    }else {
-                        FileLogger.e(TAG,"Error: "+ result.getStatus().getStatusCode());
+                    if (result.getStatus().isSuccess()) {
+                        FileLogger.e(TAG, "Result: Success");
+                    } else {
+                        FileLogger.e(TAG, "Error: " + result.getStatus().getStatusCode());
                         FileLogger.e(TAG, "Result: Failure");
                     }
                 }
             });
         }
+        FileLogger.e(TAG, "-- End Fences Recreate --");
 
         cursor.close();
         db.close();
@@ -200,29 +217,29 @@ public class Database extends SQLiteOpenHelper {
             fence.setCreate_on(cursor.getString(cursor.getColumnIndex(COLUMN_CREATE_ON)));
             fence.setTransitionType(transition);
 
-                fence.setCenterMarker(
-                        map.addMarker(new MarkerOptions()
-                                .position(center)
-                                .snippet(fence.getDescription())
-                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-                                .title(fence.getTitle())));
+            fence.setCenterMarker(
+                    map.addMarker(new MarkerOptions()
+                            .position(center)
+                            .snippet(fence.getDescription())
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                            .title(fence.getTitle())));
 
-                fence.setEdgeMarker(
-                        map.addMarker(new MarkerOptions()
-                                .position(end)
-                                .draggable(true)
-                                .alpha(0.4f)
-                                .title(fence.getTitle())));
+            fence.setEdgeMarker(
+                    map.addMarker(new MarkerOptions()
+                            .position(end)
+                            .draggable(true)
+                            .alpha(0.4f)
+                            .title(fence.getTitle())));
 
-                fence.setVisibleArea(map.addCircle(new CircleOptions()
-                        .center(center)
-                        .radius(radius)
-                        .fillColor(0)
-                        .strokeColor(Color.parseColor("#000000"))
-                        .strokeWidth(3f)));
+            fence.setVisibleArea(map.addCircle(new CircleOptions()
+                    .center(center)
+                    .radius(radius)
+                    .fillColor(0)
+                    .strokeColor(Color.parseColor("#000000"))
+                    .strokeWidth(3f)));
 
-                mFenceList.add(fence);
-            }
+            mFenceList.add(fence);
+        }
 
         cursor.close();
         db.close();
@@ -258,7 +275,6 @@ public class Database extends SQLiteOpenHelper {
         db.close();
         return fence;
     }
-
 
 
     public boolean removeFenceFromDatabase(int id) {
@@ -331,8 +347,7 @@ public class Database extends SQLiteOpenHelper {
             cursor.close();
             db.close();
             return count;
-        }
-        else {
+        } else {
             db.close();
             return -1; //Error
         }
@@ -346,5 +361,89 @@ public class Database extends SQLiteOpenHelper {
         values.put(COLUMN_END_LNG, (fence.getEdgeMarker() != null ? fence.getEdgeMarker().getPosition().longitude : fence.getEdge_lng()));
         db.update(TABLE_GEOFENCE, values, COLUMN_SERVER_FENCE_ID + "=?", new String[]{String.valueOf(fence.getId())});
         db.close();
+    }
+
+    public void savePendingEvent(GeofenceEvent event) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_REQUEST_ID, event.requestId);
+        values.put(COLUMN_TRANSITION_TYPE, event.transitionType);
+        values.put(COLUMN_IS_VERIFIED, event.isVerified);
+        values.put(COLUMN_RETRY_COUNT, event.retryCount);
+        db.insert(TABLE_GEOFENCE_EVENT, null, values);
+        db.close();
+    }
+
+    public List<GeofenceEvent> getAllPendingEvents() {
+        SQLiteDatabase db = getWritableDatabase();
+        String selection = COLUMN_IS_VERIFIED + " = " + 0;
+        Cursor cursor = db.query(TABLE_GEOFENCE_EVENT, null, selection, null, null, null, null);
+        List<GeofenceEvent> pendingEvents = new ArrayList<>();
+        while (cursor.moveToNext()) {
+            GeofenceEvent event = new GeofenceEvent();
+            event.id = cursor.getInt(cursor.getColumnIndex(COLUMN_ID));
+            event.requestId = cursor.getInt(cursor.getColumnIndex(COLUMN_REQUEST_ID));
+            event.transitionType = cursor.getInt(cursor.getColumnIndex(COLUMN_TRANSITION_TYPE));
+            event.isVerified =  cursor.getInt(cursor.getColumnIndex(COLUMN_IS_VERIFIED));
+            event.retryCount = cursor.getInt(cursor.getColumnIndex(COLUMN_RETRY_COUNT));
+            pendingEvents.add(event);
+        }
+        cursor.close();
+        db.close();
+        return pendingEvents;
+    }
+    public GeofenceEvent getLastVerifiedEvent(int requestId){
+        SQLiteDatabase db = this.getWritableDatabase();
+        String selection = COLUMN_REQUEST_ID + " = " + requestId
+                + " AND " + COLUMN_IS_VERIFIED + " = " + 1;
+        GeofenceEvent event = new GeofenceEvent();
+        Cursor cursor = db.query(TABLE_GEOFENCE_EVENT, null, selection, null, null, null, COLUMN_ID + " DESC","1");
+        while (cursor.moveToNext()){
+            event.id = cursor.getInt(cursor.getColumnIndex(COLUMN_ID));
+            event.requestId = cursor.getInt(cursor.getColumnIndex(COLUMN_REQUEST_ID));
+            event.transitionType = cursor.getInt(cursor.getColumnIndex(COLUMN_TRANSITION_TYPE));
+            event.isVerified =  cursor.getInt(cursor.getColumnIndex(COLUMN_IS_VERIFIED));
+            event.retryCount = cursor.getInt(cursor.getColumnIndex(COLUMN_RETRY_COUNT));
+        }
+        cursor.close();
+        db.close();
+        return event;
+    }
+
+    public GeofenceEvent getLastPendingEvent(int requestId){
+        SQLiteDatabase db = this.getWritableDatabase();
+        String selection = COLUMN_REQUEST_ID + " = " + requestId
+                + " AND " + COLUMN_IS_VERIFIED + " = " + 0;
+        GeofenceEvent event = new GeofenceEvent();
+        Cursor cursor = db.query(TABLE_GEOFENCE_EVENT, null, selection, null, null, null, COLUMN_ID + " DESC","1");
+        while (cursor.moveToNext()){
+            event.id = cursor.getInt(cursor.getColumnIndex(COLUMN_ID));
+            event.requestId = cursor.getInt(cursor.getColumnIndex(COLUMN_REQUEST_ID));
+            event.transitionType = cursor.getInt(cursor.getColumnIndex(COLUMN_TRANSITION_TYPE));
+            event.isVerified =  cursor.getInt(cursor.getColumnIndex(COLUMN_IS_VERIFIED));
+            event.retryCount = cursor.getInt(cursor.getColumnIndex(COLUMN_RETRY_COUNT));
+        }
+        cursor.close();
+        db.close();
+        return event;
+    }
+
+    public Boolean updateEvent(GeofenceEvent event){
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_REQUEST_ID, event.requestId);
+        values.put(COLUMN_TRANSITION_TYPE, event.transitionType);
+        values.put(COLUMN_IS_VERIFIED, event.isVerified);
+        values.put(COLUMN_RETRY_COUNT,event.retryCount);
+        int result= db.update(TABLE_GEOFENCE_EVENT, values, COLUMN_ID + "=?", new String[]{String.valueOf(event.id)});
+        db.close();
+        return result > 0;
+
+    }
+    public Boolean removeEvent(int id){
+        SQLiteDatabase db = getWritableDatabase();
+        int result = db.delete(TABLE_GEOFENCE_EVENT, COLUMN_ID + "=? AND " + COLUMN_IS_VERIFIED + "=?", new String[]{String.valueOf(id),"0"});
+        db.close();
+        return result > 0;
     }
 }

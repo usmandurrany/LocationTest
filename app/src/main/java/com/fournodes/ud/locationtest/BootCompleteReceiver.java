@@ -12,7 +12,6 @@ public class BootCompleteReceiver extends WakefulBroadcastReceiver {
 
     @Override
     public void onReceive(final Context context, Intent intent) {
-        FileLogger.e(TAG, "-- Begin Fences Recreate --");
         context.startService(new Intent(context, LocationService.class));
         final Handler checkService = new Handler();
         Runnable check =new Runnable() {
@@ -22,7 +21,6 @@ public class BootCompleteReceiver extends WakefulBroadcastReceiver {
                     Database db = new Database(context);
                     db.registerOnDeviceFences();
                     checkService.removeCallbacks(this);
-                    FileLogger.e(TAG, "-- End Fences Recreate --");
                 } else
                     checkService.postDelayed(this, 5000);
             }

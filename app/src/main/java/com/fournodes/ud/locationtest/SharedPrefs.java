@@ -39,7 +39,7 @@ public class SharedPrefs {
         lastLocUpdateTime = pref.getString("lastLocUpdateTime", null);
         minDisplacement = pref.getInt("minDisplacement", 200);// 500 Meters
         pollingEnabled = pref.getBoolean("pollingEnabled", true);
-        updateServerInterval = pref.getInt("updateServerInterval", 120000); //5 Min 300000
+        updateServerInterval = pref.getInt("updateServerInterval", 240000); //5 Min 300000
         updateServerEnabled = pref.getBoolean("updateServerEnabled", true);
         deviceGcmId = pref.getString("deviceGcmId", null);
         userId = pref.getString("userId", null);

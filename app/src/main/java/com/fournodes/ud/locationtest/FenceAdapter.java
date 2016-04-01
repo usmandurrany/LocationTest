@@ -59,8 +59,6 @@ public class FenceAdapter extends ArrayAdapter {
             public void onClick(View v) {
                 if (LocationService.isGoogleApiConnected) {
                     Database db = new Database(getContext());
-              /*          LocationServices.GeofencingApi.removeGeofences(LocationService.mGoogleApiClient,
-                                fenceListOrig.get(position).getPendingIntent()); //Remove from GoogleApiGeofence*/
                     fenceListOrig.get(position).removeFence(); //Remove form map
                     db.removeFenceFromDatabase(fenceListOrig.get(position).getId()); //Remove from database
                     FenceApi fenceApi = new FenceApi();

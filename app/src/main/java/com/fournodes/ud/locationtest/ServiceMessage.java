@@ -1,5 +1,7 @@
 package com.fournodes.ud.locationtest;
 
+import android.location.Location;
+
 /**
  * Created by Usman on 16/3/2016.
  */
@@ -13,5 +15,6 @@ public interface ServiceMessage {
     void locationUpdated(String lat, String lng, String time);
 
     void updateServer(String result);
+
 
 }

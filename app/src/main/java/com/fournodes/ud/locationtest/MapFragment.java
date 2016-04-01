@@ -82,16 +82,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        View v = inflater.inflate(R.layout.fragment_map, container, false);
+        new SharedPrefs(getContext()).initialize();
+        db = new Database(getContext());
 
+        mMapView = (MapView) v.findViewById(R.id.mapView);
+        mMapView.getMapAsync(this);
 
         if (savedInstanceState != null) {
             Bundle mapViewSavedInstanceState = savedInstanceState.getBundle("mapViewSaveState");
             mMapView.onCreate(mapViewSavedInstanceState);
+        }else {
+            mMapView.onCreate(savedInstanceState);
+            mMapView.onResume();
+
         }
 
-        View v = inflater.inflate(R.layout.fragment_map, container, false);
-        new SharedPrefs(getContext()).initialize();
-        db = new Database(getContext());
         mGeofenceList = new ArrayList<>();
 
         fabMenu = (FloatingActionMenu) v.findViewById(R.id.fabMenu);
@@ -109,11 +115,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
         fabStopTrack.setOnClickListener(this);
         fabDeleteHistory.setOnClickListener(this);
 
-        mMapView = (MapView) v.findViewById(R.id.mapView);
-        mMapView.getMapAsync(this);
-        mMapView.onCreate(savedInstanceState);
 
-        mMapView.onResume();
+
 
         return v;
     }

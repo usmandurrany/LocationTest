@@ -11,6 +11,9 @@ import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by Usman on 24/3/2016.
  */
@@ -56,10 +59,8 @@ public class GeofenceWrapper {
 
     private PendingIntent getPendingIntent() {
         Intent intent = new Intent(context, GeofenceTransitionsIntentService.class);
-        intent.putExtra("notify_id", String.valueOf(notify_id));
-        intent.putExtra("title",title);
         intent.putExtra("remote", true);  //Don't generate notification of fence on this device as it is a remote fence
-        return PendingIntent.getService(context, id, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+        return PendingIntent.getService(context,0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     /**
@@ -95,7 +96,9 @@ public class GeofenceWrapper {
         getAttributes(fence);
         if (LocationServices.GeofencingApi != null && LocationService.isGoogleApiConnected){
             pendingIntent = getPendingIntent();
-            LocationServices.GeofencingApi.removeGeofences(LocationService.mGoogleApiClient, pendingIntent).setResultCallback(resultCallback);
+            List<String> requestIds  = new ArrayList<>();
+            requestIds.add(String.valueOf(id));
+            LocationServices.GeofencingApi.removeGeofences(LocationService.mGoogleApiClient,requestIds).setResultCallback(resultCallback);
         }else
             FileLogger.e(TAG,"Service is not running or fence doesn't exist");
 

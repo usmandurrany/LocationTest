@@ -79,11 +79,11 @@ public class LocationUpdateApi extends AsyncTask<Long, String, String> {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
+                FileLogger.e(TAG, "Command: location_update");
+                FileLogger.e(TAG, "Data: Row Count: "+String.valueOf(payload.length()));
                 FileLogger.e(TAG, "Result: Network Error");
-                delegate.onFailure();
             } finally {
                 TrafficStats.clearThreadStatsTag();
-
             }
         } else
             this.cancel(true);
@@ -101,20 +101,23 @@ public class LocationUpdateApi extends AsyncTask<Long, String, String> {
                 FileLogger.e(TAG, "Data: Row Count: "+String.valueOf(payload.length()));
                 if (response.getString("result").equals("1")) {
                     db.removeLocEntries(time); //Remove from db after successfully sending to server
-                    delegate.onSuccess(null);
+                    if (delegate !=null)
+                        delegate.onSuccess(null);
                     FileLogger.e(TAG, "Result: Success");
 
                 } else {
-                    delegate.onFailure();
+                    if (delegate !=null)
+                         delegate.onFailure();
                     FileLogger.e(TAG, "Result: Failure");
-
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-        } else {
-            Log.e(TAG, "Result is null");
+        }else{
+            if (delegate !=null)
+                delegate.onFailure();
         }
+
         super.onPostExecute(result);
     }
 

@@ -41,7 +41,7 @@ public class FileLogger {
                 //BufferedWriter for performance, true to set append to file flag
                 String formattedDate = SimpleDateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime());
                 BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true));
-                buf.append(formattedDate + ": " + TAG + ": " + message);
+                buf.append(formattedDate).append(": ").append(TAG).append(": ").append(message);
                 buf.newLine();
                 buf.close();
             } catch (IOException e) {

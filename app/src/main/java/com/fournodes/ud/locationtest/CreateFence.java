@@ -68,6 +68,9 @@ public class CreateFence implements TrackApiResult, RequestResult {
         chkExit = (CheckBox) dialog.findViewById(R.id.chkExit);
         selectDevice = (Spinner) dialog.findViewById(R.id.selectDevice);
 
+        chkEntry.setChecked(true);
+        chkExit.setChecked(true);
+
         trackApi = new TrackApi();
         trackApi.delegate = this;
         trackApi.execute("user_id=" + SharedPrefs.getUserId(), "user_list");

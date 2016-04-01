@@ -1,6 +1,7 @@
 package com.fournodes.ud.locationtest.network;
 
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.util.Log;
 
 import com.fournodes.ud.locationtest.FileLogger;
@@ -24,14 +25,22 @@ import java.net.URL;
 public class NotificationApi extends AsyncTask<String, String, String> {
     private String postData;
     private String getData;
-    
+    private int retryCount = 1;
+
     public static final String TAG = "Network";
+
+    public NotificationApi() {
+    }
+
+    public NotificationApi(int retryCount) {
+        this.retryCount = retryCount;
+    }
 
     @Override
     protected String doInBackground(String... params) {
         try {
             getData = params[0];
-            postData = params[1];
+            postData = params[1]+"&sent_time="+System.currentTimeMillis();
             String url = SharedPrefs.SERVER_ADDRESS + "incoming.php?type=" + params[0];
             URL obj = new URL(url);
             HttpURLConnection con = (HttpURLConnection) obj.openConnection();
@@ -47,7 +56,7 @@ public class NotificationApi extends AsyncTask<String, String, String> {
             // Send post request
             con.setDoOutput(true);
             DataOutputStream wr = new DataOutputStream(con.getOutputStream());
-            wr.writeBytes(params[1]);
+            wr.writeBytes(postData);
             wr.flush();
             wr.close();
 
@@ -63,6 +72,8 @@ public class NotificationApi extends AsyncTask<String, String, String> {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+            FileLogger.e(TAG, "Command: " + getData);
+            FileLogger.e(TAG, "Data: " + postData);
             FileLogger.e(TAG, "Result: Network Error");
         }
         return null;
@@ -80,9 +91,22 @@ public class NotificationApi extends AsyncTask<String, String, String> {
                     FileLogger.e(TAG, "Result: Success");
                 else
                     FileLogger.e(TAG, "Result: Failure");
-            } else
-                new NotificationApi().execute(getData, postData);
-
+            } else {
+                FileLogger.e(TAG, "Retrying..");
+                final Handler retry = new Handler();
+                retry.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (retryCount != 7) {
+                            new NotificationApi(retryCount++).execute(getData, postData);
+                            retry.removeCallbacks(this);
+                        }else{
+                            FileLogger.e(TAG, "Discarded Notification");
+                            retry.removeCallbacks(this);
+                        }
+                    }
+                }, retryCount * 60000);
+            }
 
         } catch (JSONException e) {
             e.printStackTrace();

@@ -63,8 +63,6 @@ public class FenceApi extends AsyncTask<String, String, String> {
         } catch (IOException e) {
             e.printStackTrace();
             Log.e(TAG, "Network Error");
-            if (delegate!=null)
-                delegate.onFailure();
         }
 
         return null;
@@ -83,7 +81,11 @@ public class FenceApi extends AsyncTask<String, String, String> {
                     if (delegate!=null)
                         delegate.onFailure();
                 }
+            }else{
+                if (delegate!=null)
+                    delegate.onFailure();
             }
+
         } catch (JSONException e) {
             e.printStackTrace();
         }
