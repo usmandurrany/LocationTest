@@ -73,7 +73,7 @@ public class TrackApi extends AsyncTask<String, String, String> {
     protected void onPostExecute(String s) {
         try {
             if (s != null) {
-                Log.e(TAG, s);
+                Log.i(TAG, s);
                 if (type != null) {
                     switch (type) {
                         case "track_user":

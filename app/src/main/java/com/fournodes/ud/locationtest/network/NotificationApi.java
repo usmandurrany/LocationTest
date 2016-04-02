@@ -72,9 +72,9 @@ public class NotificationApi extends AsyncTask<String, String, String> {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-            FileLogger.e(TAG, "Command: " + getData);
-            FileLogger.e(TAG, "Data: " + postData);
-            FileLogger.e(TAG, "Result: Network Error");
+            Log.i(TAG, "Command: " + getData);
+            Log.i(TAG, "Data: " + postData);
+            Log.i(TAG, "Result: Network Error");
         }
         return null;
     }
@@ -85,14 +85,14 @@ public class NotificationApi extends AsyncTask<String, String, String> {
             if (s != null) {
                 Log.e(TAG, s);
                 JSONObject result = new JSONObject(s);
-                FileLogger.e(TAG, "Command: " + getData);
-                FileLogger.e(TAG, "Data: " + postData);
+                Log.i(TAG, "Command: " + getData);
+                Log.i(TAG, "Data: " + postData);
                 if (result.getString("success").equals("1"))
-                    FileLogger.e(TAG, "Result: Success");
+                    Log.i(TAG, "Result: Success");
                 else
-                    FileLogger.e(TAG, "Result: Failure");
+                    Log.i(TAG, "Result: Failure");
             } else {
-                FileLogger.e(TAG, "Retrying..");
+                Log.i(TAG, "Retrying..");
                 final Handler retry = new Handler();
                 retry.postDelayed(new Runnable() {
                     @Override
@@ -101,7 +101,7 @@ public class NotificationApi extends AsyncTask<String, String, String> {
                             new NotificationApi(retryCount++).execute(getData, postData);
                             retry.removeCallbacks(this);
                         }else{
-                            FileLogger.e(TAG, "Discarded Notification");
+                            Log.i(TAG, "Discarded Notification");
                             retry.removeCallbacks(this);
                         }
                     }

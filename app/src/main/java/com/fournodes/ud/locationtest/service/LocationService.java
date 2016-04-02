@@ -19,12 +19,12 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.fournodes.ud.locationtest.Database;
+import com.fournodes.ud.locationtest.DetectedActivitiesIntentService;
 import com.fournodes.ud.locationtest.FileLogger;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.RequestResult;
 import com.fournodes.ud.locationtest.ServiceMessage;
 import com.fournodes.ud.locationtest.SharedPrefs;
-import com.fournodes.ud.locationtest.VerfyLocationInterface;
 import com.fournodes.ud.locationtest.VerifyGeofenceEvent;
 import com.fournodes.ud.locationtest.network.LocationUpdateApi;
 import com.google.android.gms.common.ConnectionResult;
@@ -32,13 +32,13 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.ActivityRecognition;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
-import com.google.android.gms.maps.model.LatLng;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -49,7 +49,6 @@ public class LocationService extends Service implements
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
     public ServiceMessage delegate;
-    public VerfyLocationInterface verifyLocation;
     private static final String TAG = "Location Service";
     public static GoogleApiClient mGoogleApiClient;
     private LocationRequest activeLocationRequest;
@@ -63,7 +62,6 @@ public class LocationService extends Service implements
     public boolean isModeActive = false;
     public boolean isLocatioVerification = false;
     private long lastUpdateTime = System.currentTimeMillis();
-    private int forceInterval = 60; //Seconds
     private Handler forceRequest;
     private Runnable request;
     private List<Location> locationList;
@@ -92,6 +90,7 @@ public class LocationService extends Service implements
                     break;
                 case "trackDisabled":
                     stopLocationUpdates();
+                    Log.e(TAG, "All Location Updates Stopped");
                     break;
                 case "GCMReceiver":
                     if (delegate != null)
@@ -119,6 +118,7 @@ public class LocationService extends Service implements
                     .addConnectionCallbacks(this)
                     .addOnConnectionFailedListener(this)
                     .addApi(LocationServices.API)
+                    .addApi(ActivityRecognition.API)
                     .build();
         }
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver,
@@ -127,10 +127,8 @@ public class LocationService extends Service implements
 
     protected void createPassiveLocationRequest() {
         passiveLocationRequest = new LocationRequest();
-        passiveLocationRequest.setInterval(60000);//1 min
-        passiveLocationRequest.setFastestInterval(5000);//5 sec
+        passiveLocationRequest.setFastestInterval(1000);
         passiveLocationRequest.setPriority(LocationRequest.PRIORITY_NO_POWER);
-        passiveLocationRequest.setSmallestDisplacement(10);//200 meters
 
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
                 .addLocationRequest(passiveLocationRequest);
@@ -170,13 +168,11 @@ public class LocationService extends Service implements
 
     public void createActiveLocationRequest() {
         activeLocationRequest = new LocationRequest();
-        activeLocationRequest.setInterval(SharedPrefs.getLocUpdateInterval());//2 min
-        activeLocationRequest.setFastestInterval(5000);//5 sec
+        activeLocationRequest.setFastestInterval(1000);
         activeLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        activeLocationRequest.setSmallestDisplacement(SharedPrefs.getMinDisplacement());//200 meters
 
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
-                .addLocationRequest(passiveLocationRequest);
+                .addLocationRequest(activeLocationRequest);
 
         PendingResult<LocationSettingsResult> result =
                 LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient,
@@ -218,7 +214,6 @@ public class LocationService extends Service implements
     }
 
     protected void stopLocationUpdates() {
-        Log.e(TAG, "All Location Updates Stopped");
         LocationServices.FusedLocationApi.removeLocationUpdates(
                 mGoogleApiClient, this);
 
@@ -290,10 +285,31 @@ public class LocationService extends Service implements
         return null;
     }
 
+    private PendingIntent getActivityDetectionPendingIntent() {
+        Intent intent = new Intent(this, DetectedActivitiesIntentService.class);
+
+        return PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
     @Override
     public void onConnected(Bundle bundle) {
         isGoogleApiConnected = true;
         Log.e(TAG, "Google API Connected");
+
+        ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(
+                mGoogleApiClient,
+                Long.MAX_VALUE,
+                getActivityDetectionPendingIntent()
+        ).setResultCallback(new ResultCallback<Status>() {
+            @Override
+            public void onResult(Status status) {
+                if (status.isSuccess())
+                    FileLogger.e(TAG, "Activity Recognition Started");
+                else
+                    FileLogger.e(TAG, "Activity Recognition Failed. " + status.getStatusCode());
+            }
+        });
+
         if (SharedPrefs.isPollingEnabled()) {
             /**
              * Force location update if no location has been aquired in an interval of 60 seconds defined by forceInterval.
@@ -305,25 +321,26 @@ public class LocationService extends Service implements
                 request = new Runnable() {
                     @Override
                     public void run() {
-                        if (!VerifyGeofenceEvent.isRunning) {
-                            FileLogger.e(TAG,"Starting event verifier");
-                            startService(new Intent(getApplicationContext(), VerifyGeofenceEvent.class));
-                        }
                         FileLogger.e(TAG, "Checking last update");
-                        if ((System.currentTimeMillis() - lastUpdateTime) / 1000 > forceInterval && isRunning && isGoogleApiConnected) {
+
+                        if (SharedPrefs.pref == null) {
+                            new SharedPrefs(getApplicationContext()).initialize();
+                        }
+                        if ((System.currentTimeMillis() - lastUpdateTime) / 1000 >= (SharedPrefs.getForceRequestTimer()-5) && isRunning && isGoogleApiConnected) {
                             FileLogger.e(TAG, "Force requesting location update");
                             switchToActiveMode();
-                            forceRequest.postDelayed(this, forceInterval * 1000);
+                            FileLogger.e(TAG, "Next check after " + String.valueOf(SharedPrefs.getForceRequestTimer()) + " seconds");
+                            forceRequest.postDelayed(this, SharedPrefs.getForceRequestTimer() * 1000);
                         } else if (!isRunning) {
                             FileLogger.e(TAG, "Force request handler terminating");
                             forceRequest.removeCallbacks(this);
                         } else {
-                            FileLogger.e(TAG, "Update found, rescheduling");
-                            forceRequest.postDelayed(this, forceInterval * 1000);
+                            FileLogger.e(TAG, "Update found. Next check after " + String.valueOf(SharedPrefs.getForceRequestTimer()) + " seconds");
+                            forceRequest.postDelayed(this, SharedPrefs.getForceRequestTimer() * 1000);
                         }
                     }
                 };
-                forceRequest.postDelayed(request, forceInterval * 1000);
+                forceRequest.postDelayed(request, SharedPrefs.getForceRequestTimer() * 1000);
             }
             startPassiveLocationUpdates();
         }
@@ -333,13 +350,6 @@ public class LocationService extends Service implements
     public void onConnectionSuspended(int i) {
         Log.e(TAG, "Google API Connection Suspended");
 
-    }
-
-    private static float toRadiusMeters(LatLng center, LatLng radius) {
-        float[] result = new float[1];
-        Location.distanceBetween(center.latitude, center.longitude,
-                radius.latitude, radius.longitude, result);
-        return result[0];
     }
 
     @Override
@@ -365,20 +375,28 @@ public class LocationService extends Service implements
             SharedPrefs.setLastDeviceLongitude(String.valueOf(location.getLongitude()));
             SharedPrefs.setLastLocUpdateTime(mLastUpdateTime);
 
-  //          if (delegate != null)
-//                delegate.locationUpdated(String.valueOf(location.getLatitude()), String.valueOf(location.getLongitude()), mLastUpdateTime);
+            if (delegate != null)
+                delegate.locationUpdated(String.valueOf(location.getLatitude()), String.valueOf(location.getLongitude()), mLastUpdateTime);
 
             int rowCount = db.getLocEntriesCount();
 
-            if (updateServer == null && update == null)
+            if (updateServer == null && update == null) {
                 updServerAfterInterval();
-            else if (rowCount >= 5 && updateServer != null && update != null)// && !isModeActive)
+            } else if (rowCount >= 5 && updateServer != null && update != null) {// && !isModeActive)
                 updateServer.post(update);
-            else if (isModeActive && updateServer != null && update != null) {
+            }
+
+            if (isModeActive) {
                 //updateServer.post(update);
                 switchToPassiveMode();
             }
         }
+
+        if (!VerifyGeofenceEvent.isRunning) {
+            FileLogger.e(TAG, "Starting event verifier");
+            startService(new Intent(getApplicationContext(), VerifyGeofenceEvent.class));
+        }
+
 
     }
 

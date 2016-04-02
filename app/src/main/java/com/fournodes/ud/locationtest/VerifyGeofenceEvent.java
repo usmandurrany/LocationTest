@@ -23,8 +23,9 @@ import com.google.android.gms.maps.model.LatLng;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Array;
 import java.net.URLEncoder;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -39,21 +40,21 @@ public class VerifyGeofenceEvent extends Service implements LocationListener {
     private Database db;
     private LocationManager lm;
     private Location location;
-    private boolean isProviderGPS = false;
     private Handler timeout;
     private Runnable check;
-    private List<Location> locationList;
-    private int isInside = 0;
-    private int isOutside = 0;
-    int i = 0;
+    private List<GeofenceEvent> pendingEvents;
+    /*    private List<Location> locationList;
+        private int isInside = 0;
+        private int isOutside = 0;
+        int i = 0;
+    private boolean isProviderGPS = false; */
 
 
     @Override
     public void onCreate() {
         super.onCreate();
-        db = new Database(this);
         this.context = this;
-        isRunning = true;
+        db = new Database(this);
     }
 
     @Nullable
@@ -64,54 +65,57 @@ public class VerifyGeofenceEvent extends Service implements LocationListener {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (SharedPrefs.pref == null)
-            new SharedPrefs(context).initialize();
-        locationList = new ArrayList<>();
-
-        Location gApiLocation = new Location("");//provider name is unecessary
-        gApiLocation.setLatitude(Double.parseDouble(SharedPrefs.getLastDeviceLongitude()));//your coords of course
-        gApiLocation.setLongitude(Double.parseDouble(SharedPrefs.getLastDeviceLongitude()));
-
-        locationList.add(gApiLocation);
-
-        lm = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-        gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-        if (gps_enabled) {
-            FileLogger.e(TAG, "GPS available");
-            isProviderGPS = true;
-            lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, this);
-        } else if (network_enabled) {
-            FileLogger.e(TAG, "GPS not available switching to NETWORK PROVIDER");
-            lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 0, VerifyGeofenceEvent.this);
-        }
-
-        timeout = new Handler();
-
-        check = new Runnable() {
-            @Override
-            public void run() {
-                if (locationList.size() == 1 && isProviderGPS) {
-                    lm.removeUpdates(VerifyGeofenceEvent.this);
-                    isProviderGPS = false;
-                    FileLogger.e(TAG, "GPS fix failed, switching to network");
-                    lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 0, VerifyGeofenceEvent.this);
-                    timeout.postDelayed(this,15000);
-                } else if (locationList.size() == 1 && !isProviderGPS) {
-                    lm.removeUpdates(VerifyGeofenceEvent.this);
-                    FileLogger.e(TAG, "Location not found, terminating");
-                    timeout.removeCallbacks(this);
-                    isRunning=false;
-                    stopSelf();
-
-                }
-            }
-        };
-        timeout.postDelayed(check, 5000);
+        isRunning = true;
+        start();
         return super.onStartCommand(intent, START_STICKY, startId);
     }
 
-    @Override
+    public void start(){
+        pendingEvents = db.getAllPendingEvents();
+
+        if (pendingEvents.size() <= 0)
+        {
+            isRunning = false;
+            stopSelf();
+            FileLogger.e(TAG,"No events pending, terminating");
+        }else {
+            if (SharedPrefs.pref == null)
+                new SharedPrefs(context).initialize();
+
+            lm = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+            gps_enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            network_enabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+            if (gps_enabled) {
+                FileLogger.e(TAG, "GPS available");
+                lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, this);
+            } else
+                FileLogger.e(TAG, "GPS not available");
+
+            timeout = new Handler();
+            check = new Runnable() {
+                @Override
+                public void run() {
+                    if (location == null) {
+                        if (SharedPrefs.pref == null)
+                            new SharedPrefs(context).initialize();
+                        lm.removeUpdates(VerifyGeofenceEvent.this);
+
+                        location = new Location("");//provider name is unecessary
+                        location.setLatitude(Double.parseDouble(SharedPrefs.getLastDeviceLatitude()));//your coords of course
+                        location.setLongitude(Double.parseDouble(SharedPrefs.getLastDeviceLongitude()));
+                        FileLogger.e(TAG, "GPS fix failed, using GoogleApi provided location");
+                        FileLogger.e(TAG, "Lat: " + String.valueOf(location.getLatitude()) +
+                                " Long: " + String.valueOf(location.getLongitude()));
+                        verify();
+                        timeout.removeCallbacks(this);
+                    }
+                }
+            };
+            timeout.postDelayed(check, 5000);
+        }
+    }
+
+/*    @Override
     public void onLocationChanged(Location location) {
         FileLogger.e(TAG, "Acquired current location from " + location.getProvider());
         FileLogger.e(TAG, "Accuracy: " + location.getAccuracy());
@@ -222,7 +226,7 @@ public class VerifyGeofenceEvent extends Service implements LocationListener {
             FileLogger.e(TAG, "Verification complete, terminating");
             stopSelf();
         }
-    }
+    }*/
 
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {
@@ -243,60 +247,83 @@ public class VerifyGeofenceEvent extends Service implements LocationListener {
         return result[0];
     }
 
-   /* @Override
+    @Override
     public void onLocationChanged(Location location) {
-        this.location = location;
-        FileLogger.e(TAG, "Acquired current location from Location Manager");
+        FileLogger.e(TAG, "Acquired current location from " + location.getProvider());
         FileLogger.e(TAG, "Accuracy: " + location.getAccuracy());
         if (location.getExtras() != null)
             FileLogger.e(TAG, "Satellites: " + String.valueOf(location.getExtras().getInt("satellites", -1)));
+        this.location = location;
+        verify();
+        lm.removeUpdates(VerifyGeofenceEvent.this);
+    }
+
+    public void verify() {
         FileLogger.e(TAG, "Verifying pending events");
 
-        List<GeofenceEvent> pendingEvents = db.getAllPendingEvents();
         for (GeofenceEvent event : pendingEvents) {
 
             Fence fence = db.getFence(String.valueOf(event.requestId));
+            FileLogger.e(TAG,"Fence Lat: " + String.valueOf(fence.getCenter_lat()) + " Long: " + String.valueOf(fence.getCenter_lng()));
             float distanceFromCenter = toRadiusMeters(new LatLng(fence.getCenter_lat(), fence.getCenter_lng()), new LatLng(location.getLatitude(), location.getLongitude()));
-
+            FileLogger.e(TAG,"Distance from fence: " + String.valueOf(distanceFromCenter));
 
             switch (event.transitionType) {
                 case Geofence.GEOFENCE_TRANSITION_ENTER:
+                    FileLogger.e(TAG, "Event: Entered fence: " + fence.getTitle());
 
-                    if (event.retryCount <= 3) {
+                    if (event.retryCount < 2 && event.verifyCount < 2) {
+
                         if (distanceFromCenter < fence.getRadius()) {
-                            event.isVerified = 1;
+                            event.verifyCount++;
                             db.updateEvent(event);
-                            FileLogger.e(TAG, "Event verified. Entered fence: " + fence.getTitle());
+                            FileLogger.e(TAG, "Verify Count:  " + String.valueOf(event.verifyCount));
                         } else {
                             event.retryCount++;
                             db.updateEvent(event);
-                            FileLogger.e(TAG, "Event not verified. Entered fence: " + fence.getTitle());
                             FileLogger.e(TAG, "Retry count: " + String.valueOf(event.retryCount));
                         }
-                    } else {
+                    } else if (event.retryCount > 1 && event.verifyCount < 2) {
                         db.removeEvent(event.id);
-                        FileLogger.e(TAG, "Event discarded. Too many retries.");
+                        FileLogger.e(TAG, "Event not verified and discarded.");
 
+                    } else if (event.retryCount < 2 && event.verifyCount > 1) {
+                        event.isVerified = 1;
+                        fence.setLastEvent(1);
+                        db.updateEvent(event);
+                        db.updateFence(fence);
+                        FileLogger.e(TAG, "Event verified.");
+                        sendNotification("Event verified. Entered fence: " + fence.getTitle(), fence.getUserId());
                     }
 
                     break;
                 case Geofence.GEOFENCE_TRANSITION_EXIT:
+                    FileLogger.e(TAG, "Event: Exited fence: " + fence.getTitle());
 
-                    if (event.retryCount <= 3) {
+                    if (event.retryCount < 2 && event.verifyCount < 2) {
+
                         if (distanceFromCenter > fence.getRadius()) {
-                            event.isVerified = 1;
+                            event.verifyCount++;
                             db.updateEvent(event);
-                            FileLogger.e(TAG, "Event verified. Entered fence: " + fence.getTitle());
+                            FileLogger.e(TAG, "Verify Count:  " + String.valueOf(event.verifyCount));
                         } else {
                             event.retryCount++;
                             db.updateEvent(event);
-                            FileLogger.e(TAG, "Event not verified. Exited fence: " + fence.getTitle());
                             FileLogger.e(TAG, "Retry count: " + String.valueOf(event.retryCount));
                         }
-                    } else {
+                    } else if (event.retryCount > 1 && event.verifyCount < 2) {
                         db.removeEvent(event.id);
-                        FileLogger.e(TAG, "Event discarded. Too many retries.");
+                        FileLogger.e(TAG, "Event not verified and discarded.");
+
+                    } else if (event.retryCount < 2 && event.verifyCount > 1) {
+                        event.isVerified = 1;
+                        fence.setLastEvent(2);
+                        db.updateEvent(event);
+                        db.updateFence(fence);
+                        FileLogger.e(TAG, "Event verified.");
+                        sendNotification("Event verified. Exited fence: " + fence.getTitle(), fence.getUserId());
                     }
+
                     break;
                 case Geofence.GEOFENCE_TRANSITION_DWELL:
                     break;
@@ -307,15 +334,12 @@ public class VerifyGeofenceEvent extends Service implements LocationListener {
 
 
         }
-        lm.removeUpdates(this);
-
         isRunning = false;
         FileLogger.e(TAG, "Verification complete, terminating");
         stopSelf();
+    }
 
-    }*/
-
-    private void sendNotification(String notificationDetails,String notify_id) {
+    private void sendNotification(String notificationDetails, String notify_id) {
         // Create an explicit content Intent that starts the main Activity.
         PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), 0, new Intent(getApplicationContext(), MainActivity.class), 0);
         // Get a notification builder that's compatible with platform versions >= 4

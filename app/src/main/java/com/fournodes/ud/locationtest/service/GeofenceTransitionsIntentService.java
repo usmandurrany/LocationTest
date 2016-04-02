@@ -1,12 +1,10 @@
 package com.fournodes.ud.locationtest.service;
 
 import android.app.IntentService;
-import android.content.Context;
 import android.content.Intent;
-import android.content.res.Resources;
-import android.util.Log;
 
 import com.fournodes.ud.locationtest.Database;
+import com.fournodes.ud.locationtest.Fence;
 import com.fournodes.ud.locationtest.FileLogger;
 import com.fournodes.ud.locationtest.GeofenceEvent;
 import com.fournodes.ud.locationtest.VerifyGeofenceEvent;
@@ -14,7 +12,6 @@ import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofenceStatusCodes;
 import com.google.android.gms.location.GeofencingEvent;
 
-import java.io.File;
 import java.util.List;
 
 public class GeofenceTransitionsIntentService extends IntentService {
@@ -26,7 +23,9 @@ public class GeofenceTransitionsIntentService extends IntentService {
      * This constructor is required, and calls the super IntentService(String)
      * constructor with the name for a worker thread.
      */
-    public GeofenceTransitionsIntentService() {super(TAG);}
+    public GeofenceTransitionsIntentService() {
+        super(TAG);
+    }
 
     @Override
     public void onCreate() {
@@ -39,9 +38,8 @@ public class GeofenceTransitionsIntentService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
         if (geofencingEvent.hasError()) {
-            String errorMessage = GeofenceErrorMessages.getErrorString(this,
-                    geofencingEvent.getErrorCode());
-            Log.e(TAG, errorMessage);
+            String errorMessage = getErrorString(geofencingEvent.getErrorCode());
+            FileLogger.e(TAG, errorMessage);
             return;
         }
         int geofenceTransition = geofencingEvent.getGeofenceTransition();
@@ -51,68 +49,52 @@ public class GeofenceTransitionsIntentService extends IntentService {
         event.requestId = Integer.parseInt(requestId);
         event.transitionType = geofenceTransition;
         event.isVerified = 0;
+        event.verifyCount = 0;
         event.retryCount = 0;
 
-        FileLogger.e(TAG, getTransitionType(geofenceTransition)+" event occurred.");
-
-        GeofenceEvent lastVerifiedEvent = db.getLastVerifiedEvent(event.requestId);
         GeofenceEvent lastPendingEvent = db.getLastPendingEvent(event.requestId);
+        Fence fence = db.getFence(requestId);
+        FileLogger.e(TAG, getTransitionType(geofenceTransition) + " fence: " + fence.getTitle());
 
-        if (lastVerifiedEvent.id == -1 && lastPendingEvent.id == -1) {
-            FileLogger.e(TAG,"Event pending verification");
-            db.savePendingEvent(event);
-        }else if(lastVerifiedEvent.id == -1 && lastPendingEvent.id != -1
-                && lastPendingEvent.transitionType != event.transitionType){
-            FileLogger.e(TAG,"Event pending verification");
-            db.savePendingEvent(event);
-        }else if(lastPendingEvent.id == -1 && lastVerifiedEvent.id != -1
-                && lastVerifiedEvent.transitionType != event.transitionType) {
+        if (fence.getLastEvent() != event.transitionType && lastPendingEvent.transitionType != event.transitionType) {
             FileLogger.e(TAG, "Event pending verification");
             db.savePendingEvent(event);
-        }else if(lastVerifiedEvent.id != -1 && lastVerifiedEvent.transitionType != event.transitionType
-                && lastPendingEvent.id != -1 && lastPendingEvent.transitionType != event.transitionType){
-            FileLogger.e(TAG,"Event pending verification");
+        } else if (fence.getLastEvent() != event.transitionType && lastPendingEvent.id == -1) {
+            FileLogger.e(TAG, "Event pending verification");
             db.savePendingEvent(event);
-        }else {
-            FileLogger.e(TAG,"Event discarded");
+        } else {
+            FileLogger.e(TAG, "Event discarded");
         }
 
         if (!VerifyGeofenceEvent.isRunning) {
-            FileLogger.e(TAG,"Starting event verifier");
+            FileLogger.e(TAG, "Starting event verifier");
             startService(new Intent(getApplicationContext(), VerifyGeofenceEvent.class));
         }
     }
 
-    public String getTransitionType(int transitionType){
-        switch (transitionType){
+    public String getTransitionType(int transitionType) {
+        switch (transitionType) {
             case 1:
-                return "Enter";
+                return "Entered";
             case 2:
-                return "Exit";
-            case 3:
-                return "Roaming";
+                return "Exited";
+            case 4:
+                return "Roaming in";
         }
         return null;
     }
 
-}
-
-
-class GeofenceErrorMessages {
-
-    public static String getErrorString(Context context, int errorCode) {
-        Resources mResources = context.getResources();
+    public static String getErrorString(int errorCode) {
         switch (errorCode) {
             case GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE:
-                return "Not available!";
+                return "Geofence service not available.";
             case GeofenceStatusCodes.GEOFENCE_TOO_MANY_GEOFENCES:
-                return "Too many fences!";
+                return "Too many geofences!";
             case GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS:
-                return "Too many pending Intents";
+                return "Too many pending Intents.";
             default:
-                return "What?";
+                return "Undefined error.";
         }
+
     }
-
-
 }

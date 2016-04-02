@@ -30,6 +30,7 @@ public class SharedPrefs {
     private static String userName;
     private static String userEmail;
     private static String userPicture;
+    private static int forceRequestTimer;
 
 
     public void initialize() {
@@ -46,8 +47,18 @@ public class SharedPrefs {
         userName = pref.getString("userName", null);
         userEmail = pref.getString("userEmail", null);
         userPicture = pref.getString("userPicture", null);
+        forceRequestTimer = pref.getInt("forceRequestTimer",80);//80 Seconds
 
 
+    }
+
+    public static int getForceRequestTimer() {
+        return forceRequestTimer;
+    }
+
+    public static void setForceRequestTimer(int forceRequestTimer) {
+        pref.edit().putInt("forceRequestTimer", forceRequestTimer).apply();
+        SharedPrefs.forceRequestTimer = forceRequestTimer;
     }
 
     public static int getLocUpdateInterval() {

@@ -27,6 +27,15 @@ public class Fence {
     private double edge_lat;
     private double edge_lng;
     private String create_on;
+    private int lastEvent=2;
+
+    public int getLastEvent() {
+        return lastEvent;
+    }
+
+    public void setLastEvent(int lastEvent) {
+        this.lastEvent = lastEvent;
+    }
 
     public String getCreate_on() {
         return create_on;

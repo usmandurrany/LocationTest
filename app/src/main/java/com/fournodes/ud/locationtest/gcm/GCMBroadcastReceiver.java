@@ -116,6 +116,7 @@ public class GCMBroadcastReceiver extends GcmListenerService {
         fence.setEdge_lat(Double.parseDouble(data.getString("edge_latitude")));
         fence.setEdge_lng(Double.parseDouble(data.getString("edge_longitude")));
         fence.setRadius(Float.parseFloat(data.getString("radius")));
+        fence.setLastEvent(2);
 
         geofenceWrapper.create(fence, new ResultCallback<Result>() {
             @Override

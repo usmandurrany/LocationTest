@@ -8,5 +8,6 @@ public class GeofenceEvent {
     public int requestId;
     public int transitionType;
     public int isVerified;
+    public int verifyCount;
     public int retryCount;
 }

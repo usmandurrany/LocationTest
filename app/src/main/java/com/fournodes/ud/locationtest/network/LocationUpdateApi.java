@@ -79,9 +79,9 @@ public class LocationUpdateApi extends AsyncTask<Long, String, String> {
                 e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
-                FileLogger.e(TAG, "Command: location_update");
-                FileLogger.e(TAG, "Data: Row Count: "+String.valueOf(payload.length()));
-                FileLogger.e(TAG, "Result: Network Error");
+                Log.i(TAG, "Command: location_update");
+                Log.i(TAG, "Data: Row Count: "+String.valueOf(payload.length()));
+                Log.i(TAG, "Result: Network Error");
             } finally {
                 TrafficStats.clearThreadStatsTag();
             }
@@ -97,18 +97,18 @@ public class LocationUpdateApi extends AsyncTask<Long, String, String> {
         if (result != null) {
             try {
                 JSONObject response = new JSONObject(result);
-                FileLogger.e(TAG, "Command: location_update");
-                FileLogger.e(TAG, "Data: Row Count: "+String.valueOf(payload.length()));
+                Log.i(TAG, "Command: location_update");
+                Log.i(TAG, "Data: Row Count: "+String.valueOf(payload.length()));
                 if (response.getString("result").equals("1")) {
                     db.removeLocEntries(time); //Remove from db after successfully sending to server
                     if (delegate !=null)
                         delegate.onSuccess(null);
-                    FileLogger.e(TAG, "Result: Success");
+                    Log.i(TAG, "Result: Success");
 
                 } else {
                     if (delegate !=null)
                          delegate.onFailure();
-                    FileLogger.e(TAG, "Result: Failure");
+                    Log.i(TAG, "Result: Failure");
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
