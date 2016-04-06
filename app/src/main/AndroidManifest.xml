@@ -77,7 +77,7 @@
             android:exported="true" />
 
         <service
-            android:name=".VerifyGeofenceEvent"
+            android:name=".EventVerifier"
             android:enabled="true"
             android:exported="true" />
         <service

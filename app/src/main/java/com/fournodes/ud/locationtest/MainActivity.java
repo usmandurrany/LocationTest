@@ -3,6 +3,7 @@ package com.fournodes.ud.locationtest;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.provider.ContactsContract;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
@@ -41,6 +42,7 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
             new UserRegisterDialog(this).show();
         else
             Log.e("User Id: ", SharedPrefs.getUserId());
+
 
 
         startService(new Intent(this, LocationService.class));

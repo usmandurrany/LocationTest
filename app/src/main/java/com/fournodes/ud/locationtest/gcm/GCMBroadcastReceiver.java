@@ -24,6 +24,9 @@ import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.gcm.GcmListenerService;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by Usman on 11/23/2015.
  */
@@ -32,12 +35,17 @@ public class GCMBroadcastReceiver extends GcmListenerService {
     private Fence fence;
     private GeofenceWrapper geofenceWrapper;
     private Database db;
+    private List<String> events;
+    private int notificationId;
 
 
     @Override
     public void onMessageReceived(String from, Bundle data) { // Prank received will trigger this
         if (SharedPrefs.pref != null)
             new SharedPrefs(getApplicationContext()).initialize();
+        if (events == null)
+            events = new ArrayList<>();
+
         db = new Database(getApplicationContext());
         geofenceWrapper = new GeofenceWrapper(getApplicationContext());
 
@@ -95,9 +103,9 @@ public class GCMBroadcastReceiver extends GcmListenerService {
                     FileLogger.e(TAG, "Result: Success");
 
                 } else {
-                    FileLogger.e(TAG,"Error: "+ result.getStatus().getStatusCode());
+                    FileLogger.e(TAG, "Error: " + result.getStatus().getStatusCode());
                     FileLogger.e(TAG, "Result: Failed");
-                    serviceMessage("Error creating fence: "+result.getStatus().getStatusCode());
+                    serviceMessage("Error creating fence: " + result.getStatus().getStatusCode());
                 }
             }
         });
@@ -129,9 +137,9 @@ public class GCMBroadcastReceiver extends GcmListenerService {
                     FileLogger.e(TAG, "Result: Success");
 
                 } else {
-                    FileLogger.e(TAG,"Error: "+ result.getStatus().getStatusCode());
+                    FileLogger.e(TAG, "Error: " + result.getStatus().getStatusCode());
                     FileLogger.e(TAG, "Result: Failed");
-                    serviceMessage("Error editing fence: "+result.getStatus().getStatusCode());
+                    serviceMessage("Error editing fence: " + result.getStatus().getStatusCode());
 
                 }
             }
@@ -156,9 +164,9 @@ public class GCMBroadcastReceiver extends GcmListenerService {
                     FileLogger.e(TAG, "Result: Success");
 
                 } else {
-                    FileLogger.e(TAG,"Error: "+ result.getStatus().getStatusCode());
+                    FileLogger.e(TAG, "Error: " + result.getStatus().getStatusCode());
                     FileLogger.e(TAG, "Result: Failed");
-                    serviceMessage("Error removing fence: "+result.getStatus().getStatusCode());
+                    serviceMessage("Error removing fence: " + result.getStatus().getStatusCode());
 
                 }
             }
@@ -172,26 +180,46 @@ public class GCMBroadcastReceiver extends GcmListenerService {
     }
 
     private void createNotification(String from, String message) {
-        PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), 0, new Intent(getApplicationContext(), MainActivity.class), 0);
+        NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
-        builder.setSmallIcon(R.mipmap.ic_launcher)
-                .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher))
-                .setColor(Color.BLUE)
-                .setContentTitle(from)
-                .setContentText(message)
-                .setContentIntent(piActivityIntent)
-                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION));
 
-        builder.setAutoCancel(true);
-        NotificationManager mNotificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        mNotificationManager.notify((int) System.currentTimeMillis(), builder.build());
+        events.add(from + ": " + message);
+
+        if (events.size() <= 1) {
+            notificationId = (int) System.currentTimeMillis();
+            PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), 0, new Intent(getApplicationContext(), MainActivity.class), 0);
+            builder.setSmallIcon(R.mipmap.ic_launcher)
+                    .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher))
+                    .setColor(Color.BLUE)
+                    .setContentTitle(from)
+                    .setContentText(message)
+                    .setContentIntent(piActivityIntent)
+                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION));
+
+            builder.setAutoCancel(true);
+
+        } else {
+            NotificationCompat.InboxStyle inboxStyle = new NotificationCompat.InboxStyle();
+            // Sets a title for the Inbox in expanded layout
+            inboxStyle.setBigContentTitle("Event Tracker:");
+
+            for (int i = 0; i < events.size(); i++) {
+
+                inboxStyle.addLine(events.get(i));
+            }
+            // Moves the expanded layout object into the notification object.
+            builder.setStyle(inboxStyle);
+        }
+        mNotificationManager.notify(notificationId, builder.build());
+
+
     }
+
     private void serviceMessage(String message) {
         Log.d("Main Fragment", "Broadcasting message");
         Intent intent = new Intent("LOCATION_TEST_SERVICE");
         intent.putExtra("message", "GCMReceiver");
-        intent.putExtra("body",message);
+        intent.putExtra("body", message);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 

@@ -3,6 +3,7 @@ package com.fournodes.ud.locationtest;
 import android.app.IntentService;
 import android.content.Intent;
 
+import com.fournodes.ud.locationtest.service.LocationService;
 import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.DetectedActivity;
 
@@ -39,6 +40,12 @@ public class DetectedActivitiesIntentService extends IntentService {
      */
     @Override
     protected void onHandleIntent(Intent intent) {
+        if (SharedPrefs.pref == null)
+            new SharedPrefs(getApplicationContext()).initialize();
+
+        if (System.currentTimeMillis() - SharedPrefs.getLocLastUpdateMillis() > (SharedPrefs.getForceRequestTimer()*1000)*2)
+            startService(new Intent(this,LocationService.class));
+
         ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
         // Get the list of the probable activities associated with the current state of the
         // device. Each activity is associated with a confidence level, which is an int between
@@ -65,15 +72,18 @@ public class DetectedActivitiesIntentService extends IntentService {
                // SharedPrefs.setForceRequestTimer(30000);
                 return "On Bicycle";
             case DetectedActivity.ON_FOOT:
-               // SharedPrefs.setForceRequestTimer(60000);
+/*                if (detectedActivity.getConfidence() >= 80 && SharedPrefs.getForceRequestTimer()>60){
+                    SharedPrefs.setForceRequestTimer(60);
+                    FileLogger.e(TAG,"Changing force check interval to 1 minutes");
+                }*/
                 return "On Foot";
             case DetectedActivity.RUNNING:
                // SharedPrefs.setForceRequestTimer(60000);
                 return "Running";
             case DetectedActivity.STILL:
-                if (detectedActivity.getConfidence() >= 95 && SharedPrefs.getForceRequestTimer()<125){
-                    SharedPrefs.setForceRequestTimer(125);
-                    FileLogger.e(TAG,"Changing force check interval to 125 seconds");
+                if (detectedActivity.getConfidence() >= 95 && SharedPrefs.getForceRequestTimer()<120){
+                    SharedPrefs.setForceRequestTimer(120);
+                    FileLogger.e(TAG,"Changing force check interval to 2 minutes");
                 }
                 return "Still";
             case DetectedActivity.TILTING:

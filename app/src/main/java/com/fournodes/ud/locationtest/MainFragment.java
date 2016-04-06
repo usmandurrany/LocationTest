@@ -2,6 +2,7 @@ package com.fournodes.ud.locationtest;
 
 import android.content.Context;
 import android.content.Intent;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -9,6 +10,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.AppCompatCheckBox;
 import android.util.Log;
+import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -41,6 +43,7 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
     private Button btnService;
     private Button btnShareLogFile;
     private Button btnClearLogFile;
+    private Button btnInspectDb;
     private ScrollView lytScrollLog;
 
 
@@ -93,6 +96,7 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
 
         btnShareLogFile = (Button) getView().findViewById(R.id.btnShareLogFile);
         btnClearLogFile = (Button) getView().findViewById(R.id.btnClearLogFile);
+        btnInspectDb = (Button) getView().findViewById(R.id.btnInspectDb);
         lytScrollLog = (ScrollView) getView().findViewById(R.id.lytScrollLog);
 
 
@@ -158,6 +162,12 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
             }
         });
 
+        btnInspectDb.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });
         btnSetUpdateInterval.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

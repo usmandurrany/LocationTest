@@ -2,6 +2,7 @@ package com.fournodes.ud.locationtest;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.provider.Settings;
 
 /**
  * Created by Usman on 15/2/2016.
@@ -31,6 +32,8 @@ public class SharedPrefs {
     private static String userEmail;
     private static String userPicture;
     private static int forceRequestTimer;
+    private static long locLastUpdateMillis;
+
 
 
     public void initialize() {
@@ -48,8 +51,17 @@ public class SharedPrefs {
         userEmail = pref.getString("userEmail", null);
         userPicture = pref.getString("userPicture", null);
         forceRequestTimer = pref.getInt("forceRequestTimer",80);//80 Seconds
+        locLastUpdateMillis = pref.getLong("locLastUpdateMillis", System.currentTimeMillis());
 
+    }
 
+    public static long getLocLastUpdateMillis() {
+        return locLastUpdateMillis;
+    }
+
+    public static void setLocLastUpdateMillis(long locLastUpdateMillis) {
+        pref.edit().putLong("locLastUpdateMillis",locLastUpdateMillis).apply();
+        SharedPrefs.locLastUpdateMillis = locLastUpdateMillis;
     }
 
     public static int getForceRequestTimer() {

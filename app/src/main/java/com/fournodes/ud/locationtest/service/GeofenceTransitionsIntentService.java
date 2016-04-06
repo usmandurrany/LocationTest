@@ -7,7 +7,7 @@ import com.fournodes.ud.locationtest.Database;
 import com.fournodes.ud.locationtest.Fence;
 import com.fournodes.ud.locationtest.FileLogger;
 import com.fournodes.ud.locationtest.GeofenceEvent;
-import com.fournodes.ud.locationtest.VerifyGeofenceEvent;
+import com.fournodes.ud.locationtest.EventVerifier;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofenceStatusCodes;
 import com.google.android.gms.location.GeofencingEvent;
@@ -66,9 +66,9 @@ public class GeofenceTransitionsIntentService extends IntentService {
             FileLogger.e(TAG, "Event discarded");
         }
 
-        if (!VerifyGeofenceEvent.isRunning) {
+        if (!EventVerifier.isRunning) {
             FileLogger.e(TAG, "Starting event verifier");
-            startService(new Intent(getApplicationContext(), VerifyGeofenceEvent.class));
+            startService(new Intent(getApplicationContext(), EventVerifier.class));
         }
     }
 

@@ -1,12 +1,19 @@
 package com.fournodes.ud.locationtest;
 
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.location.Location;
+import android.media.RingtoneManager;
+import android.os.Handler;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 import com.google.android.gms.common.api.Result;
@@ -32,6 +39,8 @@ public class Database extends SQLiteOpenHelper {
     private Context context;
     public static final String DATABASE_NAME = "LocationTest";
     public static final int DATABASE_VERSION = 9;
+    private int count;
+    private int fenceErrorCount;
 
     public static final String COLUMN_ID = "id";
 
@@ -215,12 +224,31 @@ public class Database extends SQLiteOpenHelper {
 
     public void registerOnDeviceFences() {
         FileLogger.e(TAG, "-- Begin Fences Recreate --");
+        final int notificationId = (int) System.currentTimeMillis();
+
+
+        PendingIntent piActivityIntent = PendingIntent.getActivity(context, 0, new Intent(context, MainActivity.class), 0);
+        final NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
+        builder.setSmallIcon(R.mipmap.ic_launcher)
+                .setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher))
+                .setColor(Color.BLUE)
+                .setContentTitle("Registering fences..")
+                .setContentText("Expand to view more")
+                .setContentIntent(piActivityIntent)
+                .setAutoCancel(false);
+
+        final NotificationManager mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        mNotificationManager.notify(notificationId, builder.build());
+
+        final NotificationCompat.InboxStyle inboxStyle = new NotificationCompat.InboxStyle();
+        inboxStyle.setBigContentTitle("Registration result");
+
 
         SQLiteDatabase db = this.getWritableDatabase();
         GeofenceWrapper geofenceWrapper = new GeofenceWrapper(context);
 
         String selection = COLUMN_ON_DEVICE + " = 1";
-        Cursor cursor = db.query(TABLE_GEOFENCE, null, selection, null, null, null, null, null);
+        final Cursor cursor = db.query(TABLE_GEOFENCE, null, selection, null, null, null, null, null);
 
         while (cursor.moveToNext()) {
             final int id = cursor.getInt(cursor.getColumnIndex(COLUMN_SERVER_FENCE_ID));
@@ -246,21 +274,44 @@ public class Database extends SQLiteOpenHelper {
                 public void onResult(Result result) {
                     FileLogger.e(TAG, "Fence: " + String.valueOf(id));
                     FileLogger.e(TAG, "Title: " + title);
-                    FileLogger.e(TAG, "Action: Register after reboot");
-
+                    count++;
                     if (result.getStatus().isSuccess()) {
                         FileLogger.e(TAG, "Result: Success");
+
+
                     } else {
                         FileLogger.e(TAG, "Error: " + result.getStatus().getStatusCode());
                         FileLogger.e(TAG, "Result: Failure");
+                        fenceErrorCount++;
                     }
                 }
             });
-        }
-        FileLogger.e(TAG, "-- End Fences Recreate --");
 
+        }
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (count == cursor.getCount()) {
+                    inboxStyle.addLine("Total Fences: " + String.valueOf(count));
+                    inboxStyle.addLine("Registered: " + String.valueOf(count-fenceErrorCount));
+                    inboxStyle.addLine("Failed: " + String.valueOf(fenceErrorCount));
+                    builder.setStyle(inboxStyle);
+                    mNotificationManager.notify(notificationId, builder.build());
+                    FileLogger.e(TAG, "-- End Fences Recreate --");
+                }
+            }
+        }, 2000);
         cursor.close();
         db.close();
+        if (updateEventsAfterReboot())
+            FileLogger.e(TAG, "Pending events removed successfully.");
+        else
+            FileLogger.e(TAG, "Could not remove pending events.");
+
+        if (updateFencesAfterReboot())
+            FileLogger.e(TAG, "Reset all fences successfully.");
+        else
+            FileLogger.e(TAG, "Could not reset fences.");
     }
 
 
@@ -464,10 +515,19 @@ public class Database extends SQLiteOpenHelper {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_IS_VERIFIED, 2); //Special value
-        int result = db.update(TABLE_GEOFENCE_EVENT, values,null,null);
+        int result = db.update(TABLE_GEOFENCE_EVENT, values, null, null);
         db.close();
         return result > 0;
 
+    }
+
+    public Boolean updateFencesAfterReboot() {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_LAST_EVENT, 2); //Reset all fences to exit
+        int result = db.update(TABLE_GEOFENCE, values, null, null);
+        db.close();
+        return result > 0;
     }
 
     public Boolean removeEvent(int id) {
@@ -476,4 +536,6 @@ public class Database extends SQLiteOpenHelper {
         db.close();
         return result > 0;
     }
+
+
 }

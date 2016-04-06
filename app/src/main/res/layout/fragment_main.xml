@@ -37,14 +37,22 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"
          />
+
     <Button
         android:id="@+id/btnClearLogFile"
         android:text="Clear Log File"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentLeft="true"
- />
+        android:layout_alignParentLeft="true"/>
+    <Button
+        android:id="@+id/btnInspectDb"
+        android:text="Inspect DB"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_toRightOf="@id/btnClearLogFile"
+        android:layout_toLeftOf="@id/btnShareLogFile"/>
     <ScrollView
         android:id="@+id/lytScrollLog"
         android:layout_width="match_parent"
