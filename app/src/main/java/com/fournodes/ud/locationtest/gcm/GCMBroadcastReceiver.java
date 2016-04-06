@@ -36,7 +36,7 @@ public class GCMBroadcastReceiver extends GcmListenerService {
     private GeofenceWrapper geofenceWrapper;
     private Database db;
     private List<String> events;
-    private int notificationId;
+    private int notificationId = -1;
 
 
     @Override
@@ -182,33 +182,36 @@ public class GCMBroadcastReceiver extends GcmListenerService {
     private void createNotification(String from, String message) {
         NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
+        if (notificationId == -1)
+            notificationId = (int) System.currentTimeMillis();
+
+        PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), 0, new Intent(getApplicationContext(), MainActivity.class), 0);
+        builder.setSmallIcon(R.mipmap.ic_launcher)
+                .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher))
+                .setColor(Color.BLUE)
+                .setContentTitle(from)
+                .setContentText(message)
+                .setContentIntent(piActivityIntent)
+                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
+                .setAutoCancel(false);
 
         events.add(from + ": " + message);
 
         if (events.size() <= 1) {
-            notificationId = (int) System.currentTimeMillis();
-            PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), 0, new Intent(getApplicationContext(), MainActivity.class), 0);
-            builder.setSmallIcon(R.mipmap.ic_launcher)
-                    .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher))
-                    .setColor(Color.BLUE)
-                    .setContentTitle(from)
-                    .setContentText(message)
-                    .setContentIntent(piActivityIntent)
-                    .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION));
+            mNotificationManager.notify(notificationId, builder.build());
 
-            builder.setAutoCancel(true);
 
         } else {
-            NotificationCompat.InboxStyle inboxStyle = new NotificationCompat.InboxStyle();
+            NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
             // Sets a title for the Inbox in expanded layout
-            inboxStyle.setBigContentTitle("Event Tracker:");
-
+            bigTextStyle.setBigContentTitle("Event Tracker:");
+            StringBuilder groupEvents = new StringBuilder();
             for (int i = 0; i < events.size(); i++) {
-
-                inboxStyle.addLine(events.get(i));
+                groupEvents.append(events.get(i)).append("/n");
             }
+            bigTextStyle.bigText(groupEvents.toString());
             // Moves the expanded layout object into the notification object.
-            builder.setStyle(inboxStyle);
+            builder.setStyle(bigTextStyle);
         }
         mNotificationManager.notify(notificationId, builder.build());
 
