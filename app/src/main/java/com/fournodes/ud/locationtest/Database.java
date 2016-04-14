@@ -2,6 +2,7 @@ package com.fournodes.ud.locationtest;
 
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.backup.BackupManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -38,6 +39,7 @@ public class Database extends SQLiteOpenHelper {
     private static final String TAG = "Database";
     private Context context;
     public static final String DATABASE_NAME = "LocationTest";
+    public static final String DATABASE_FILE_NAME = "LocationTest.db";
     public static final int DATABASE_VERSION = 9;
     private int count;
     private int fenceErrorCount;
@@ -219,6 +221,9 @@ public class Database extends SQLiteOpenHelper {
         values.put(COLUMN_TRANSITION_TYPE, fence.getTransitionType());
         long rowId = db.insert(TABLE_GEOFENCE, null, values);
         db.close();
+
+        BackupManager bm = new BackupManager(context);
+        bm.dataChanged();
         return rowId;
     }
 
@@ -312,6 +317,8 @@ public class Database extends SQLiteOpenHelper {
             FileLogger.e(TAG, "Reset all fences successfully.");
         else
             FileLogger.e(TAG, "Could not reset fences.");
+
+        SharedPrefs.setPendingEventCount(0);
     }
 
 
@@ -420,6 +427,9 @@ public class Database extends SQLiteOpenHelper {
         SQLiteDatabase db = getWritableDatabase();
         int result = db.delete(TABLE_GEOFENCE, COLUMN_SERVER_FENCE_ID + "=" + id, null);
         db.close();
+
+        BackupManager bm = new BackupManager(context);
+        bm.dataChanged();
         return result > 0;
     }
 

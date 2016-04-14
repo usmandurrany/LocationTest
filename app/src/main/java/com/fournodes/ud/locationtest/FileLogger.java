@@ -22,14 +22,33 @@ public class FileLogger {
     private static final String TAG = "FileLogger";
     private static File logFile;
 
-    private static boolean createFile(){
+    private static Calendar c = Calendar.getInstance();
+    private static SimpleDateFormat df = new SimpleDateFormat("yyyyMMdd");
+    private static final String LOG_FILE_PREFIX = "location_log_";
+    public static final String LOG_FILE_NAME  = LOG_FILE_PREFIX + df.format(c.getTime()) + ".txt";
+
+
+    private static boolean createFile() {
         try {
-            if (logFile == null)
-                logFile = new File("sdcard/location_log.txt");
 
-            return logFile.exists() ? logFile.exists() : logFile.createNewFile();
 
-        }catch (IOException e){
+            logFile = new File("sdcard/" + LOG_FILE_NAME);
+
+            if (!logFile.exists()) {
+
+                int yesterday = Integer.parseInt(df.format(c.getTime())) - 1;
+                String oldLogFileName = LOG_FILE_PREFIX + String.valueOf(yesterday) + ".txt";
+                File oldLogFile = new File("sdcard/" + oldLogFileName);
+                if (oldLogFile.exists())
+                    oldLogFile.delete();
+
+                return logFile.createNewFile();
+            }
+
+            return true;
+
+
+        } catch (IOException e) {
             e.printStackTrace();
         }
         return false;
@@ -49,7 +68,8 @@ public class FileLogger {
             } finally {
                 Log.e(TAG, message);
             }
-        }else Log.e(FileLogger.TAG,"Unable to create log file");
+        }
+        else Log.e(FileLogger.TAG, "Unable to create log file");
     }
 
 }

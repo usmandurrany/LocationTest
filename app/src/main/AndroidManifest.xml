@@ -19,7 +19,11 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        android:backupAgent="BackupAgentHelper"
+        android:fullBackupOnly="true">
+
+        <meta-data android:name="com.google.android.backup.api_key" android:value="AEdPqrEAAAAIjA7KGSb4Qqa_WwYknfXmQqYz7ygitnuzUj8GGA" />
 
         <!--**********************GCM BEGIN************************-->
         <receiver
@@ -77,10 +81,6 @@
             android:exported="true" />
 
         <service
-            android:name=".EventVerifier"
-            android:enabled="true"
-            android:exported="true" />
-        <service
             android:name=".DetectedActivitiesIntentService"
             android:enabled="true"
             android:exported="true" />
@@ -100,6 +100,9 @@
             android:name=".service.GeofenceTransitionsIntentService"
             android:exported="false" />
 
+        <meta-data
+            android:name="io.fabric.ApiKey"
+            android:value="490387366699b5598577fc72b165d728cf8f936f" />
     </application>
 
 </manifest>

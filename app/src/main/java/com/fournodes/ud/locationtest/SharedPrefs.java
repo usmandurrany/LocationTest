@@ -2,7 +2,6 @@ package com.fournodes.ud.locationtest;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.provider.Settings;
 
 /**
  * Created by Usman on 15/2/2016.
@@ -31,8 +30,10 @@ public class SharedPrefs {
     private static String userName;
     private static String userEmail;
     private static String userPicture;
-    private static int forceRequestTimer;
+    private static int locationRequestInterval;
     private static long locLastUpdateMillis;
+    private static int pendingEventCount;
+    private static float lastLocationAccuracy;
 
 
 
@@ -50,9 +51,28 @@ public class SharedPrefs {
         userName = pref.getString("userName", null);
         userEmail = pref.getString("userEmail", null);
         userPicture = pref.getString("userPicture", null);
-        forceRequestTimer = pref.getInt("forceRequestTimer",80);//80 Seconds
+        locationRequestInterval = pref.getInt("locationRequestInterval",80);//80 Seconds
         locLastUpdateMillis = pref.getLong("locLastUpdateMillis", System.currentTimeMillis());
+        pendingEventCount = pref.getInt("pendingEventCount",0);
+        lastLocationAccuracy = pref.getFloat("lastLocationAccuracy",999f);
+    }
 
+    public static float getLastLocationAccuracy() {
+        return lastLocationAccuracy;
+    }
+
+    public static void setLastLocationAccuracy(float lastLocationAccuracy) {
+        pref.edit().putFloat("lastLocationAccuracy", lastLocationAccuracy).apply();
+        SharedPrefs.lastLocationAccuracy = lastLocationAccuracy;
+    }
+
+    public static int getPendingEventCount() {
+        return pendingEventCount;
+    }
+
+    public static void setPendingEventCount(int pendingEventCount) {
+        pref.edit().putInt("pendingEventCount", pendingEventCount).apply();
+        SharedPrefs.pendingEventCount = pendingEventCount;
     }
 
     public static long getLocLastUpdateMillis() {
@@ -64,13 +84,13 @@ public class SharedPrefs {
         SharedPrefs.locLastUpdateMillis = locLastUpdateMillis;
     }
 
-    public static int getForceRequestTimer() {
-        return forceRequestTimer;
+    public static int getLocationRequestInterval() {
+        return locationRequestInterval;
     }
 
-    public static void setForceRequestTimer(int forceRequestTimer) {
-        pref.edit().putInt("forceRequestTimer", forceRequestTimer).apply();
-        SharedPrefs.forceRequestTimer = forceRequestTimer;
+    public static void setLocationRequestInterval(int locationRequestInterval) {
+        pref.edit().putInt("locationRequestInterval", locationRequestInterval).apply();
+        SharedPrefs.locationRequestInterval = locationRequestInterval;
     }
 
     public static int getLocUpdateInterval() {

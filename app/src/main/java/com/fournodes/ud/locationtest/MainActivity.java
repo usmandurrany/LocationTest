@@ -3,21 +3,23 @@ package com.fournodes.ud.locationtest;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.ContactsContract;
 import android.support.design.widget.TabLayout;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.view.ViewPager;
 import android.util.Log;
 
+import com.crashlytics.android.Crashlytics;
 import com.fournodes.ud.locationtest.gcm.GCMInitiate;
 import com.fournodes.ud.locationtest.service.LocationService;
 import com.google.android.gms.maps.model.LatLng;
 
+import io.fabric.sdk.android.Fabric;
 import org.json.JSONArray;
 
 import java.util.ArrayList;
 import java.util.List;
+
 
 public class MainActivity extends FragmentActivity implements TrackApiResult, ServiceMessage {
     public MainFragmentInterface mainDelegate;
@@ -36,25 +38,33 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Fabric.with(this, new Crashlytics());
         setContentView(R.layout.activity_main);
         new SharedPrefs(this).initialize();
+
+
         if (SharedPrefs.getUserId() == null)
             new UserRegisterDialog(this).show();
         else
             Log.e("User Id: ", SharedPrefs.getUserId());
 
+        //SharedPrefs.setPendingEventCount(0);
 
-
-        startService(new Intent(this, LocationService.class));
         handler = new Handler();
         check = new Runnable() {
             @Override
             public void run() {
-                if (LocationService.isRunning && LocationService.getServiceObject().delegate == null) {
+                if (LocationService.isRunning){
                     locationService = LocationService.getServiceObject();
                     locationService.delegate = MainActivity.this;
-                } else
+                    if (mainDelegate != null)
+                        mainDelegate.serviceStarted();
+
+                }
+                else {
+                    startService(new Intent(MainActivity.this, LocationService.class));
                     handler.postDelayed(check, 2000);
+                }
             }
         };
         handler.postDelayed(check, 2000);

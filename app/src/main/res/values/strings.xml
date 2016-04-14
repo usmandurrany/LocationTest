@@ -11,4 +11,6 @@
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
     <string name="action_settings">Settings</string>
+    <string name="crash_text">Something went wrong :( But no worries, a report has been sent to help fix the issue.</string>
+
 </resources>

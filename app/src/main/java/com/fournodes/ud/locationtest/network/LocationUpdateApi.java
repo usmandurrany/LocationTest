@@ -40,7 +40,7 @@ public class LocationUpdateApi extends AsyncTask<Long, String, String> {
 
     @Override
     protected String doInBackground(Long... longs) {
-        time = longs[0]; // Time sent by LocationService.updServerAfterInterval()
+        time = longs[0]; // Time sent by LocationService.createServerUpdateHandler()
         db = new Database(context);
         payload = db.getLocEntries(time);
         if (payload.length() > 0) {

@@ -1,8 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<android.support.design.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:fab="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:id="@+id/lytCoordinator">
+
+    <android.support.v4.widget.NestedScrollView
+        android:id="@+id/bottom_sheet"
+        android:layout_width="match_parent"
+        android:layout_height="400dp"
+        android:background="@android:color/holo_orange_light"
+        android:clipToPadding="true"
+        app:behavior_hideable = "true"
+        app:layout_behavior="android.support.design.widget.BottomSheetBehavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="15dp"
+            android:weightSum="1"
+            >
+
+            <android.support.design.widget.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp">
+
+                <EditText
+                    android:id="@+id/edtTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Title"/>
+
+            </android.support.design.widget.TextInputLayout>
+
+            <android.support.design.widget.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp">
+
+                <EditText
+                    android:id="@+id/edtDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Description"
+                    android:lines="3"
+                    android:maxLines="3"/>
+
+            </android.support.design.widget.TextInputLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="Create fence on:"
+                android:textAppearance="?android:attr/textAppearanceSmall"/>
+
+            <Spinner
+                android:id="@+id/selectDevice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:spinnerMode="dropdown">
+
+            </Spinner>
+
+            <TextView
+                android:id="@+id/textView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="Notify on:"
+                android:textAppearance="?android:attr/textAppearanceSmall"/>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:weightSum="3">
+
+                <CheckBox
+                    android:id="@+id/chkEntry"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
+                    android:layout_weight="1"
+                    android:text="Entry"/>
+
+                <CheckBox
+                    android:id="@+id/chkRoaming"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
+                    android:layout_weight="1"
+                    android:text="Roaming"/>
+
+                <CheckBox
+                    android:id="@+id/chkExit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
+                    android:layout_weight="1"
+                    android:text="Exit"/>
+            </LinearLayout>
+
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnSaveFence"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="right"
+                    android:layout_marginLeft="5dp"
+                    android:text="Save"/>
+
+                <Button
+                    android:id="@+id/btnCancelFence"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginRight="5dp"
+                    android:text="Cancel"/>
+
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </android.support.v4.widget.NestedScrollView>
+
 
     <com.fournodes.ud.locationtest.CustomFrameLayout
         android:id="@+id/floatingMarker"
@@ -10,10 +143,11 @@
         android:layout_height="match_parent"
         android:layout_below="@+id/btnFence">
 
+
         <com.google.android.gms.maps.MapView
             android:id="@+id/mapView"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"/>
 
         <RelativeLayout
             android:layout_width="match_parent"
@@ -26,87 +160,96 @@
                 android:layout_centerHorizontal="true"
                 android:layout_centerVertical="true"
                 android:paddingBottom="25dp"
-                android:src="@drawable/pin" />
+                android:src="@drawable/pin"/>
 
-            <com.github.clans.fab.FloatingActionMenu
-                android:id="@+id/fabMenu"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:layout_alignParentRight="true"
-                android:layout_margin="20dp"
-                fab:menu_colorNormal="@color/colorPrimary"
-                fab:menu_colorPressed="@color/colorPrimaryDark">
 
-                <com.github.clans.fab.FloatingActionButton
-                    android:id="@+id/fabAddFence"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:src="@drawable/ic_add_location_white_24dp"
-                    fab:fab_label="Add Fence"
-                    fab:fab_size="mini"
-                    fab:fab_colorNormal="@color/colorPrimary"
-                    fab:fab_colorPressed="@color/colorPrimaryDark" />
-
-                <com.github.clans.fab.FloatingActionButton
-                    android:id="@+id/fabMyLoc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:src="@drawable/ic_my_location_white_24dp"
-                    fab:fab_label="Locate Me"
-                    fab:fab_size="mini"
-                    fab:fab_colorNormal="@color/colorPrimary"
-                    fab:fab_colorPressed="@color/colorPrimaryDark" />
-
-                <com.github.clans.fab.FloatingActionButton
-                    android:id="@+id/fabShowFences"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:src="@drawable/ic_group_work_white_24dp"
-                    fab:fab_label="Show Fences"
-                    fab:fab_size="mini"
-                    fab:fab_colorNormal="@color/colorPrimary"
-                    fab:fab_colorPressed="@color/colorPrimaryDark" />
-
-                <com.github.clans.fab.FloatingActionButton
-                    android:id="@+id/fabTrackDevice"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:src="@drawable/ic_person_pin_white_24dp"
-                    fab:fab_label="Track Device"
-                    fab:fab_size="mini"
-                    fab:fab_colorNormal="@color/colorPrimary"
-                    fab:fab_colorPressed="@color/colorPrimaryDark" />
-            </com.github.clans.fab.FloatingActionMenu>
-
-            <com.github.clans.fab.FloatingActionButton
-                android:id="@+id/fabStopTrack"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:layout_margin="20dp"
-                android:src="@drawable/ic_location_off_white_24dp"
-                android:visibility="gone"
-                fab:fab_label="Stop Track"
-                fab:fab_size="mini"
-                fab:fab_colorNormal="@color/colorPrimary"
-                fab:fab_colorPressed="@color/colorPrimaryDark" />
-            <com.github.clans.fab.FloatingActionButton
-                android:id="@+id/fabDeleteHistory"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentBottom="true"
-                android:layout_margin="20dp"
-                android:src="@drawable/ic_delete_forever_white_24dp"
-                android:visibility="gone"
-                fab:fab_label="Delete History"
-                fab:fab_size="mini"
-                fab:fab_colorNormal="@color/colorPrimary"
-                fab:fab_colorPressed="@color/colorPrimaryDark" />
         </RelativeLayout>
 
 
     </com.fournodes.ud.locationtest.CustomFrameLayout>
 
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.github.clans.fab.FloatingActionMenu
+            android:id="@+id/fabMenu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:layout_margin="20dp"
+            fab:menu_colorNormal="@color/colorPrimary"
+            fab:menu_colorPressed="@color/colorPrimaryDark">
+
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/fabAddFence"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_add_location_white_24dp"
+                fab:fab_colorNormal="@color/colorPrimary"
+                fab:fab_colorPressed="@color/colorPrimaryDark"
+                fab:fab_label="Add Fence"
+                fab:fab_size="mini"/>
+
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/fabMyLoc"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_my_location_white_24dp"
+                fab:fab_colorNormal="@color/colorPrimary"
+                fab:fab_colorPressed="@color/colorPrimaryDark"
+                fab:fab_label="Locate Me"
+                fab:fab_size="mini"/>
+
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/fabShowFences"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_group_work_white_24dp"
+                fab:fab_colorNormal="@color/colorPrimary"
+                fab:fab_colorPressed="@color/colorPrimaryDark"
+                fab:fab_label="Show Fences"
+                fab:fab_size="mini"/>
+
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/fabTrackDevice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_person_pin_white_24dp"
+                fab:fab_colorNormal="@color/colorPrimary"
+                fab:fab_colorPressed="@color/colorPrimaryDark"
+                fab:fab_label="Track Device"
+                fab:fab_size="mini"/>
+        </com.github.clans.fab.FloatingActionMenu>
+
+
+        <com.github.clans.fab.FloatingActionButton
+            android:id="@+id/fabStopTrack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_margin="20dp"
+            android:src="@drawable/ic_location_off_white_24dp"
+            android:visibility="gone"
+            fab:fab_colorNormal="@color/colorPrimary"
+            fab:fab_colorPressed="@color/colorPrimaryDark"
+            fab:fab_label="Stop Track"
+            fab:fab_size="mini"/>
+
+        <com.github.clans.fab.FloatingActionButton
+            android:id="@+id/fabDeleteHistory"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_margin="20dp"
+            android:src="@drawable/ic_delete_forever_white_24dp"
+            android:visibility="gone"
+            fab:fab_colorNormal="@color/colorPrimary"
+            fab:fab_colorPressed="@color/colorPrimaryDark"
+            fab:fab_label="Delete History"
+            fab:fab_size="mini"/>
+    </RelativeLayout>
 
 </android.support.design.widget.CoordinatorLayout>

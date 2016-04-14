@@ -36,7 +36,6 @@ public class GCMBroadcastReceiver extends GcmListenerService {
     private GeofenceWrapper geofenceWrapper;
     private Database db;
     private List<String> events;
-    private int notificationId = -1;
 
 
     @Override
@@ -102,7 +101,8 @@ public class GCMBroadcastReceiver extends GcmListenerService {
                     db.saveFence(fence);
                     FileLogger.e(TAG, "Result: Success");
 
-                } else {
+                }
+                else {
                     FileLogger.e(TAG, "Error: " + result.getStatus().getStatusCode());
                     FileLogger.e(TAG, "Result: Failed");
                     serviceMessage("Error creating fence: " + result.getStatus().getStatusCode());
@@ -136,7 +136,8 @@ public class GCMBroadcastReceiver extends GcmListenerService {
                     db.updateFence(fence);
                     FileLogger.e(TAG, "Result: Success");
 
-                } else {
+                }
+                else {
                     FileLogger.e(TAG, "Error: " + result.getStatus().getStatusCode());
                     FileLogger.e(TAG, "Result: Failed");
                     serviceMessage("Error editing fence: " + result.getStatus().getStatusCode());
@@ -163,7 +164,8 @@ public class GCMBroadcastReceiver extends GcmListenerService {
                     db.removeFenceFromDatabase(fence.getId());
                     FileLogger.e(TAG, "Result: Success");
 
-                } else {
+                }
+                else {
                     FileLogger.e(TAG, "Error: " + result.getStatus().getStatusCode());
                     FileLogger.e(TAG, "Result: Failed");
                     serviceMessage("Error removing fence: " + result.getStatus().getStatusCode());
@@ -182,8 +184,6 @@ public class GCMBroadcastReceiver extends GcmListenerService {
     private void createNotification(String from, String message) {
         NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
-        if (notificationId == -1)
-            notificationId = (int) System.currentTimeMillis();
 
         PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), 0, new Intent(getApplicationContext(), MainActivity.class), 0);
         builder.setSmallIcon(R.mipmap.ic_launcher)
@@ -195,25 +195,7 @@ public class GCMBroadcastReceiver extends GcmListenerService {
                 .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
                 .setAutoCancel(false);
 
-        events.add(from + ": " + message);
-
-        if (events.size() <= 1) {
-            mNotificationManager.notify(notificationId, builder.build());
-
-
-        } else {
-            NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
-            // Sets a title for the Inbox in expanded layout
-            bigTextStyle.setBigContentTitle("Event Tracker:");
-            StringBuilder groupEvents = new StringBuilder();
-            for (int i = 0; i < events.size(); i++) {
-                groupEvents.append(events.get(i)).append("/n");
-            }
-            bigTextStyle.bigText(groupEvents.toString());
-            // Moves the expanded layout object into the notification object.
-            builder.setStyle(bigTextStyle);
-        }
-        mNotificationManager.notify(notificationId, builder.build());
+        mNotificationManager.notify((int) System.currentTimeMillis(), builder.build());
 
 
     }

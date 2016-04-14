@@ -14,21 +14,13 @@
         android:textSize="12sp"
 
         android:id="@+id/btnService"
-        android:layout_alignTop="@+id/btnSetUpdateInterval"
-        android:layout_toRightOf="@+id/btnSetUpdateInterval"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true" />
+        android:layout_alignTop="@+id/btnReset"
+        android:layout_alignRight="@+id/btnShareLogFile"
+        android:layout_alignEnd="@+id/btnShareLogFile"
+        android:layout_toRightOf="@+id/btnReset"
+        android:layout_toEndOf="@+id/btnReset"/>
 
 
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:textSize="12sp"
-
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Set"
-        android:id="@+id/btnSetUpdateInterval"
-        android:layout_centerHorizontal="true" />
     <Button
         android:id="@+id/btnShareLogFile"
         android:text="Share Log File"
@@ -36,7 +28,8 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"
-         />
+        android:layout_alignLeft="@+id/view"
+        android:layout_alignStart="@+id/view"/>
 
     <Button
         android:id="@+id/btnClearLogFile"
@@ -44,23 +37,25 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentLeft="true"/>
+        android:layout_alignParentLeft="true"
+        android:layout_toStartOf="@+id/view"
+        android:layout_toLeftOf="@+id/view"/>
     <Button
-        android:id="@+id/btnInspectDb"
-        android:text="Inspect DB"
+        android:id="@+id/btnReset"
+        android:text="Reset Events and Fences"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_toRightOf="@id/btnClearLogFile"
-        android:layout_toLeftOf="@id/btnShareLogFile"/>
+        android:layout_above="@+id/btnShareLogFile"
+        android:layout_toRightOf="@+id/view2"
+        android:layout_toEndOf="@+id/view2"/>
     <ScrollView
         android:id="@+id/lytScrollLog"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@+id/btnSetUpdateServer"
-        android:layout_above="@id/btnShareLogFile"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true">
+        android:fillViewport="false"
+        android:layout_above="@+id/btnService"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true">
 
         <TextView
             android:layout_width="match_parent"
@@ -71,120 +66,28 @@
     </ScrollView>
 
 
-
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Set"
-        android:textSize="12sp"
-
-        android:id="@+id/btnSetDisplacement"
-        android:layout_below="@+id/btnSetUpdateInterval"
-        android:layout_alignLeft="@+id/btnSetUpdateInterval"
-        android:layout_alignStart="@+id/btnSetUpdateInterval" />
-
-    <Button
-        style="?android:attr/buttonStyleSmall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Set"
-        android:textSize="12sp"
-
-        android:id="@+id/btnSetUpdateServer"
-        android:layout_below="@+id/btnSetDisplacement"
-        android:layout_alignLeft="@+id/btnSetDisplacement"
-        android:layout_alignStart="@+id/btnSetDisplacement" />
-
-    <android.support.v7.widget.AppCompatCheckBox
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Enable Polling"
-        android:id="@+id/chkPolling"
-        android:textSize="12sp"
-        android:layout_alignTop="@+id/btnSetDisplacement"
-        android:layout_alignLeft="@+id/btnService"
-        android:layout_alignStart="@+id/btnService"
-        android:layout_alignRight="@+id/btnFence"
-        android:layout_alignEnd="@+id/btnFence" />
-
-
     <android.support.design.widget.TextInputLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:layout_toLeftOf="@+id/btnSetUpdateInterval"
-        android:layout_toStartOf="@+id/btnSetUpdateInterval"
-        android:layout_alignBottom="@+id/btnSetUpdateInterval">
+        android:layout_centerHorizontal="true"
+        android:id="@+id/view">
 
-        <android.support.design.widget.TextInputEditText
-            style="?android:attr/textAppearanceSmall"
-
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:inputType="number"
-            android:ems="10"
-            android:hint="Update Interval"
-            android:id="@+id/edtUpdateInterval" />
     </android.support.design.widget.TextInputLayout>
 
     <android.support.design.widget.TextInputLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_toLeftOf="@+id/btnSetDisplacement"
-        android:layout_toStartOf="@+id/btnSetDisplacement"
-        android:layout_alignBottom="@+id/btnSetDisplacement">
+        android:id="@+id/view2">
 
-        <android.support.design.widget.TextInputEditText
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:inputType="number"
-            android:ems="10"
-            android:id="@+id/edtDisplacement"
-            android:hint="Displacement"
-            style="?android:attr/textAppearanceSmall" />
     </android.support.design.widget.TextInputLayout>
 
     <android.support.design.widget.TextInputLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_toLeftOf="@+id/btnSetUpdateServer"
-        android:layout_toStartOf="@+id/btnSetUpdateServer"
-        android:layout_alignBottom="@+id/btnSetUpdateServer">
+        >
 
-        <android.support.design.widget.TextInputEditText
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:inputType="number"
-            android:ems="10"
-            android:id="@+id/edtUpdateServer"
-            android:hint="Server Update Interval"
-            style="?android:attr/textAppearanceSmall" />
     </android.support.design.widget.TextInputLayout>
-
-    <android.support.v7.widget.AppCompatCheckBox
-        android:textSize="12sp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Active Mode"
-        android:id="@+id/chkActiveMode"
-        android:layout_below="@+id/chkPolling"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true"
-        android:layout_toRightOf="@+id/btnSetDisplacement"
-        android:layout_toEndOf="@+id/btnSetDisplacement" />
-
-    <android.support.v7.widget.AppCompatCheckBox
-        android:textSize="12sp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Send To Server"
-        android:id="@+id/chkUpdateServer"
-        android:layout_below="@+id/chkActiveMode"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true"
-        android:layout_toRightOf="@+id/btnSetDisplacement"
-        android:layout_toEndOf="@+id/btnSetDisplacement" />
 
 
 </RelativeLayout>

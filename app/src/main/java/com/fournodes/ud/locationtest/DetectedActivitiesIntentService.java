@@ -2,12 +2,12 @@ package com.fournodes.ud.locationtest;
 
 import android.app.IntentService;
 import android.content.Intent;
+import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 
-import com.fournodes.ud.locationtest.service.LocationService;
 import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.DetectedActivity;
 
-import java.io.File;
 import java.util.ArrayList;
 
 /**
@@ -15,6 +15,9 @@ import java.util.ArrayList;
  */
 public class DetectedActivitiesIntentService extends IntentService {
     protected static final String TAG = "DetectedActivitiesIS";
+    public int fastMovement;
+    public int slowMovement;
+    public int noMovement ;
 
     /**
      * This constructor is required, and calls the super IntentService(String)
@@ -32,6 +35,8 @@ public class DetectedActivitiesIntentService extends IntentService {
             new SharedPrefs(this).initialize();
     }
 
+
+
     /**
      * Handles incoming intents.
      *
@@ -43,8 +48,9 @@ public class DetectedActivitiesIntentService extends IntentService {
         if (SharedPrefs.pref == null)
             new SharedPrefs(getApplicationContext()).initialize();
 
-        if (System.currentTimeMillis() - SharedPrefs.getLocLastUpdateMillis() > (SharedPrefs.getForceRequestTimer()*1000)*2)
-            startService(new Intent(this,LocationService.class));
+/*        // Restart the service incase the system stops it and it doesnt restart on its own
+        if (System.currentTimeMillis() - SharedPrefs.getLocLastUpdateMillis() > (SharedPrefs.getLocationRequestInterval()*1000)*2)
+            startService(new Intent(this,LocationService.class));*/
 
         ActivityRecognitionResult result = ActivityRecognitionResult.extractResult(intent);
         // Get the list of the probable activities associated with the current state of the
@@ -57,46 +63,52 @@ public class DetectedActivitiesIntentService extends IntentService {
         for (DetectedActivity da : detectedActivities) {
             FileLogger.e(TAG, getActivityString(da) + " Confidence: " + da.getConfidence() + "%");
         }
-
+        if (fastMovement >= 50) {
+            FileLogger.e(TAG, "Fast Movement Detected.");
+            SharedPrefs.setLocationRequestInterval(15);
+            serviceMessage("fastMovement");
+        }else if (slowMovement >= 50){
+            FileLogger.e(TAG, "Slow Movement Detected.");
+            SharedPrefs.setLocationRequestInterval(60);
+            serviceMessage("slowMovement");
+        }else if (noMovement >= 50){
+            FileLogger.e(TAG, "No Movement Detected.");
+            SharedPrefs.setLocationRequestInterval(900);
+            serviceMessage("noMovement");
+        }else
+            FileLogger.e(TAG, "No enough data to change interval. Using last value of "+SharedPrefs.getLocationRequestInterval()+" seconds");
     }
 
-    public static String getActivityString(DetectedActivity detectedActivity) {
+    public  String getActivityString(DetectedActivity detectedActivity) {
         switch (detectedActivity.getType()) {
             case DetectedActivity.IN_VEHICLE:
-                if (SharedPrefs.getForceRequestTimer()>15) {
-                    FileLogger.e(TAG,"Changing force check interval to 15 seconds");
-                    SharedPrefs.setForceRequestTimer(15);
-                }
+                fastMovement += detectedActivity.getConfidence();
                 return "In Vehicle";
             case DetectedActivity.ON_BICYCLE:
-               // SharedPrefs.setForceRequestTimer(30000);
+                fastMovement += detectedActivity.getConfidence();
                 return "On Bicycle";
             case DetectedActivity.ON_FOOT:
-/*                if (detectedActivity.getConfidence() >= 80 && SharedPrefs.getForceRequestTimer()>60){
-                    SharedPrefs.setForceRequestTimer(60);
-                    FileLogger.e(TAG,"Changing force check interval to 1 minutes");
-                }*/
+                slowMovement += detectedActivity.getConfidence();
                 return "On Foot";
             case DetectedActivity.RUNNING:
-               // SharedPrefs.setForceRequestTimer(60000);
                 return "Running";
             case DetectedActivity.STILL:
-                if (detectedActivity.getConfidence() >= 95 && SharedPrefs.getForceRequestTimer()<120){
-                    SharedPrefs.setForceRequestTimer(120);
-                    FileLogger.e(TAG,"Changing force check interval to 2 minutes");
-                }
+                noMovement += detectedActivity.getConfidence();
                 return "Still";
             case DetectedActivity.TILTING:
-                //SharedPrefs.setForceRequestTimer(120000);
                 return "Tilting";
             case DetectedActivity.UNKNOWN:
-               // SharedPrefs.setForceRequestTimer(10000);
                 return "Unknown";
             case DetectedActivity.WALKING:
-               // SharedPrefs.setForceRequestTimer(60000);
                 return "Walking";
             default:
                 return "Undefined";
         }
+    }
+    private void serviceMessage(String message) {
+        Log.d("Main Fragment", "Broadcasting message");
+        Intent intent = new Intent("LOCATION_TEST_SERVICE");
+        intent.putExtra("message", message);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 }

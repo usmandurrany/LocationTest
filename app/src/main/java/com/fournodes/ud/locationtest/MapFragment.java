@@ -8,8 +8,10 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
+import android.support.design.widget.BottomSheetBehavior;
+import android.support.design.widget.BottomSheetDialogFragment;
+import android.support.design.widget.CoordinatorLayout;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +19,7 @@ import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
 import android.widget.Toast;
 
+import com.crashlytics.android.Crashlytics;
 import com.fournodes.ud.locationtest.network.FenceApi;
 import com.fournodes.ud.locationtest.network.NotificationApi;
 import com.fournodes.ud.locationtest.network.TrackApi;
@@ -45,6 +48,8 @@ import org.json.JSONException;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.fabric.sdk.android.Fabric;
+
 public class MapFragment extends Fragment implements OnMapReadyCallback, ResultCallback, MapFragmentInterface, View.OnClickListener, RequestResult {
     MapView mMapView;
     private GoogleMap map;
@@ -65,6 +70,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     private Handler updateLocation;
     private Runnable update;
     private Polyline polyline;
+
 
 
     public MapFragment() {
@@ -92,13 +98,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
         if (savedInstanceState != null) {
             Bundle mapViewSavedInstanceState = savedInstanceState.getBundle("mapViewSaveState");
             mMapView.onCreate(mapViewSavedInstanceState);
-        }else {
+        }
+        else {
             mMapView.onCreate(savedInstanceState);
             mMapView.onResume();
 
         }
 
         mGeofenceList = new ArrayList<>();
+
 
         fabMenu = (FloatingActionMenu) v.findViewById(R.id.fabMenu);
         fabShowFences = (FloatingActionButton) v.findViewById(R.id.fabShowFences);
@@ -116,8 +124,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
         fabDeleteHistory.setOnClickListener(this);
 
 
-
-
         return v;
     }
 
@@ -126,12 +132,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     public void onAttach(Context context) {
         super.onAttach(context);
         ((MainActivity) getActivity()).mapDelegate = this;
+        Fabric.with(getContext(), new Crashlytics());
+
     }
 
 
     @Override
-    public void onResult(@NonNull Result result) {
-    }
+    public void onResult(@NonNull Result result) { }
 
     @Override
     public void onMapReady(final GoogleMap googleMap) {
@@ -145,6 +152,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                     marker.showInfoWindow();
                     markerSelected = marker;
                 }
+
+
                 return true;
             }
         });
@@ -209,6 +218,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
 
             }
         });
+
+
     }
 
 
@@ -228,13 +239,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     @Override
     public void viewLiveLocation(LatLng coordinates, final String track_id) {
         if (map != null) {
-            if (updateLocation != null && update != null){
+            if (updateLocation != null && update != null) {
                 updateLocation.removeCallbacks(update);
                 updateLocation = null;
             }
             if (currPos != null) {
                 animateMarker(currPos, coordinates, false);
-            } else {
+            }
+            else {
                 currPos = map.addMarker(new MarkerOptions()
                         .position(coordinates)
                         .title("Tracking Id: " + track_id)
@@ -343,10 +355,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                 if (t < 1.0) {
                     // Post again 16ms later.
                     handler.postDelayed(this, 16);
-                } else {
+                }
+                else {
                     if (hideMarker) {
                         marker.setVisible(false);
-                    } else {
+                    }
+                    else {
                         marker.setVisible(true);
                     }
                 }
@@ -375,8 +389,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                             150,
                             mGeofenceList, map);
                     newFenceDialog.details();
-                } else
+                }
+                else
                     Toast.makeText(getContext(), "Service is not running", Toast.LENGTH_SHORT).show();
+
+               /* BottomSheetDialogFragment bottomSheetDialogFragment = new CreateFenceBottomSheet();
+                bottomSheetDialogFragment.show(getFragmentManager(), bottomSheetDialogFragment.getTag());
+*/
 
                 break;
             case R.id.fabMyLoc:
@@ -405,7 +424,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                     polyline.remove();
 
                 NotificationApi notificationApi = new NotificationApi();
-                notificationApi.execute("delete_history","user_id="+SharedPrefs.getUserId());
+                notificationApi.execute("delete_history", "user_id=" + SharedPrefs.getUserId());
                 break;
         }
         fabMenu.close(true);
@@ -422,8 +441,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
         if (polyline != null)
             polyline.remove();
     }
+
     public void showFabDeleteHistory() {
-       fabDeleteHistory.setVisibility(View.VISIBLE);
+        fabDeleteHistory.setVisibility(View.VISIBLE);
         if (updateLocation != null && update != null)
             updateLocation.removeCallbacks(update);
     }
