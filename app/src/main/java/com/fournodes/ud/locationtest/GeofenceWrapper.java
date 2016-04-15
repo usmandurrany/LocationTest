@@ -3,6 +3,7 @@ package com.fournodes.ud.locationtest;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.location.LocationManager;
 
 import com.fournodes.ud.locationtest.service.GeofenceTransitionsIntentService;
 import com.fournodes.ud.locationtest.service.LocationService;
@@ -32,9 +33,11 @@ public class GeofenceWrapper {
     private Geofence geofence;
     private PendingIntent pendingIntent;
     private Fence fence;
+    private LocationManager locationManager;
 
     public GeofenceWrapper(Context context) {
         this.context = context;
+        locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
     }
     private void getAttributes(Fence fence){
         this.fence = fence;
@@ -50,57 +53,37 @@ public class GeofenceWrapper {
         pendingIntent = fence.getPendingIntent();
     }
 
-    private GeofencingRequest getRequest(com.google.android.gms.location.Geofence geofence) {
-        GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
-        builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER);
-        builder.addGeofence(geofence);
-        return builder.build();
-    }
 
     private PendingIntent getPendingIntent() {
         Intent intent = new Intent(context, GeofenceTransitionsIntentService.class);
-        intent.putExtra("remote", true);  //Don't generate notification of fence on this device as it is a remote fence
-        return PendingIntent.getService(context,0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        intent.putExtra("remote", true); //Don't generate notification of fence on this device as it is a remote fence
+        intent.putExtra("id",id);
+        return PendingIntent.getService(context,id, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     /**
      * Will also be called for edit fence as it will replace the current
      * Geofence based on the pending intent
      **/
-    public void create(Fence fence, ResultCallback resultCallback) {
+    public void create(Fence fence) {
         getAttributes(fence);
-
-        if (LocationServices.GeofencingApi != null && LocationService.isGoogleApiConnected){
-            geofence = new Geofence.Builder()
-                .setRequestId(String.valueOf(id))
-                .setCircularRegion(
-                        centerLatitude,
-                        centerLongitude,
-                        radius)
-                .setExpirationDuration(Geofence.NEVER_EXPIRE)
-                .setTransitionTypes(transitionType)
-                .setLoiteringDelay(500)
-                .build();
+        if (locationManager != null){
             pendingIntent = getPendingIntent();
-            fence.setArea(geofence);
+            fence.setArea(null);
             fence.setPendingIntent(pendingIntent);
-            LocationServices.GeofencingApi.addGeofences(
-                    LocationService.mGoogleApiClient,
-                    getRequest(geofence),
-                    pendingIntent).setResultCallback(resultCallback);
+
+            locationManager.addProximityAlert(centerLatitude,centerLongitude,radius,-1,pendingIntent);
         } else
-            FileLogger.e(TAG,"Service is not running");
+            FileLogger.e(TAG,"Location Manager is not available");
     }
 
-    public void remove(Fence fence, ResultCallback resultCallback){
+    public void remove(Fence fence){
         getAttributes(fence);
-        if (LocationServices.GeofencingApi != null && LocationService.isGoogleApiConnected){
-            pendingIntent = getPendingIntent();
-            List<String> requestIds  = new ArrayList<>();
-            requestIds.add(String.valueOf(id));
-            LocationServices.GeofencingApi.removeGeofences(LocationService.mGoogleApiClient,requestIds).setResultCallback(resultCallback);
+        if (locationManager != null){
+            pendingIntent = fence.getPendingIntent();
+            locationManager.removeProximityAlert(pendingIntent);
         }else
-            FileLogger.e(TAG,"Service is not running or fence doesn't exist");
+            FileLogger.e(TAG,"Location Manager is not available");
 
     }
 }

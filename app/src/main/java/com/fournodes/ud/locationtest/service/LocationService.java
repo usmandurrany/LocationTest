@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -19,28 +20,22 @@ import com.fournodes.ud.locationtest.Database;
 import com.fournodes.ud.locationtest.DetectedActivitiesIntentService;
 import com.fournodes.ud.locationtest.EventVerifierThread;
 import com.fournodes.ud.locationtest.FileLogger;
-import com.fournodes.ud.locationtest.LocationUpdateListener;
 import com.fournodes.ud.locationtest.LocationRequestThread;
+import com.fournodes.ud.locationtest.LocationUpdateListener;
 import com.fournodes.ud.locationtest.RequestResult;
 import com.fournodes.ud.locationtest.ServiceMessage;
 import com.fournodes.ud.locationtest.SharedGmsListener;
+import com.fournodes.ud.locationtest.SharedLocationListener;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.network.LocationUpdateApi;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.ActivityRecognition;
-import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.LocationSettingsRequest;
-import com.google.android.gms.location.LocationSettingsResult;
-import com.google.android.gms.location.LocationSettingsStatusCodes;
 
 import java.text.DateFormat;
-import java.util.Date;
-import java.util.logging.SocketHandler;
 
 import io.fabric.sdk.android.Fabric;
 
@@ -61,6 +56,9 @@ public class LocationService extends Service implements
     private EventVerifierThread eventVerifierThread;
     private LocationRequestThread locationRequestThread;
     private long lastEventVerifiedTime;
+
+    private LocationManager locationManager;
+    private SharedLocationListener sharedLocationListener;
 
     private SharedGmsListener gmsLocationListener;
 
@@ -91,21 +89,21 @@ public class LocationService extends Service implements
                     break;
                 }
                 case "fastMovement": {
-                    FileLogger.e(TAG, "Changing request interval to 15 seconds");
+/*                    FileLogger.e(TAG, "Changing request interval to 15 seconds");
                     requestLocationUpdate.removeCallbacksAndMessages(null);
-                    requestLocationUpdate.post(request);
+                    requestLocationUpdate.post(request);*/
                     break;
                 }
                 case "slowMovement": {
-                    FileLogger.e(TAG, "Changing request interval to 60 seconds");
+/*                    FileLogger.e(TAG, "Changing request interval to 60 seconds");
                     requestLocationUpdate.removeCallbacksAndMessages(null);
-                    requestLocationUpdate.post(request);
+                    requestLocationUpdate.post(request);*/
                     break;
                 }
                 case "noMovement": {
-                    FileLogger.e(TAG, "Changing request interval to 900 seconds");
+/*                    FileLogger.e(TAG, "Changing request interval to 900 seconds");
                     requestLocationUpdate.removeCallbacksAndMessages(null);
-                    requestLocationUpdate.post(request);
+                    requestLocationUpdate.post(request);*/
                     break;
                 }
                 case "runEventVerifier": {
@@ -128,7 +126,7 @@ public class LocationService extends Service implements
 
         Fabric.with(this, new Crashlytics());
 
-        createLocRequestHandler();
+        //createLocRequestHandler();
         createServerUpdateHandler();
 
         locationRequestThread = new LocationRequestThread(getApplicationContext());
@@ -196,7 +194,8 @@ public class LocationService extends Service implements
     public void onConnected(Bundle bundle) {
         isGoogleApiConnected = true;
         Log.e(TAG, "Google API Connected");
-        requestLocationUpdate.post(request);
+        //requestLocationUpdate.post(request);
+        switchToPassiveMode();
 
         ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(
                 mGoogleApiClient,
@@ -228,44 +227,11 @@ public class LocationService extends Service implements
 
 
     protected void createPassiveLocationRequest() {
-        LocationRequest passiveLocationRequest = new LocationRequest();
-        passiveLocationRequest.setFastestInterval(1000);
-        passiveLocationRequest.setPriority(LocationRequest.PRIORITY_NO_POWER);
-
-        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
-                .addLocationRequest(passiveLocationRequest);
-
-        PendingResult<LocationSettingsResult> result =
-                LocationServices.SettingsApi.checkLocationSettings(mGoogleApiClient,
-                        builder.build());
-
-        result.setResultCallback(new ResultCallback<LocationSettingsResult>() {
-            @Override
-            public void onResult(LocationSettingsResult result) {
-                final Status status = result.getStatus();
-                switch (status.getStatusCode()) {
-                    case LocationSettingsStatusCodes.SUCCESS:
-                        // All location settings are satisfied. The client can
-                        // initialize location requests here.
-                        FileLogger.e(TAG, "Location Settings Are Correct");
-                        break;
-                    case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
-                        // Location settings are not satisfied, but this can be fixed
-                        // by showing the user a dialog.
-                        FileLogger.e(TAG, "Location Settings Needs To Be Resolved");
-
-                        break;
-                    case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-                        // Location settings are not satisfied. However, we have no way
-                        // to fix the settings so we won't show the dialog.
-                        FileLogger.e(TAG, "Location Settings Unresolvable");
-                        break;
-                }
-            }
-        });
-        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, passiveLocationRequest, gmsLocationListener);
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        sharedLocationListener = new SharedLocationListener(TAG);
+        sharedLocationListener.delegate=this;
+        locationManager.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, 0, 0, sharedLocationListener);
         isModeActive = false;
-
     }
 
     protected void stopLocationUpdates() {
@@ -284,7 +250,34 @@ public class LocationService extends Service implements
     public void gpsBestLocation(Location bestLocation, int locationScore) {}
 
     @Override
-    public void gpsLocation(Location location, int locationScore) {}
+    public void gpsLocation(Location location, int locationScore) {
+        if (SharedPrefs.pref == null)
+            new SharedPrefs(getApplicationContext()).initialize();
+
+        lastLocationTime = System.currentTimeMillis();
+        SharedPrefs.setLocLastUpdateMillis(lastLocationTime);
+
+        Database db = new Database(getApplicationContext());
+        String locationTime = String.valueOf(DateFormat.getTimeInstance().format(location.getTime()));
+        db.saveLocation(location.getLatitude(), location.getLongitude(), System.currentTimeMillis());
+        //Save in shared prefs after saving in db
+        SharedPrefs.setLastDeviceLatitude(String.valueOf(location.getLatitude()));
+        SharedPrefs.setLastDeviceLongitude(String.valueOf(location.getLongitude()));
+        SharedPrefs.setLastLocUpdateTime(locationTime);
+        SharedPrefs.setLastLocationAccuracy(location.getAccuracy());
+
+        if (delegate != null)
+            delegate.locationUpdated(String.valueOf(location.getLatitude()), String.valueOf(location.getLongitude()), locationTime);
+
+        int rowCount = db.getLocEntriesCount();
+
+        if (updateServer == null && update == null)
+            createServerUpdateHandler();
+        else if (rowCount >= 5 && updateServer != null && update != null)
+            updateServer.post(update);
+
+        runEventVerifier();
+    }
 
     @Override
     public void removeGpsLocationUpdates() {}
@@ -311,7 +304,7 @@ public class LocationService extends Service implements
             if (location.hasAccuracy() && location.getAccuracy() <= 60) {
 
                 Database db = new Database(getApplicationContext());
-                String locationTime=String.valueOf(DateFormat.getTimeInstance().format(location.getTime()));
+                String locationTime = String.valueOf(DateFormat.getTimeInstance().format(location.getTime()));
                 db.saveLocation(location.getLatitude(), location.getLongitude(), System.currentTimeMillis());
                 //Save in shared prefs after saving in db
                 SharedPrefs.setLastDeviceLatitude(String.valueOf(location.getLatitude()));
@@ -423,7 +416,7 @@ public class LocationService extends Service implements
             FileLogger.e(TAG, "Event verifier first run");
             eventVerifierThread.start();
         }
-        else if (eventVerifierThread.getState() == Thread.State.TERMINATED  && SharedPrefs.getPendingEventCount() > 0) { //&& (System.currentTimeMillis() - lastEventVerifiedTime > 5000)) {
+        else if (eventVerifierThread.getState() == Thread.State.TERMINATED && SharedPrefs.getPendingEventCount() > 0) { //&& (System.currentTimeMillis() - lastEventVerifiedTime > 5000)) {
             FileLogger.e(TAG, "Pending events: " + String.valueOf(SharedPrefs.getPendingEventCount()));
             FileLogger.e(TAG, "Starting event verifier");
             lastEventVerifiedTime = System.currentTimeMillis();

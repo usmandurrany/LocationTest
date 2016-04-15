@@ -2,6 +2,7 @@ package com.fournodes.ud.locationtest.service;
 
 import android.app.IntentService;
 import android.content.Intent;
+import android.location.LocationManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
@@ -14,6 +15,7 @@ import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofenceStatusCodes;
 import com.google.android.gms.location.GeofencingEvent;
 
+import java.io.File;
 import java.util.List;
 
 public class GeofenceTransitionsIntentService extends IntentService {
@@ -38,24 +40,20 @@ public class GeofenceTransitionsIntentService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
-        GeofencingEvent geofencingEvent = GeofencingEvent.fromIntent(intent);
-        if (geofencingEvent.hasError()) {
-            String errorMessage = getErrorString(geofencingEvent.getErrorCode());
-            FileLogger.e(TAG, errorMessage);
-            return;
-        }
-        int geofenceTransition = geofencingEvent.getGeofenceTransition();
-        List<Geofence> triggeringGeofences = geofencingEvent.getTriggeringGeofences();
-        String requestId = triggeringGeofences.get(0).getRequestId();
+        Boolean hasEntered = intent.getBooleanExtra(LocationManager.KEY_PROXIMITY_ENTERING,false);
+        // If user entered then 1 else 2
+        int geofenceTransition = hasEntered ? 1 : 2;
+        int requestId = intent.getIntExtra("id",-1);
+        FileLogger.e(TAG,"FENCE ID: " +String.valueOf(requestId));
         GeofenceEvent event = new GeofenceEvent();
-        event.requestId = Integer.parseInt(requestId);
+        event.requestId = requestId;
         event.transitionType = geofenceTransition;
         event.isVerified = 0;
         event.verifyCount = 0;
         event.retryCount = 0;
 
         GeofenceEvent lastPendingEvent = db.getLastPendingEvent(event.requestId);
-        Fence fence = db.getFence(requestId);
+        Fence fence = db.getFence(String.valueOf(requestId));
         FileLogger.e(TAG, getTransitionType(geofenceTransition) + " fence: " + fence.getTitle());
 
         /*
@@ -100,17 +98,4 @@ public class GeofenceTransitionsIntentService extends IntentService {
         return null;
     }
 
-    public static String getErrorString(int errorCode) {
-        switch (errorCode) {
-            case GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE:
-                return "Geofence service not available.";
-            case GeofenceStatusCodes.GEOFENCE_TOO_MANY_GEOFENCES:
-                return "Too many geofences!";
-            case GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS:
-                return "Too many pending Intents.";
-            default:
-                return "Undefined error.";
-        }
-
-    }
 }

@@ -273,24 +273,11 @@ public class Database extends SQLiteOpenHelper {
             fence.setLastEvent(cursor.getInt(cursor.getColumnIndex(COLUMN_LAST_EVENT)));
             fence.setTransitionType(cursor.getInt(cursor.getColumnIndex(COLUMN_TRANSITION_TYPE)));
 
+            FileLogger.e(TAG, "Fence: " + String.valueOf(id));
+            FileLogger.e(TAG, "Title: " + title);
 
-            geofenceWrapper.create(fence, new ResultCallback() {
-                @Override
-                public void onResult(Result result) {
-                    FileLogger.e(TAG, "Fence: " + String.valueOf(id));
-                    FileLogger.e(TAG, "Title: " + title);
-                    count++;
-                    if (result.getStatus().isSuccess()) {
-                        FileLogger.e(TAG, "Result: Success");
-
-
-                    } else {
-                        FileLogger.e(TAG, "Error: " + result.getStatus().getStatusCode());
-                        FileLogger.e(TAG, "Result: Failure");
-                        fenceErrorCount++;
-                    }
-                }
-            });
+            geofenceWrapper.create(fence);
+            FileLogger.e(TAG, "Result: Success");
 
         }
         new Handler().postDelayed(new Runnable() {

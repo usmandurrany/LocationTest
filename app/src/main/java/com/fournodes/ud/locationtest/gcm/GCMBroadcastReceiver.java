@@ -87,28 +87,16 @@ public class GCMBroadcastReceiver extends GcmListenerService {
         fence.setCreate_on(data.getString("create_on"));
         fence.setId(Integer.parseInt(data.getString("fence_id")));
 
-        geofenceWrapper.create(fence, new ResultCallback<Result>() {
-            @Override
-            public void onResult(Result result) {
-                FileLogger.e(TAG, "Fence: " + data.getString("fence_id"));
-                FileLogger.e(TAG, "Action: Create");
-                FileLogger.e(TAG, "Title: " + data.getString("title"));
-                FileLogger.e(TAG, "Description: " + data.getString("description"));
-                FileLogger.e(TAG, "Center: Lat: " + data.getString("center_latitude") + " Long: " + data.getString("center_longitude"));
-                FileLogger.e(TAG, "Radius: " + data.getString("radius"));
+        FileLogger.e(TAG, "Fence: " + data.getString("fence_id"));
+        FileLogger.e(TAG, "Action: Create");
+        FileLogger.e(TAG, "Title: " + data.getString("title"));
+        FileLogger.e(TAG, "Description: " + data.getString("description"));
+        FileLogger.e(TAG, "Center: Lat: " + data.getString("center_latitude") + " Long: " + data.getString("center_longitude"));
+        FileLogger.e(TAG, "Radius: " + data.getString("radius"));
+        geofenceWrapper.create(fence);
+        FileLogger.e(TAG, "Result: Success");
+        db.saveFence(fence);
 
-                if (result.getStatus().isSuccess()) {
-                    db.saveFence(fence);
-                    FileLogger.e(TAG, "Result: Success");
-
-                }
-                else {
-                    FileLogger.e(TAG, "Error: " + result.getStatus().getStatusCode());
-                    FileLogger.e(TAG, "Result: Failed");
-                    serviceMessage("Error creating fence: " + result.getStatus().getStatusCode());
-                }
-            }
-        });
 
 
         NotificationApi notificationApi = new NotificationApi();
@@ -126,25 +114,13 @@ public class GCMBroadcastReceiver extends GcmListenerService {
         fence.setRadius(Float.parseFloat(data.getString("radius")));
         fence.setLastEvent(2);
 
-        geofenceWrapper.create(fence, new ResultCallback<Result>() {
-            @Override
-            public void onResult(Result result) {
-                FileLogger.e(TAG, "Fence: " + data.getString("fence_id"));
-                FileLogger.e(TAG, "Action: Edit");
-                FileLogger.e(TAG, "Radius: " + data.getString("radius"));
-                if (result.getStatus().isSuccess()) {
-                    db.updateFence(fence);
-                    FileLogger.e(TAG, "Result: Success");
+        FileLogger.e(TAG, "Fence: " + data.getString("fence_id"));
+        FileLogger.e(TAG, "Action: Edit");
+        FileLogger.e(TAG, "Radius: " + data.getString("radius"));
 
-                }
-                else {
-                    FileLogger.e(TAG, "Error: " + result.getStatus().getStatusCode());
-                    FileLogger.e(TAG, "Result: Failed");
-                    serviceMessage("Error editing fence: " + result.getStatus().getStatusCode());
-
-                }
-            }
-        });
+        geofenceWrapper.create(fence);
+        FileLogger.e(TAG, "Result: Success");
+        db.updateFence(fence);
 
 
         NotificationApi notificationApi = new NotificationApi();
@@ -155,24 +131,12 @@ public class GCMBroadcastReceiver extends GcmListenerService {
     public void removeFence(final Bundle data) {
         fence = db.getFence(data.getString("fence_id"));
 
-        geofenceWrapper.remove(fence, new ResultCallback<Result>() {
-            @Override
-            public void onResult(Result result) {
-                FileLogger.e(TAG, "Fence: " + data.getString("fence_id"));
-                FileLogger.e(TAG, "Action: Remove");
-                if (result.getStatus().isSuccess()) {
-                    db.removeFenceFromDatabase(fence.getId());
-                    FileLogger.e(TAG, "Result: Success");
+        FileLogger.e(TAG, "Fence: " + data.getString("fence_id"));
+        FileLogger.e(TAG, "Action: Remove");
+        geofenceWrapper.remove(fence);
+        FileLogger.e(TAG, "Result: Success");
+        db.removeFenceFromDatabase(fence.getId());
 
-                }
-                else {
-                    FileLogger.e(TAG, "Error: " + result.getStatus().getStatusCode());
-                    FileLogger.e(TAG, "Result: Failed");
-                    serviceMessage("Error removing fence: " + result.getStatus().getStatusCode());
-
-                }
-            }
-        });
 
         NotificationApi notificationApi = new NotificationApi();
         notificationApi.execute("response",

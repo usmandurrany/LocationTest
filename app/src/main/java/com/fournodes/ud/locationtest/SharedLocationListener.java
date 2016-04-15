@@ -26,24 +26,28 @@ public class SharedLocationListener implements LocationListener {
     public void onLocationChanged(Location location) {
         float accuracy = location.getAccuracy();
 
-        FileLogger.e(className,"Location obtained from " + location.getProvider());
+        FileLogger.e(className, "Location obtained from " + location.getProvider());
         FileLogger.e(className, "Lat: " + String.valueOf(location.getLatitude()) + " Long: " + String.valueOf(location.getLongitude()));
         FileLogger.e(className, "Accuracy: " + String.valueOf(location.getAccuracy()));
         FileLogger.e(className, "Location Time: " + String.valueOf(DateFormat.getTimeInstance().format(location.getTime())));
 
-        calculateLocationScore(accuracy);
+        if (className.equals("Location Service")) {
+            delegate.gpsLocation(location,0);
+        }
+        else {
+            calculateLocationScore(accuracy);
 
-        if (bestLocation.getAccuracy() > accuracy) {
-            bestLocation = location;
-            delegate.gpsLocation(location,locationScore);
-            if (locationScore >= 10) {
-                // Stop any further location updates
-                delegate.removeGpsLocationUpdates();
-                // Stop timeout handler from firing
-                delegate.removeGpsTimeoutHandler();
-                // Return the best location
-                delegate.gpsBestLocation(bestLocation,locationScore);
-
+            if (bestLocation.getAccuracy() > accuracy) {
+                bestLocation = location;
+                delegate.gpsLocation(location, locationScore);
+                if (locationScore >= 10) {
+                    // Stop any further location updates
+                    delegate.removeGpsLocationUpdates();
+                    // Stop timeout handler from firing
+                    delegate.removeGpsTimeoutHandler();
+                    // Return the best location
+                    delegate.gpsBestLocation(bestLocation, locationScore);
+                }
             }
         }
 
@@ -58,7 +62,7 @@ public class SharedLocationListener implements LocationListener {
             locationScore += 3;
         else if (accuracy >= 50.0)
             locationScore += 1;
-        FileLogger.e(className, "Location score: "+String.valueOf(locationScore));
+        FileLogger.e(className, "Location score: " + String.valueOf(locationScore));
     }
 
     @Override
