@@ -30,10 +30,10 @@ import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.network.LocationUpdateApi;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Result;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.ActivityRecognition;
-import com.google.android.gms.location.LocationServices;
 
 import java.text.DateFormat;
 
@@ -89,21 +89,21 @@ public class LocationService extends Service implements
                     break;
                 }
                 case "fastMovement": {
-/*                    FileLogger.e(TAG, "Changing request interval to 15 seconds");
+                    FileLogger.e(TAG, "Changing request interval to 15 seconds");
                     requestLocationUpdate.removeCallbacksAndMessages(null);
-                    requestLocationUpdate.post(request);*/
+                    requestLocationUpdate.post(request);
                     break;
                 }
                 case "slowMovement": {
-/*                    FileLogger.e(TAG, "Changing request interval to 60 seconds");
+                    FileLogger.e(TAG, "Changing request interval to 60 seconds");
                     requestLocationUpdate.removeCallbacksAndMessages(null);
-                    requestLocationUpdate.post(request);*/
+                    requestLocationUpdate.post(request);
                     break;
                 }
                 case "noMovement": {
-/*                    FileLogger.e(TAG, "Changing request interval to 900 seconds");
+                    FileLogger.e(TAG, "Changing request interval to 900 seconds");
                     requestLocationUpdate.removeCallbacksAndMessages(null);
-                    requestLocationUpdate.post(request);*/
+                    requestLocationUpdate.post(request);
                     break;
                 }
                 case "runEventVerifier": {
@@ -126,7 +126,7 @@ public class LocationService extends Service implements
 
         Fabric.with(this, new Crashlytics());
 
-        //createLocRequestHandler();
+        createLocRequestHandler();
         createServerUpdateHandler();
 
         locationRequestThread = new LocationRequestThread(getApplicationContext());
@@ -142,6 +142,7 @@ public class LocationService extends Service implements
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.e(TAG, "Service Started");
+
         gmsLocationListener = new SharedGmsListener(TAG);
         gmsLocationListener.delegate = this;
 
@@ -160,11 +161,10 @@ public class LocationService extends Service implements
         /*
         Create An Instance Of GoogleApi
          */
-        if (mGoogleApiClient == null) {
+        if (mGoogleApiClient == null || !mGoogleApiClient.isConnected()) {
             mGoogleApiClient = new GoogleApiClient.Builder(this)
                     .addConnectionCallbacks(this)
                     .addOnConnectionFailedListener(this)
-                    .addApi(LocationServices.API)
                     .addApi(ActivityRecognition.API)
                     .build();
         }
@@ -173,6 +173,8 @@ public class LocationService extends Service implements
 
         isRunning = true;
         self = this;
+
+        requestLocationUpdate.post(request);
 
 
         return super.onStartCommand(intent, START_STICKY, startId);
@@ -194,8 +196,7 @@ public class LocationService extends Service implements
     public void onConnected(Bundle bundle) {
         isGoogleApiConnected = true;
         Log.e(TAG, "Google API Connected");
-        //requestLocationUpdate.post(request);
-        switchToPassiveMode();
+        //switchToPassiveMode();
 
         ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(
                 mGoogleApiClient,
@@ -227,17 +228,16 @@ public class LocationService extends Service implements
 
 
     protected void createPassiveLocationRequest() {
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        locationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
         sharedLocationListener = new SharedLocationListener(TAG);
-        sharedLocationListener.delegate=this;
+        sharedLocationListener.delegate = this;
         locationManager.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, 0, 0, sharedLocationListener);
         isModeActive = false;
     }
 
     protected void stopLocationUpdates() {
         FileLogger.e(TAG, "Stopping listener");
-        LocationServices.FusedLocationApi.removeLocationUpdates(
-                mGoogleApiClient, gmsLocationListener);
+        locationManager.removeUpdates(sharedLocationListener);
     }
 
     public void switchToPassiveMode() {
@@ -247,10 +247,10 @@ public class LocationService extends Service implements
 
 
     @Override
-    public void gpsBestLocation(Location bestLocation, int locationScore) {}
+    public void lmBestLocation(Location bestLocation, int locationScore) {}
 
     @Override
-    public void gpsLocation(Location location, int locationScore) {
+    public void lmLocation(Location location, int locationScore) {
         if (SharedPrefs.pref == null)
             new SharedPrefs(getApplicationContext()).initialize();
 
@@ -280,10 +280,10 @@ public class LocationService extends Service implements
     }
 
     @Override
-    public void removeGpsLocationUpdates() {}
+    public void lmRemoveUpdates() {}
 
     @Override
-    public void removeGpsTimeoutHandler() {}
+    public void lmRemoveTimeoutHandler() {}
 
     @Override
     public void fusedLocation(Location location) {
@@ -327,13 +327,14 @@ public class LocationService extends Service implements
         }
     }
 
+
     @Override
-    public void fusedBestLocation(Location bestLocation, int locationScore) {
+    public void fusedBestLocation(Location bestLocation, int locationScore)  {
         // Not used here because this just listens for updates regardless of accuracy
     }
 
     @Override
-    public void removeFusedLocationUpdates() {
+    public void fusedRemoveUpdates() {
         // Not used here because listener is never stopped except when it runs force request
     }
 
@@ -438,9 +439,14 @@ public class LocationService extends Service implements
         isGoogleApiConnected = false;
         isRunning = false;
         isModeActive = false;
+
         if (requestLocationUpdate != null)
             requestLocationUpdate.removeCallbacksAndMessages(null);
 
+
+        Log.e(TAG, "Stopping listener");
+        locationManager.removeUpdates(sharedLocationListener);
+        locationManager = null;
 
         if (delegate != null)
             delegate.serviceStopped();

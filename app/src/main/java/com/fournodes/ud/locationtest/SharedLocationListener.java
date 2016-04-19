@@ -31,22 +31,22 @@ public class SharedLocationListener implements LocationListener {
         FileLogger.e(className, "Accuracy: " + String.valueOf(location.getAccuracy()));
         FileLogger.e(className, "Location Time: " + String.valueOf(DateFormat.getTimeInstance().format(location.getTime())));
 
-        if (className.equals("Location Service")) {
-            delegate.gpsLocation(location,0);
+        if (className.equals("Location Service") || className.equals("RequestLocUpdateThread") && location.getProvider().equals("network")) {
+            delegate.lmLocation(location,0);
         }
-        else {
+        else if(className.equals("RequestLocUpdateThread")){
             calculateLocationScore(accuracy);
 
             if (bestLocation.getAccuracy() > accuracy) {
                 bestLocation = location;
-                delegate.gpsLocation(location, locationScore);
+                delegate.lmLocation(location, locationScore);
                 if (locationScore >= 10) {
                     // Stop any further location updates
-                    delegate.removeGpsLocationUpdates();
+                    delegate.lmRemoveUpdates();
                     // Stop timeout handler from firing
-                    delegate.removeGpsTimeoutHandler();
+                    delegate.lmRemoveTimeoutHandler();
                     // Return the best location
-                    delegate.gpsBestLocation(bestLocation, locationScore);
+                    delegate.lmBestLocation(bestLocation, locationScore);
                 }
             }
         }

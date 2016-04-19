@@ -7,18 +7,16 @@
     android:id="@+id/root">
 
     <Button
-        style="?android:attr/buttonStyleSmall"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Start Service"
-        android:textSize="12sp"
-
+        android:layout_toRightOf="@+id/btnCreateAll"
+        android:layout_toEndOf="@+id/btnCreateAll"
         android:id="@+id/btnService"
-        android:layout_alignTop="@+id/btnReset"
+        android:layout_alignTop="@+id/btnRemoveAll"
         android:layout_alignRight="@+id/btnShareLogFile"
         android:layout_alignEnd="@+id/btnShareLogFile"
-        android:layout_toRightOf="@+id/btnReset"
-        android:layout_toEndOf="@+id/btnReset"/>
+        />
 
 
     <Button
@@ -41,13 +39,21 @@
         android:layout_toStartOf="@+id/view"
         android:layout_toLeftOf="@+id/view"/>
     <Button
-        android:id="@+id/btnReset"
-        android:text="Reset Events and Fences"
+        android:id="@+id/btnRemoveAll"
+        android:text="Remove All"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@+id/btnShareLogFile"
         android:layout_toRightOf="@+id/view2"
         android:layout_toEndOf="@+id/view2"/>
+    <Button
+        android:id="@+id/btnCreateAll"
+        android:text="Create All "
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/btnShareLogFile"
+        android:layout_toRightOf="@+id/btnRemoveAll"
+        android:layout_toEndOf="@+id/btnRemoveAll"/>
     <ScrollView
         android:id="@+id/lytScrollLog"
         android:layout_width="match_parent"

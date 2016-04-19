@@ -17,6 +17,7 @@ import com.google.android.gms.location.GeofencingEvent;
 
 import java.io.File;
 import java.util.List;
+import java.util.logging.SocketHandler;
 
 public class GeofenceTransitionsIntentService extends IntentService {
 
@@ -40,6 +41,9 @@ public class GeofenceTransitionsIntentService extends IntentService {
 
     @Override
     protected void onHandleIntent(Intent intent) {
+        if (SharedPrefs.pref == null)
+            new SharedPrefs(this).initialize();
+
         Boolean hasEntered = intent.getBooleanExtra(LocationManager.KEY_PROXIMITY_ENTERING,false);
         // If user entered then 1 else 2
         int geofenceTransition = hasEntered ? 1 : 2;

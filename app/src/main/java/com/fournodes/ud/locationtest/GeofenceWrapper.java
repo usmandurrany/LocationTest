@@ -81,6 +81,8 @@ public class GeofenceWrapper {
         getAttributes(fence);
         if (locationManager != null){
             pendingIntent = fence.getPendingIntent();
+            if (pendingIntent == null)
+                pendingIntent = getPendingIntent();
             locationManager.removeProximityAlert(pendingIntent);
         }else
             FileLogger.e(TAG,"Location Manager is not available");

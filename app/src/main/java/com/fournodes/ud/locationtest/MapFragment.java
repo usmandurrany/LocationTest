@@ -60,6 +60,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     private FloatingActionButton fabStopTrack;
     private FloatingActionButton fabTrackDevice;
     private FloatingActionButton fabDeleteHistory;
+    private FloatingActionButton fabShowHiddenFences;
     private Marker markerSelected;
     private Marker currPos;
 
@@ -115,6 +116,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
         fabAddFence = (FloatingActionButton) v.findViewById(R.id.fabAddFence);
         fabStopTrack = (FloatingActionButton) v.findViewById(R.id.fabStopTrack);
         fabDeleteHistory = (FloatingActionButton) v.findViewById(R.id.fabDeleteHistory);
+        fabShowHiddenFences = (FloatingActionButton) v.findViewById(R.id.fabShowHiddenFences);
+
 
         fabMyLoc.setOnClickListener(this);
         fabShowFences.setOnClickListener(this);
@@ -122,6 +125,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
         fabTrackDevice.setOnClickListener(this);
         fabStopTrack.setOnClickListener(this);
         fabDeleteHistory.setOnClickListener(this);
+        fabShowHiddenFences.setOnClickListener(this);
 
 
         return v;
@@ -425,6 +429,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
 
                 NotificationApi notificationApi = new NotificationApi();
                 notificationApi.execute("delete_history", "user_id=" + SharedPrefs.getUserId());
+                break;
+            case R.id.fabShowHiddenFences:
+                Database db = new Database(getContext());
+                List<Fence> fenceList = db.onDeviceFence("showAll");
+                for (Fence f :
+                        fenceList) {
+                    if (map != null){
+                        map.addCircle(new CircleOptions()
+                                .center(new LatLng(f.getCenter_lat(),f.getCenter_lng()))
+                                .radius(f.getRadius())
+                                .fillColor(Color.parseColor("#03A9F4"))
+                                .strokeColor(Color.parseColor("#000000"))
+                                .strokeWidth(3f)
+                        );
+                    }
+                }
                 break;
         }
         fabMenu.close(true);

@@ -45,7 +45,6 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     private Runnable timeout;
     private Location bestLocation;
     private SharedLocationListener locationListener;
-    private SharedGmsListener gmsLocationListener;
     private NotificationManager mNotificationManager;
 
 
@@ -74,7 +73,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
                 locationManager.removeUpdates(locationListener);
 
                 if (bestLocation == null) {
-                    FileLogger.e(TAG, "GPS not available, using fused api");
+                    FileLogger.e(TAG, "GPS not available");
                     activeLocationFallback();
                 }
                 else if (bestLocation != null) {
@@ -86,7 +85,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     }
 
     private void requestCurrentLocation() {
-/*        locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         if (isGpsEnabled) {
             FileLogger.e(TAG, "GPS available waiting for fix");
@@ -94,100 +93,50 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
             locationUpdateTimeout.postDelayed(timeout, TIMEOUT_INTERVAL);
         }
         else {
-            FileLogger.e(TAG, "GPS not available");*/
+            FileLogger.e(TAG, "GPS not available");
         activeLocationFallback();
-        //}
+        }
 
     }
 
     private void activeLocationFallback() {
-        FileLogger.e(TAG, "Requesting location");
-
-        gmsLocationListener = new SharedGmsListener(TAG);
-        gmsLocationListener.delegate = this;
-
-        LocationRequest activeLocationRequest = new LocationRequest();
-        activeLocationRequest.setFastestInterval(0);
-        activeLocationRequest.setInterval(500);
-        activeLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-
-        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
-                .addLocationRequest(activeLocationRequest);
-
-        PendingResult<LocationSettingsResult> result =
-                LocationServices.SettingsApi.checkLocationSettings(LocationService.mGoogleApiClient,
-                        builder.build());
-
-        result.setResultCallback(new ResultCallback<LocationSettingsResult>() {
-            @Override
-            public void onResult(LocationSettingsResult result) {
-                final Status status = result.getStatus();
-                switch (status.getStatusCode()) {
-                    case LocationSettingsStatusCodes.SUCCESS:
-                        // All location settings are satisfied. The client can
-                        // initialize location requests here.
-                        FileLogger.e(TAG, "Location Settings Are Correct");
-                        break;
-                    case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
-                        // Location settings are not satisfied, but this can be fixed
-                        // by showing the user a dialog.
-                        FileLogger.e(TAG, "Location Settings Needs To Be Resolved");
-
-                        break;
-                    case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-                        // Location settings are not satisfied. However, we have no way
-                        // to fix the settings so we won't show the dialog.
-                        FileLogger.e(TAG, "Location Settings Unresolvable");
-                        break;
-                }
-            }
-        });
-
-        if (LocationService.isRunning && LocationService.isGoogleApiConnected)
-            LocationServices.FusedLocationApi.requestLocationUpdates(LocationService.mGoogleApiClient, activeLocationRequest, gmsLocationListener, getLooper());
-        else
-            Toast.makeText(context, "Service is not running", Toast.LENGTH_SHORT).show();
+        FileLogger.e(TAG,"Requesting location from network");
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,0,0,locationListener,getLooper());
     }
 
 
     @Override
-    public void gpsBestLocation(Location bestLocation, int locationScore) {
+    public void lmBestLocation(Location bestLocation, int locationScore) {
         FileLogger.e(TAG, "Best location found");
         saveLocation(bestLocation);
     }
 
     @Override
-    public void gpsLocation(Location location, int locationScore) {
-        bestLocation = location;
+    public void lmLocation(Location location, int locationScore) {
+        lmRemoveUpdates();
+        saveLocation(location);
     }
 
     @Override
-    public void removeGpsLocationUpdates() {
-        FileLogger.e(TAG, "Stopping GPS location updates");
+    public void lmRemoveUpdates() {
+        FileLogger.e(TAG, "Stopping location manager location updates");
         locationManager.removeUpdates(locationListener);
     }
 
     @Override
-    public void removeGpsTimeoutHandler() {
+    public void lmRemoveTimeoutHandler() {
         locationUpdateTimeout.removeCallbacksAndMessages(null);
     }
 
     @Override
-    public void fusedLocation(Location location) {
-        bestLocation = location;
-    }
+    public void fusedLocation(Location location) {}
 
     @Override
-    public void fusedBestLocation(Location bestLocation, int locationScore) {
-        FileLogger.e(TAG, "Best location found");
-        saveLocation(bestLocation);
-    }
+    public void fusedBestLocation(Location bestLocation, int locationScore) {}
 
     @Override
-    public void removeFusedLocationUpdates() {
-        FileLogger.e(TAG, "Stopping Fused Api location updates");
-        LocationServices.FusedLocationApi.removeLocationUpdates(LocationService.mGoogleApiClient, gmsLocationListener);
-    }
+    public void fusedRemoveUpdates() {}
+
 
     public void saveLocation(Location bestLocation) {
         this.bestLocation = bestLocation;

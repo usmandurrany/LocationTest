@@ -105,14 +105,14 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
 
 
     @Override
-    public void gpsBestLocation(Location bestLocation, int locationScore){
+    public void lmBestLocation(Location bestLocation, int locationScore){
         FileLogger.e(TAG,"Best location found");
         this.locationScore = locationScore;
         verifyEvent(bestLocation);
     }
 
     @Override
-    public void gpsLocation(Location location, int locationScore){
+    public void lmLocation(Location location, int locationScore){
         this.locationScore = locationScore;
         bestLocation = location;
     }
@@ -248,13 +248,13 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
     }
 
     @Override
-    public void removeGpsLocationUpdates() {
+    public void lmRemoveUpdates() {
         FileLogger.e(TAG,"Stopping GPS location updates");
         locationManager.removeUpdates(locationListener);
     }
 
     @Override
-    public void removeGpsTimeoutHandler() {
+    public void lmRemoveTimeoutHandler() {
         locationUpdateTimeout.removeCallbacksAndMessages(null);
     }
 
@@ -269,7 +269,7 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
     }
 
     @Override
-    public void removeFusedLocationUpdates() {
+    public void fusedRemoveUpdates() {
 
     }
 

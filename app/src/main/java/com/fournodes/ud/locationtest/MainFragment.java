@@ -2,6 +2,7 @@ package com.fournodes.ud.locationtest;
 
 import android.content.Context;
 import android.content.Intent;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -65,7 +66,8 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
         btnService = (Button) getView().findViewById(R.id.btnService);
         Button btnShareLogFile = (Button) getView().findViewById(R.id.btnShareLogFile);
         Button btnClearLogFile = (Button) getView().findViewById(R.id.btnClearLogFile);
-        Button btnReset = (Button) getView().findViewById(R.id.btnReset);
+        Button btnCreateAll = (Button) getView().findViewById(R.id.btnCreateAll);
+        Button btnRemoveAll = (Button) getView().findViewById(R.id.btnRemoveAll);
 
         txtLog = (TextView) getView().findViewById(R.id.txtLog);
         lytScrollLog = (ScrollView) getView().findViewById(R.id.lytScrollLog);
@@ -119,16 +121,23 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
             }
         });
 
-        btnReset.setOnClickListener(new View.OnClickListener() {
+        btnCreateAll.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
                 if (LocationService.isRunning && LocationService.isGoogleApiConnected) {
                     Database db = new Database(getContext());
-                    db.registerOnDeviceFences();
+                    db.onDeviceFence("create");
                 }
                 else
                     Toast.makeText(getContext(), "Service is not running", Toast.LENGTH_SHORT).show();
+            }
+        });
+        btnRemoveAll.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Database db = new Database(getContext());
+                db.onDeviceFence("remove");
             }
         });
 

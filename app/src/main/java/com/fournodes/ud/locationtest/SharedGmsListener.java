@@ -44,7 +44,7 @@ public class SharedGmsListener implements LocationListener {
                 delegate.fusedLocation(location);
                 if (locationScore >= 10) {
                     // Stop any further location updates
-                    delegate.removeFusedLocationUpdates();
+                    delegate.fusedRemoveUpdates();
                     // Return the best location
                     delegate.fusedBestLocation(bestLocation,locationScore);
 

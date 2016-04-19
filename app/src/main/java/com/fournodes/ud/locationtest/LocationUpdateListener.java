@@ -8,16 +8,16 @@ import android.location.Location;
 public interface LocationUpdateListener {
     //Android Listener
 
-    void gpsBestLocation(Location bestLocation, int locationScore);
-    void gpsLocation(Location location, int locationScore);
-    void removeGpsLocationUpdates();
-    void removeGpsTimeoutHandler();
+    void lmBestLocation(Location bestLocation, int locationScore);
+    void lmLocation(Location location, int locationScore);
+    void lmRemoveUpdates();
+    void lmRemoveTimeoutHandler();
 
     //GMS Listener
 
     void fusedLocation(Location location); // Return location to delegate
     void fusedBestLocation(Location bestLocation, int locationScore);
-    void removeFusedLocationUpdates();
+    void fusedRemoveUpdates();
 
 /*    void requestLocationUpdate(); // Order delegate to request location
     void createServerUpdateHandler();// Schedule location data transfer to server
