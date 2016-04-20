@@ -13,15 +13,13 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.fournodes.ud.locationtest.Database;
-import com.fournodes.ud.locationtest.Fence;
-import com.fournodes.ud.locationtest.FileLogger;
+import com.fournodes.ud.locationtest.objects.Fence;
+import com.fournodes.ud.locationtest.utils.FileLogger;
 import com.fournodes.ud.locationtest.GeofenceWrapper;
-import com.fournodes.ud.locationtest.MainActivity;
+import com.fournodes.ud.locationtest.activities.MainActivity;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
-import com.fournodes.ud.locationtest.network.NotificationApi;
-import com.google.android.gms.common.api.Result;
-import com.google.android.gms.common.api.ResultCallback;
+import com.fournodes.ud.locationtest.apis.NotificationApi;
 import com.google.android.gms.gcm.GcmListenerService;
 
 import java.util.ArrayList;

@@ -5,15 +5,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.location.LocationManager;
 
-import com.fournodes.ud.locationtest.service.GeofenceTransitionsIntentService;
-import com.fournodes.ud.locationtest.service.LocationService;
-import com.google.android.gms.common.api.ResultCallback;
+import com.fournodes.ud.locationtest.objects.Fence;
+import com.fournodes.ud.locationtest.services.GeofenceTransitionsIntentService;
+import com.fournodes.ud.locationtest.utils.FileLogger;
 import com.google.android.gms.location.Geofence;
-import com.google.android.gms.location.GeofencingRequest;
-import com.google.android.gms.location.LocationServices;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by Usman on 24/3/2016.

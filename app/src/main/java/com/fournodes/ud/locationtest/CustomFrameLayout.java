@@ -5,6 +5,8 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.widget.FrameLayout;
 
+import com.fournodes.ud.locationtest.activities.MainActivity;
+
 /**
  * Created by Usman on 16/2/2016.
  */

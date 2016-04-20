@@ -15,7 +15,10 @@ import android.location.Location;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
-import com.google.android.gms.location.Geofence;
+import com.fournodes.ud.locationtest.activities.MainActivity;
+import com.fournodes.ud.locationtest.objects.Fence;
+import com.fournodes.ud.locationtest.objects.Event;
+import com.fournodes.ud.locationtest.utils.FileLogger;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CircleOptions;
@@ -415,7 +418,7 @@ public class Database extends SQLiteOpenHelper {
         return result > 0;
     }
 
-    public void savePendingEvent(GeofenceEvent event) {
+    public void savePendingEvent(Event event) {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_REQUEST_ID, event.requestId);
@@ -427,13 +430,13 @@ public class Database extends SQLiteOpenHelper {
         db.close();
     }
 
-    public List<GeofenceEvent> getAllPendingEvents() {
+    public List<Event> getAllPendingEvents() {
         SQLiteDatabase db = getWritableDatabase();
         String selection = COLUMN_IS_VERIFIED + " = " + 0;
         Cursor cursor = db.query(TABLE_GEOFENCE_EVENT, null, selection, null, null, null, null);
-        List<GeofenceEvent> pendingEvents = new ArrayList<>();
+        List<Event> pendingEvents = new ArrayList<>();
         while (cursor.moveToNext()) {
-            GeofenceEvent event = new GeofenceEvent();
+            Event event = new Event();
             event.id = cursor.getInt(cursor.getColumnIndex(COLUMN_ID));
             event.requestId = cursor.getInt(cursor.getColumnIndex(COLUMN_REQUEST_ID));
             event.transitionType = cursor.getInt(cursor.getColumnIndex(COLUMN_TRANSITION_TYPE));
@@ -447,13 +450,13 @@ public class Database extends SQLiteOpenHelper {
         return pendingEvents;
     }
 
-    public GeofenceEvent getLastVerifiedEvent(int requestId) {
+    public Event getLastVerifiedEvent(int requestId) {
         FileLogger.e(TAG, "-- Begin Pending Event Removal --");
 
         SQLiteDatabase db = this.getWritableDatabase();
         String selection = COLUMN_REQUEST_ID + " = " + requestId
                 + " AND " + COLUMN_IS_VERIFIED + " = " + 1;
-        GeofenceEvent event = new GeofenceEvent();
+        Event event = new Event();
         Cursor cursor = db.query(TABLE_GEOFENCE_EVENT, null, selection, null, null, null, COLUMN_ID + " DESC", "1");
         while (cursor.moveToNext()) {
             event.id = cursor.getInt(cursor.getColumnIndex(COLUMN_ID));
@@ -470,11 +473,11 @@ public class Database extends SQLiteOpenHelper {
         return event;
     }
 
-    public GeofenceEvent getLastPendingEvent(int requestId) {
+    public Event getLastPendingEvent(int requestId) {
         SQLiteDatabase db = this.getWritableDatabase();
         String selection = COLUMN_REQUEST_ID + " = " + requestId
                 + " AND " + COLUMN_IS_VERIFIED + " = " + 0;
-        GeofenceEvent event = new GeofenceEvent();
+        Event event = new Event();
         Cursor cursor = db.query(TABLE_GEOFENCE_EVENT, null, selection, null, null, null, COLUMN_ID + " DESC", "1");
         while (cursor.moveToNext()) {
             event.id = cursor.getInt(cursor.getColumnIndex(COLUMN_ID));
@@ -489,7 +492,7 @@ public class Database extends SQLiteOpenHelper {
         return event;
     }
 
-    public Boolean updateEvent(GeofenceEvent event) {
+    public Boolean updateEvent(Event event) {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_REQUEST_ID, event.requestId);
