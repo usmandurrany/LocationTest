@@ -10,15 +10,15 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
-import com.fournodes.ud.locationtest.Database;
-import com.fournodes.ud.locationtest.interfaces.RequestResult;
-import com.fournodes.ud.locationtest.interfaces.TrackApiResult;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.adapters.UserAdapter;
 import com.fournodes.ud.locationtest.apis.FenceApi;
 import com.fournodes.ud.locationtest.apis.TrackApi;
+import com.fournodes.ud.locationtest.interfaces.RequestResult;
+import com.fournodes.ud.locationtest.interfaces.TrackApiResult;
 import com.fournodes.ud.locationtest.objects.Fence;
+import com.fournodes.ud.locationtest.utils.Database;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.Circle;
@@ -94,9 +94,11 @@ public class CreateFenceDialog implements TrackApiResult, RequestResult {
                 if (edtTitle.getText().length() > 0 && !edtTitle.getText().toString().equals("My Device") && edtDescription.getText().length() > 0 && (chkEntry.isChecked() || chkExit.isChecked() || chkRoaming.isChecked())) {
                     if (getFenceId(edtTitle.getText().toString()) == -1) {
                         createFence(center, radius);
-                    } else
+                    }
+                    else
                         Toast.makeText(activity, "You already have a fence called " + edtTitle.getText().toString(), Toast.LENGTH_SHORT).show();
-                } else if (edtTitle.getText().toString().equals("My Device"))
+                }
+                else if (edtTitle.getText().toString().equals("My Device"))
                     Toast.makeText(activity, "Title can not be My Device", Toast.LENGTH_SHORT).show();
                 else
                     Toast.makeText(activity, "All fields are required", Toast.LENGTH_SHORT).show();

@@ -10,25 +10,27 @@ import android.support.v4.view.ViewPager;
 import android.util.Log;
 
 import com.crashlytics.android.Crashlytics;
-import com.fournodes.ud.locationtest.adapters.FragmentAdapter;
-import com.fournodes.ud.locationtest.fragments.MainFragment;
-import com.fournodes.ud.locationtest.interfaces.MainFragmentInterface;
-import com.fournodes.ud.locationtest.fragments.MapFragment;
-import com.fournodes.ud.locationtest.interfaces.MapFragmentInterface;
 import com.fournodes.ud.locationtest.R;
-import com.fournodes.ud.locationtest.interfaces.ServiceMessage;
 import com.fournodes.ud.locationtest.SharedPrefs;
-import com.fournodes.ud.locationtest.interfaces.TrackApiResult;
+import com.fournodes.ud.locationtest.adapters.FragmentAdapter;
 import com.fournodes.ud.locationtest.dialogs.UserRegisterDialog;
+import com.fournodes.ud.locationtest.fragments.MainFragment;
+import com.fournodes.ud.locationtest.fragments.MapFragment;
 import com.fournodes.ud.locationtest.gcm.GCMInitiate;
+import com.fournodes.ud.locationtest.interfaces.MainFragmentInterface;
+import com.fournodes.ud.locationtest.interfaces.MapFragmentInterface;
+import com.fournodes.ud.locationtest.interfaces.ServiceMessage;
+import com.fournodes.ud.locationtest.interfaces.TrackApiResult;
+import com.fournodes.ud.locationtest.objects.Fence;
 import com.fournodes.ud.locationtest.services.LocationService;
 import com.google.android.gms.maps.model.LatLng;
 
-import io.fabric.sdk.android.Fabric;
 import org.json.JSONArray;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import io.fabric.sdk.android.Fabric;
 
 
 public class MainActivity extends FragmentActivity implements TrackApiResult, ServiceMessage {
@@ -52,7 +54,6 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
         setContentView(R.layout.activity_main);
         new SharedPrefs(this).initialize();
 
-
         if (SharedPrefs.getUserId() == null)
             new UserRegisterDialog(this).show();
         else
@@ -64,7 +65,7 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
         check = new Runnable() {
             @Override
             public void run() {
-                if (LocationService.isRunning){
+                if (LocationService.isRunning) {
                     locationService = LocationService.getServiceObject();
                     locationService.delegate = MainActivity.this;
                     if (mainDelegate != null)
@@ -183,4 +184,16 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
     }
 
 
+    @Override
+    public void activeFenceList(List<Fence> fenceListActive) {
+        if (fragmentAdapter.getItem(viewPager.getCurrentItem()) instanceof MapFragment) {
+            if (mapDelegate != null)
+                mapDelegate.activeFenceList(fenceListActive);
+        }
+    }
+
+    @Override
+    public void allFenceList(List<Fence> fenceListAll) {
+
+    }
 }

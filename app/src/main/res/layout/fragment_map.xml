@@ -232,6 +232,17 @@
                 fab:fab_colorPressed="@color/colorPrimaryDark"
                 fab:fab_label="Show hidden fences"
                 fab:fab_size="mini"/>
+
+            <com.github.clans.fab.FloatingActionButton
+                android:id="@+id/fabToggleSimulation"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_add_location_white_24dp"
+                fab:fab_colorNormal="@color/colorPrimary"
+                fab:fab_colorPressed="@color/colorPrimaryDark"
+                fab:fab_label="Toggle Simulation"
+                fab:fab_size="mini"/>
+
         </com.github.clans.fab.FloatingActionMenu>
 
 
@@ -260,6 +271,16 @@
             fab:fab_colorPressed="@color/colorPrimaryDark"
             fab:fab_label="Delete History"
             fab:fab_size="mini"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/txtInfo"
+            android:text="Hello"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentRight="true"
+            android:padding="15dp"
+            android:textColor="#000"
+            />
     </RelativeLayout>
 
 </android.support.design.widget.CoordinatorLayout>

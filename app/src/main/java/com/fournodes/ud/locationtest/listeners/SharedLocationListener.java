@@ -4,8 +4,8 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.os.Bundle;
 
-import com.fournodes.ud.locationtest.utils.FileLogger;
 import com.fournodes.ud.locationtest.interfaces.LocationUpdateListener;
+import com.fournodes.ud.locationtest.utils.FileLogger;
 
 import java.text.DateFormat;
 
@@ -28,32 +28,47 @@ public class SharedLocationListener implements LocationListener {
     @Override
     public void onLocationChanged(Location location) {
         float accuracy = location.getAccuracy();
+        // Discard anything above 250m and network location
+        if (accuracy < 250) {
 
-        FileLogger.e(className, "Location obtained from " + location.getProvider());
-        FileLogger.e(className, "Lat: " + String.valueOf(location.getLatitude()) + " Long: " + String.valueOf(location.getLongitude()));
-        FileLogger.e(className, "Accuracy: " + String.valueOf(location.getAccuracy()));
-        FileLogger.e(className, "Location Time: " + String.valueOf(DateFormat.getTimeInstance().format(location.getTime())));
+            if ((className.equals("Location Service") && !location.getProvider().equals("network")) || (className.equals("RequestLocUpdateThread") && location.getProvider().equals("network"))) {
 
-        if (className.equals("Location Service") || className.equals("RequestLocUpdateThread") && location.getProvider().equals("network")) {
-            delegate.lmLocation(location,0);
-        }
-        else if(className.equals("RequestLocUpdateThread")){
-            calculateLocationScore(accuracy);
+                FileLogger.e(className, "Location obtained from " + location.getProvider());
+                FileLogger.e(className, "Lat: " + String.valueOf(location.getLatitude()) + " Long: " + String.valueOf(location.getLongitude()));
+                FileLogger.e(className, "Accuracy: " + String.valueOf(location.getAccuracy()));
+                FileLogger.e(className, "Location Time: " + String.valueOf(DateFormat.getTimeInstance().format(location.getTime())));
 
-            if (bestLocation.getAccuracy() > accuracy) {
-                bestLocation = location;
-                delegate.lmLocation(location, locationScore);
-                if (locationScore >= 10) {
-                    // Stop any further location updates
-                    delegate.lmRemoveUpdates();
-                    // Stop timeout handler from firing
-                    delegate.lmRemoveTimeoutHandler();
-                    // Return the best location
-                    delegate.lmBestLocation(bestLocation, locationScore);
+                delegate.lmLocation(location, 0);
+            }
+            else if (className.equals("RequestLocUpdateThread") || className.equals("EventVerifierThread")) {
+                calculateLocationScore(accuracy);
+
+                if (bestLocation.getAccuracy() > accuracy) {
+                    bestLocation = location;
+                    if (locationScore >= 10) {
+
+                        FileLogger.e(className, "Best location obtained from " + location.getProvider());
+                        FileLogger.e(className, "Lat: " + String.valueOf(location.getLatitude()) + " Long: " + String.valueOf(location.getLongitude()));
+                        FileLogger.e(className, "Accuracy: " + String.valueOf(location.getAccuracy()));
+                        FileLogger.e(className, "Location Time: " + String.valueOf(DateFormat.getTimeInstance().format(location.getTime())));
+                        FileLogger.e(className, "Location score: " + String.valueOf(locationScore));
+
+                        // Stop any further location updates
+                        delegate.lmRemoveUpdates();
+                        // Stop timeout handler from firing
+                        delegate.lmRemoveTimeoutHandler();
+                        // Return the best location
+                        delegate.lmBestLocation(bestLocation, locationScore);
+                    }
+
+                }
+                else {
+                    FileLogger.e(className, "Refining location");
+                    FileLogger.e(className, "Location score: " + String.valueOf(locationScore));
+                    delegate.lmLocation(location, locationScore);
                 }
             }
         }
-
     }
 
     private void calculateLocationScore(float accuracy) {
@@ -65,7 +80,7 @@ public class SharedLocationListener implements LocationListener {
             locationScore += 3;
         else if (accuracy >= 50.0)
             locationScore += 1;
-        FileLogger.e(className, "Location score: " + String.valueOf(locationScore));
+        // FileLogger.e(className, "Location score: " + String.valueOf(locationScore));
     }
 
     @Override

@@ -25,7 +25,7 @@ public class FileLogger {
     private static Calendar c = Calendar.getInstance();
     private static SimpleDateFormat df = new SimpleDateFormat("yyyyMMdd");
     private static final String LOG_FILE_PREFIX = "location_log_";
-    public static final String LOG_FILE_NAME  = LOG_FILE_PREFIX + df.format(c.getTime()) + ".txt";
+    public static final String LOG_FILE_NAME = LOG_FILE_PREFIX + df.format(c.getTime()) + ".txt";
 
 
     private static boolean createFile() {

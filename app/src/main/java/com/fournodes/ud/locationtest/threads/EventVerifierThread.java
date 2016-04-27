@@ -11,18 +11,22 @@ import android.location.LocationManager;
 import android.media.RingtoneManager;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.NotificationCompat;
+import android.util.Log;
 
-import com.fournodes.ud.locationtest.Database;
-import com.fournodes.ud.locationtest.utils.FileLogger;
-import com.fournodes.ud.locationtest.interfaces.LocationUpdateListener;
+import com.fournodes.ud.locationtest.Constants;
 import com.fournodes.ud.locationtest.R;
-import com.fournodes.ud.locationtest.listeners.SharedLocationListener;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.activities.MainActivity;
 import com.fournodes.ud.locationtest.apis.NotificationApi;
-import com.fournodes.ud.locationtest.objects.Fence;
+import com.fournodes.ud.locationtest.interfaces.LocationUpdateListener;
+import com.fournodes.ud.locationtest.listeners.SharedLocationListener;
 import com.fournodes.ud.locationtest.objects.Event;
+import com.fournodes.ud.locationtest.objects.Fence;
+import com.fournodes.ud.locationtest.utils.Database;
+import com.fournodes.ud.locationtest.utils.DistanceCalculator;
+import com.fournodes.ud.locationtest.utils.FileLogger;
 import com.google.android.gms.location.Geofence;
 
 import java.io.UnsupportedEncodingException;
@@ -34,7 +38,6 @@ import java.util.List;
  */
 public class EventVerifierThread extends HandlerThread implements LocationUpdateListener {
     private static final String TAG = "EventVerifierThread";
-    private static final int TIMEOUT_INTERVAL = 5000; // Milliseconds
 
     private Context context;
     private boolean isGpsEnabled;
@@ -87,8 +90,8 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
         isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         if (isGpsEnabled) {
             FileLogger.e(TAG, "GPS available waiting for fix");
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener,getLooper());
-            locationUpdateTimeout.postDelayed(timeout, TIMEOUT_INTERVAL);
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener, getLooper());
+            locationUpdateTimeout.postDelayed(timeout, Constants.GPS_TIMEOUT_INTERVAL);
         }
         else {
             gpsNotAvailableFallback();
@@ -96,7 +99,7 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
 
     }
 
-    private void gpsNotAvailableFallback(){
+    private void gpsNotAvailableFallback() {
         FileLogger.e(TAG, "GPS not available using last known location");
         FileLogger.e(TAG, "Lat: " + String.valueOf(SharedPrefs.getLastDeviceLatitude()) + " Long: " + String.valueOf(SharedPrefs.getLastDeviceLongitude()));
         FileLogger.e(TAG, "Accuracy: " + String.valueOf(SharedPrefs.getLastLocationAccuracy()));
@@ -109,14 +112,13 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
 
 
     @Override
-    public void lmBestLocation(Location bestLocation, int locationScore){
-        FileLogger.e(TAG,"Best location found");
+    public void lmBestLocation(Location bestLocation, int locationScore) {
         this.locationScore = locationScore;
         verifyEvent(bestLocation);
     }
 
     @Override
-    public void lmLocation(Location location, int locationScore){
+    public void lmLocation(Location location, int locationScore) {
         this.locationScore = locationScore;
         bestLocation = location;
     }
@@ -132,12 +134,14 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
         for (Event event : pendingEvents) {
 
             Fence fence = db.getFence(String.valueOf(event.requestId));
-            float[] distanceFromCenter = new float[1];
-            Location.distanceBetween(fence.getCenter_lat(), fence.getCenter_lng(), bestLocation.getLatitude(), bestLocation.getLongitude(), distanceFromCenter);
+            Location fenceLocation = new Location("");
+            fenceLocation.setLatitude(fence.getCenter_lat());
+            fenceLocation.setLongitude(fence.getCenter_lng());
+            int distanceFromCenter = DistanceCalculator.calcDistanceFromLocation(fenceLocation,bestLocation);
 
             FileLogger.e(TAG, "Fence: " + fence.getTitle());
             FileLogger.e(TAG, "Event: " + getTransitionType(event.transitionType));
-            FileLogger.e(TAG, "Distance from fence: " + String.valueOf(distanceFromCenter[0]));
+            FileLogger.e(TAG, "Distance from fence: " + String.valueOf(distanceFromCenter));
 
 
 
@@ -145,13 +149,15 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
             *   Discard event if its same as the last event of the fence
             *   This maintains the event pairs
             */
+            Log.e(TAG,"Event type: " + String.valueOf(event.transitionType));
+            Log.e(TAG,"Fence last event: " + String.valueOf(fence.getLastEvent()));
 
             if (fence.getLastEvent() != event.transitionType) {
 
                 switch (event.transitionType) {
                     case Geofence.GEOFENCE_TRANSITION_ENTER:
                         // If device is inside the fence
-                        if (distanceFromCenter[0] < fence.getRadius()) {
+                        if (distanceFromCenter < fence.getRadius()) {
                             // Check if locationScore is good enough to verify in single pass (verifyCount will be 0)
                             // Or if best of three condition is met
                             if (locationScore > 0 || (event.retryCount < 2 && event.verifyCount > 1)) {
@@ -161,6 +167,8 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                                 FileLogger.e(TAG, "Event verified.");
                                 sendNotification("Event verified. Entered fence: " + fence.getTitle(), fence.getUserId());
                                 SharedPrefs.setPendingEventCount(pendingEventCount - 1);
+                                serviceMessage("updateFenceListActive");
+
                             }
                             // if locationScore is not good enough then run three passes to verify event using best of three
                             else {
@@ -189,7 +197,7 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
 
                     case Geofence.GEOFENCE_TRANSITION_EXIT:
                         // If device is outside the fence
-                        if (distanceFromCenter[0] > fence.getRadius()) {
+                        if (distanceFromCenter > fence.getRadius()) {
                             // Check if locationScore is good enough to verify in single pass (verifyCount will be 0)
                             // Or if best of three condition is met
                             if (locationScore > 0 || (event.retryCount < 2 && event.verifyCount > 1)) {
@@ -199,6 +207,7 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                                 FileLogger.e(TAG, "Event verified.");
                                 sendNotification("Event verified. Exited fence: " + fence.getTitle(), fence.getUserId());
                                 SharedPrefs.setPendingEventCount(pendingEventCount - 1);
+                                serviceMessage("updateFenceListActive");
                             }
                             // if locationScore is not good enough then run three passes to verify event using best of three
                             else {
@@ -225,8 +234,6 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
 
                         break;
 
-                    case Geofence.GEOFENCE_TRANSITION_DWELL:
-                        break;
 
                     default:
                         break;
@@ -246,35 +253,20 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                 SharedPrefs.setPendingEventCount(pendingEventCount - 1);
             }
         }
-        FileLogger.e(TAG,"Verification complete");
+        FileLogger.e(TAG, "Verification complete");
         quit();
 
     }
 
     @Override
     public void lmRemoveUpdates() {
-        FileLogger.e(TAG,"Stopping GPS location updates");
+        FileLogger.e(TAG, "Stopping GPS location updates");
         locationManager.removeUpdates(locationListener);
     }
 
     @Override
     public void lmRemoveTimeoutHandler() {
         locationUpdateTimeout.removeCallbacksAndMessages(null);
-    }
-
-    @Override
-    public void fusedLocation(Location location) {
-
-    }
-
-    @Override
-    public void fusedBestLocation(Location bestLocation, int locationScore) {
-
-    }
-
-    @Override
-    public void fusedRemoveUpdates() {
-
     }
 
 
@@ -329,6 +321,13 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
+    }
+
+    private void serviceMessage(String message) {
+        Log.d("Main Fragment", "Broadcasting message");
+        Intent intent = new Intent("LOCATION_TEST_SERVICE");
+        intent.putExtra("message", message);
+        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
     }
 
     @Override

@@ -11,8 +11,8 @@ import android.widget.TextView;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.activities.MainActivity;
-import com.fournodes.ud.locationtest.dialogs.UserListDialog;
 import com.fournodes.ud.locationtest.apis.TrackApi;
+import com.fournodes.ud.locationtest.dialogs.UserListDialog;
 import com.fournodes.ud.locationtest.objects.User;
 
 import org.json.JSONArray;
@@ -64,7 +64,8 @@ public class UserAdapter extends BaseAdapter {
             }
             convertView.setTag(holder);
 
-        } else {
+        }
+        else {
             holder = (viewHolder) convertView.getTag();
         }
         holder.txtName.setText(userList.get(position).name);
@@ -100,8 +101,8 @@ public class UserAdapter extends BaseAdapter {
         return convertView;
     }
 
-    public View getMultiSelectionView(){
-        return  null;
+    public View getMultiSelectionView() {
+        return null;
     }
 
     @Override
@@ -118,7 +119,6 @@ public class UserAdapter extends BaseAdapter {
     public int getCount() {
         return userList.size();
     }
-
 
 
     public static class viewHolder {

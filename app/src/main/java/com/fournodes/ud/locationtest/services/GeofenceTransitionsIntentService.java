@@ -6,11 +6,11 @@ import android.location.LocationManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
-import com.fournodes.ud.locationtest.Database;
-import com.fournodes.ud.locationtest.objects.Fence;
-import com.fournodes.ud.locationtest.utils.FileLogger;
-import com.fournodes.ud.locationtest.objects.Event;
 import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.objects.Event;
+import com.fournodes.ud.locationtest.objects.Fence;
+import com.fournodes.ud.locationtest.utils.Database;
+import com.fournodes.ud.locationtest.utils.FileLogger;
 
 public class GeofenceTransitionsIntentService extends IntentService {
 
@@ -37,11 +37,11 @@ public class GeofenceTransitionsIntentService extends IntentService {
         if (SharedPrefs.pref == null)
             new SharedPrefs(this).initialize();
 
-        Boolean hasEntered = intent.getBooleanExtra(LocationManager.KEY_PROXIMITY_ENTERING,false);
+        Boolean hasEntered = intent.getBooleanExtra(LocationManager.KEY_PROXIMITY_ENTERING, false);
         // If user entered then 1 else 2
         int geofenceTransition = hasEntered ? 1 : 2;
-        int requestId = intent.getIntExtra("id",-1);
-        FileLogger.e(TAG,"FENCE ID: " +String.valueOf(requestId));
+        int requestId = intent.getIntExtra("id", -1);
+        FileLogger.e(TAG, "FENCE ID: " + String.valueOf(requestId));
         Event event = new Event();
         event.requestId = requestId;
         event.transitionType = geofenceTransition;

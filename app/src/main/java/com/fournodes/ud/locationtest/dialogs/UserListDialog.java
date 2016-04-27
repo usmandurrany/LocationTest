@@ -4,12 +4,12 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.widget.ListView;
 
-import com.fournodes.ud.locationtest.interfaces.TrackApiResult;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.adapters.UserAdapter;
-import com.fournodes.ud.locationtest.fragments.MapFragment;
 import com.fournodes.ud.locationtest.apis.TrackApi;
+import com.fournodes.ud.locationtest.fragments.MapFragment;
+import com.fournodes.ud.locationtest.interfaces.TrackApiResult;
 
 import org.json.JSONArray;
 
@@ -62,6 +62,7 @@ public class UserListDialog implements TrackApiResult {
     public void showFabStopTrack() {
         fragment.showFabStopTrack();
     }
+
     public void showFabDeleteHistory() {
         fragment.showFabDeleteHistory();
     }

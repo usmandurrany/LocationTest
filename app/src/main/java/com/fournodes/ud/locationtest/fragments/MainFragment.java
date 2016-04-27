@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.annotation.StringDef;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -12,20 +13,24 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.crashlytics.android.Crashlytics;
 import com.fournodes.ud.locationtest.CustomFrameLayout;
-import com.fournodes.ud.locationtest.Database;
-import com.fournodes.ud.locationtest.utils.FileLogger;
-import com.fournodes.ud.locationtest.interfaces.MainFragmentInterface;
 import com.fournodes.ud.locationtest.R;
+import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.activities.MainActivity;
+import com.fournodes.ud.locationtest.interfaces.MainFragmentInterface;
+import com.fournodes.ud.locationtest.objects.Fence;
 import com.fournodes.ud.locationtest.services.LocationService;
+import com.fournodes.ud.locationtest.utils.Database;
+import com.fournodes.ud.locationtest.utils.FileLogger;
 
 import java.io.File;
+import java.util.List;
 
 import io.fabric.sdk.android.Fabric;
 
@@ -71,8 +76,16 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
         btnService = (Button) getView().findViewById(R.id.btnService);
         Button btnShareLogFile = (Button) getView().findViewById(R.id.btnShareLogFile);
         Button btnClearLogFile = (Button) getView().findViewById(R.id.btnClearLogFile);
-        Button btnCreateAll = (Button) getView().findViewById(R.id.btnCreateAll);
-        Button btnRemoveAll = (Button) getView().findViewById(R.id.btnRemoveAll);
+        Button btnResetAll = (Button) getView().findViewById(R.id.btnRemoveAll);
+        Button btnSetVicinity = (Button) getView().findViewById(R.id.btnSetVicinity);
+        Button btnSetDistanceThreshold = (Button) getView().findViewById(R.id.btnSetDistanceThreshold);
+
+        final EditText edtVicinity = (EditText) getView().findViewById(R.id.edtVicinity);
+        final EditText edtDistanceThreshold = (EditText) getView().findViewById(R.id.edtDistanceThreshold);
+
+        edtVicinity.setText(String.valueOf(SharedPrefs.getVicinity()));
+        edtDistanceThreshold.setText(String.valueOf(SharedPrefs.getDistanceThreshold()));
+
 
         txtLog = (TextView) getView().findViewById(R.id.txtLog);
         lytScrollLog = (ScrollView) getView().findViewById(R.id.lytScrollLog);
@@ -105,7 +118,7 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
         btnClearLogFile.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                File file = new File("sdcard/"+ FileLogger.LOG_FILE_NAME);
+                File file = new File("sdcard/" + FileLogger.LOG_FILE_NAME);
                 if (file.exists() && !LocationService.isRunning)
                     file.delete();
                 else if (LocationService.isRunning)
@@ -120,29 +133,35 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
             public void onClick(View v) {
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
-                sendIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(new File("sdcard/"+FileLogger.LOG_FILE_NAME)));
+                sendIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(new File("sdcard/" + FileLogger.LOG_FILE_NAME)));
                 sendIntent.setType("text/plain");
                 startActivity(sendIntent);
             }
         });
 
-        btnCreateAll.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
 
-                if (LocationService.isRunning && LocationService.isGoogleApiConnected) {
-                    Database db = new Database(getContext());
-                    db.onDeviceFence("create");
-                }
-                else
-                    Toast.makeText(getContext(), "Service is not running", Toast.LENGTH_SHORT).show();
-            }
-        });
-        btnRemoveAll.setOnClickListener(new View.OnClickListener() {
+        btnResetAll.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Database db = new Database(getContext());
-                db.onDeviceFence("remove");
+                db.resetAll();
+                serviceMessage("calcDistance");
+            }
+        });
+
+        btnSetVicinity.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                SharedPrefs.setVicinity(Integer.parseInt(edtVicinity.getText().toString()));
+                Toast.makeText(getContext(), "Vicinity value set", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnSetDistanceThreshold.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                SharedPrefs.setDistanceThreshold(Integer.parseInt(edtDistanceThreshold.getText().toString()));
+                Toast.makeText(getContext(), "Distance threshold value set", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -209,4 +228,13 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
     }
 
 
+    @Override
+    public void activeFenceList(List<Fence> fenceListActive) {
+
+    }
+
+    @Override
+    public void allFenceList(List<Fence> fenceListAll) {
+
+    }
 }

@@ -1,4 +1,4 @@
-package com.fournodes.ud.locationtest;
+package com.fournodes.ud.locationtest.utils;
 
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -15,10 +15,12 @@ import android.location.Location;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
+import com.fournodes.ud.locationtest.GeofenceWrapper;
+import com.fournodes.ud.locationtest.R;
+import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.activities.MainActivity;
-import com.fournodes.ud.locationtest.objects.Fence;
 import com.fournodes.ud.locationtest.objects.Event;
-import com.fournodes.ud.locationtest.utils.FileLogger;
+import com.fournodes.ud.locationtest.objects.Fence;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CircleOptions;
@@ -40,9 +42,8 @@ public class Database extends SQLiteOpenHelper {
     private Context context;
     public static final String DATABASE_NAME = "LocationTest";
     public static final String DATABASE_FILE_NAME = "LocationTest.db";
-    public static final int DATABASE_VERSION = 9;
-    private int count;
-    private int fenceErrorCount;
+    public static final int DATABASE_VERSION = 10;
+
 
     public static final String COLUMN_ID = "id";
 
@@ -61,6 +62,8 @@ public class Database extends SQLiteOpenHelper {
     public static final String COLUMN_TRANSITION_TYPE = "transition";
     public static final String COLUMN_LAST_EVENT = "last_event";
     public static final String COLUMN_DISTANCE_FROM = "distance_from";
+    public static final String COLUMN_IS_ACTIVE = "is_active";
+
 
     public static final String TABLE_LOCATION = "location";
     public static final String COLUMN_LOC_LAT = "loc_lat";
@@ -92,7 +95,8 @@ public class Database extends SQLiteOpenHelper {
             + COLUMN_CREATE_ON + " text not null,"
             + COLUMN_TRANSITION_TYPE + " integer not null,"
             + COLUMN_LAST_EVENT + " integer default 2,"
-            + COLUMN_DISTANCE_FROM + "double default 0);";
+            + COLUMN_IS_ACTIVE + " integer default 1,"
+            + COLUMN_DISTANCE_FROM + " double default 0);";
 
     private static final String SQL_CREATE_TABLE_LOCATION = "create table if not exists "
             + TABLE_LOCATION + "("
@@ -222,6 +226,8 @@ public class Database extends SQLiteOpenHelper {
         values.put(COLUMN_CREATE_ON, fence.getCreate_on());
         values.put(COLUMN_LAST_EVENT, fence.getLastEvent());
         values.put(COLUMN_TRANSITION_TYPE, fence.getTransitionType());
+        values.put(COLUMN_IS_ACTIVE, fence.getIsActive());
+        values.put(COLUMN_DISTANCE_FROM, fence.getDistanceFrom());
         long rowId = db.insert(TABLE_GEOFENCE, null, values);
         db.close();
 
@@ -230,6 +236,12 @@ public class Database extends SQLiteOpenHelper {
         return rowId;
     }
 
+    /* Possible actions
+      * getAll
+      * getActive
+      * createAll
+      * removeAll
+     */
     public List<Fence> onDeviceFence(String action) {
         final int notificationId = (int) System.currentTimeMillis();
 
@@ -237,8 +249,13 @@ public class Database extends SQLiteOpenHelper {
 
         SQLiteDatabase db = this.getWritableDatabase();
         GeofenceWrapper geofenceWrapper = new GeofenceWrapper(context);
+        String selection = null;
 
-        String selection = COLUMN_ON_DEVICE + " = 1";
+        if (action.equals("getActive"))
+            selection = COLUMN_ON_DEVICE + " = 1 AND " + COLUMN_IS_ACTIVE + " = 1";
+        else if (action.equals("getAll"))
+            selection = COLUMN_ON_DEVICE + " = 1";
+
         final Cursor cursor = db.query(TABLE_GEOFENCE, null, selection, null, null, null, null, null);
 
         while (cursor.moveToNext()) {
@@ -258,17 +275,19 @@ public class Database extends SQLiteOpenHelper {
             fence.setCreate_on(cursor.getString(cursor.getColumnIndex(COLUMN_CREATE_ON)));
             fence.setLastEvent(cursor.getInt(cursor.getColumnIndex(COLUMN_LAST_EVENT)));
             fence.setTransitionType(cursor.getInt(cursor.getColumnIndex(COLUMN_TRANSITION_TYPE)));
+            fence.setDistanceFrom((int)cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE_FROM)));
+            fence.setIsActive(cursor.getInt(cursor.getColumnIndex(COLUMN_IS_ACTIVE)));
 
-            FileLogger.e(TAG, "Fence: " + fence.getId());
+/*            FileLogger.e(TAG, "Fence: " + fence.getId());
             FileLogger.e(TAG, "Action: " + action);
             FileLogger.e(TAG, "Title: " + fence.getTitle());
             FileLogger.e(TAG, "Description: " + fence.getDescription());
             FileLogger.e(TAG, "Center: Lat: " + fence.getCenter_lat() + " Long: " + fence.getCenter_lng());
-            FileLogger.e(TAG, "Radius: " + fence.getRadius());
+            FileLogger.e(TAG, "Radius: " + fence.getRadius());*/
 
-            if (action.equals("create"))
+            if (action.equals("createAll"))
                 geofenceWrapper.create(fence);
-            else if (action.equals("remove"))
+            else if (action.equals("removeAll"))
                 geofenceWrapper.remove(fence);
 
             mFenceList.add(fence);
@@ -277,7 +296,7 @@ public class Database extends SQLiteOpenHelper {
         cursor.close();
         db.close();
 
-        PendingIntent piActivityIntent = PendingIntent.getActivity(context, 0, new Intent(context, MainActivity.class), 0);
+/*        PendingIntent piActivityIntent = PendingIntent.getActivity(context, 0, new Intent(context, MainActivity.class), 0);
         final NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
         builder.setSmallIcon(R.mipmap.ic_launcher)
                 .setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher))
@@ -288,9 +307,12 @@ public class Database extends SQLiteOpenHelper {
                 .setAutoCancel(false);
 
         final NotificationManager mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        mNotificationManager.notify(notificationId, builder.build());
+        mNotificationManager.notify(notificationId, builder.build());*/
 
+        return mFenceList;
+    }
 
+    public void resetAll(){
         if (updateEventsAfterReboot())
             FileLogger.e(TAG, "Pending events removed successfully.");
         else
@@ -302,8 +324,6 @@ public class Database extends SQLiteOpenHelper {
             FileLogger.e(TAG, "Could not reset fences.");
 
         SharedPrefs.setPendingEventCount(0);
-
-        return mFenceList;
     }
 
 
@@ -389,7 +409,9 @@ public class Database extends SQLiteOpenHelper {
             fence.setUserId(cursor.getString(cursor.getColumnIndex(COLUMN_NOTIFY_DEVICE)));
             fence.setOnDevice(cursor.getInt(cursor.getColumnIndex(COLUMN_ON_DEVICE)));
             fence.setLastEvent(cursor.getInt(cursor.getColumnIndex(COLUMN_LAST_EVENT)));
+            fence.setIsActive(cursor.getInt(cursor.getColumnIndex(COLUMN_IS_ACTIVE)));
             fence.setTransitionType(cursor.getInt(cursor.getColumnIndex(COLUMN_TRANSITION_TYPE)));
+            fence.setDistanceFrom((int)cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE_FROM)));
         }
 
         cursor.close();
@@ -397,16 +419,28 @@ public class Database extends SQLiteOpenHelper {
         return fence;
     }
 
-    public void updateFence(Fence fence) {
+    public boolean updateFence(Fence fence) {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_RADIUS, fence.getRadius());
         values.put(COLUMN_END_LAT, (fence.getEdgeMarker() != null ? fence.getEdgeMarker().getPosition().latitude : fence.getEdge_lat()));
         values.put(COLUMN_END_LNG, (fence.getEdgeMarker() != null ? fence.getEdgeMarker().getPosition().longitude : fence.getEdge_lng()));
         values.put(COLUMN_LAST_EVENT, fence.getLastEvent());
-        db.update(TABLE_GEOFENCE, values, COLUMN_SERVER_FENCE_ID + "=?", new String[]{String.valueOf(fence.getId())});
+        int result = db.update(TABLE_GEOFENCE, values, COLUMN_SERVER_FENCE_ID + "=?", new String[]{String.valueOf(fence.getId())});
         db.close();
+        return result > 0;
     }
+
+    public boolean updateFenceDistance(Fence fence) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_IS_ACTIVE, fence.getIsActive());
+        values.put(COLUMN_DISTANCE_FROM, fence.getDistanceFrom());
+        int result = db.update(TABLE_GEOFENCE, values, COLUMN_SERVER_FENCE_ID + "=?", new String[]{String.valueOf(fence.getId())});
+        db.close();
+        return result > 0;
+    }
+
 
     public boolean removeFenceFromDatabase(int id) {
         SQLiteDatabase db = getWritableDatabase();

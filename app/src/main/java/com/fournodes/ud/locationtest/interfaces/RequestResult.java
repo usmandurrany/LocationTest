@@ -5,5 +5,6 @@ package com.fournodes.ud.locationtest.interfaces;
  */
 public interface RequestResult {
     void onSuccess(String result);
+
     void onFailure();
 }

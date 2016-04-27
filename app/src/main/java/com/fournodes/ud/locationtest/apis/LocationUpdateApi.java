@@ -5,9 +5,9 @@ import android.net.TrafficStats;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.fournodes.ud.locationtest.Database;
-import com.fournodes.ud.locationtest.interfaces.RequestResult;
 import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.interfaces.RequestResult;
+import com.fournodes.ud.locationtest.utils.Database;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -79,12 +79,13 @@ public class LocationUpdateApi extends AsyncTask<Long, String, String> {
             } catch (IOException e) {
                 e.printStackTrace();
                 Log.i(TAG, "Command: location_update");
-                Log.i(TAG, "Data: Row Count: "+String.valueOf(payload.length()));
+                Log.i(TAG, "Data: Row Count: " + String.valueOf(payload.length()));
                 Log.i(TAG, "Result: Network Error");
             } finally {
                 TrafficStats.clearThreadStatsTag();
             }
-        } else
+        }
+        else
             this.cancel(true);
 
         //Log.e("Server Resp",result);
@@ -97,23 +98,25 @@ public class LocationUpdateApi extends AsyncTask<Long, String, String> {
             try {
                 JSONObject response = new JSONObject(result);
                 Log.i(TAG, "Command: location_update");
-                Log.i(TAG, "Data: Row Count: "+String.valueOf(payload.length()));
+                Log.i(TAG, "Data: Row Count: " + String.valueOf(payload.length()));
                 if (response.getString("result").equals("1")) {
                     db.removeLocEntries(time); //Remove from db after successfully sending to server
-                    if (delegate !=null)
+                    if (delegate != null)
                         delegate.onSuccess(null);
                     Log.i(TAG, "Result: Success");
 
-                } else {
-                    if (delegate !=null)
-                         delegate.onFailure();
+                }
+                else {
+                    if (delegate != null)
+                        delegate.onFailure();
                     Log.i(TAG, "Result: Failure");
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-        }else{
-            if (delegate !=null)
+        }
+        else {
+            if (delegate != null)
                 delegate.onFailure();
         }
 

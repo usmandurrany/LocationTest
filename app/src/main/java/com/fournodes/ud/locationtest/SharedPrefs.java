@@ -34,7 +34,14 @@ public class SharedPrefs {
     private static long locLastUpdateMillis;
     private static int pendingEventCount;
     private static float lastLocationAccuracy;
+    private static float currentDisplacement;
+    private static String reCalcDistanceAtLatitude;
+    private static String reCalcDistanceAtLongitude;
 
+    private static boolean isMoving;
+
+    private static int vicinity;
+    private static int distanceThreshold;
 
 
     public void initialize() {
@@ -51,10 +58,71 @@ public class SharedPrefs {
         userName = pref.getString("userName", null);
         userEmail = pref.getString("userEmail", null);
         userPicture = pref.getString("userPicture", null);
-        locationRequestInterval = pref.getInt("locationRequestInterval",80);//80 Seconds
+        locationRequestInterval = pref.getInt("locationRequestInterval", 80);//80 Seconds
         locLastUpdateMillis = pref.getLong("locLastUpdateMillis", System.currentTimeMillis());
-        pendingEventCount = pref.getInt("pendingEventCount",0);
-        lastLocationAccuracy = pref.getFloat("lastLocationAccuracy",999f);
+        pendingEventCount = pref.getInt("pendingEventCount", 0);
+        lastLocationAccuracy = pref.getFloat("lastLocationAccuracy", 999f);
+        currentDisplacement = pref.getFloat("currentDisplacement", 0);
+        reCalcDistanceAtLatitude = pref.getString("reCalcDistanceAtLatitude", null);
+        reCalcDistanceAtLongitude = pref.getString("reCalcDistanceAtLongitude", null);
+        isMoving = pref.getBoolean("isMoving", false);
+        vicinity = pref.getInt("vicinity", 1000);
+        distanceThreshold = pref.getInt("distanceThreshold", 500);
+    }
+
+    public static int getDistanceThreshold() {
+        return distanceThreshold;
+    }
+
+    public static void setDistanceThreshold(int distanceThreshold) {
+        pref.edit().putInt("distanceThreshold", distanceThreshold).apply();
+        SharedPrefs.distanceThreshold = distanceThreshold;
+    }
+
+    public static int getVicinity() {
+        return vicinity;
+    }
+
+    public static void setVicinity(int vicinity) {
+        pref.edit().putInt("vicinity", vicinity).apply();
+        SharedPrefs.vicinity = vicinity;
+    }
+
+    public static boolean isMoving() {
+        return isMoving;
+    }
+
+    public static void setIsMoving(boolean isMoving) {
+        pref.edit().putBoolean("isMoving", isMoving).apply();
+        SharedPrefs.isMoving = isMoving;
+    }
+
+    public static String getReCalcDistanceAtLatitude() {
+        return reCalcDistanceAtLatitude;
+    }
+
+    public static void setReCalcDistanceAtLatitude(String reCalcDistanceAtLatitude) {
+        pref.edit().putString("reCalcDistanceAtLatitude", reCalcDistanceAtLatitude).apply();
+
+        SharedPrefs.reCalcDistanceAtLatitude = reCalcDistanceAtLatitude;
+    }
+
+    public static String getReCalcDistanceAtLongitude() {
+        return reCalcDistanceAtLongitude;
+    }
+
+    public static void setReCalcDistanceAtLongitude(String reCalcDistanceAtLongitude) {
+        pref.edit().putString("reCalcDistanceAtLongitude", reCalcDistanceAtLongitude).commit();
+        SharedPrefs.reCalcDistanceAtLongitude = reCalcDistanceAtLongitude;
+    }
+
+    public static float getCurrentDisplacement() {
+        return currentDisplacement;
+    }
+
+    public static void setCurrentDisplacement(float currentDisplacement) {
+        pref.edit().putFloat("currentDisplacement", currentDisplacement).apply();
+        SharedPrefs.currentDisplacement = currentDisplacement;
     }
 
     public static float getLastLocationAccuracy() {
@@ -80,7 +148,7 @@ public class SharedPrefs {
     }
 
     public static void setLocLastUpdateMillis(long locLastUpdateMillis) {
-        pref.edit().putLong("locLastUpdateMillis",locLastUpdateMillis).apply();
+        pref.edit().putLong("locLastUpdateMillis", locLastUpdateMillis).apply();
         SharedPrefs.locLastUpdateMillis = locLastUpdateMillis;
     }
 

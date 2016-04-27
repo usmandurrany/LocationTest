@@ -9,13 +9,13 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.fournodes.ud.locationtest.Database;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
-import com.fournodes.ud.locationtest.dialogs.FenceListDialog;
 import com.fournodes.ud.locationtest.apis.FenceApi;
+import com.fournodes.ud.locationtest.dialogs.FenceListDialog;
 import com.fournodes.ud.locationtest.objects.Fence;
 import com.fournodes.ud.locationtest.services.LocationService;
+import com.fournodes.ud.locationtest.utils.Database;
 
 import java.util.List;
 
@@ -46,7 +46,8 @@ public class FenceAdapter extends ArrayAdapter {
             holder.txtFenceDesc = (TextView) convertView.findViewById(R.id.txtFenceDesc);
             holder.btnRemoveFence = (ImageButton) convertView.findViewById(R.id.btnRemoveFence);
             convertView.setTag(holder);
-        } else {
+        }
+        else {
             holder = (viewHolder) convertView.getTag();
         }
 
@@ -71,7 +72,8 @@ public class FenceAdapter extends ArrayAdapter {
                             "&create_on=" + fenceListOrig.get(position).getCreate_on(), "remove_fence");
                     fenceListOrig.remove(position); //Remove from list
                     notifyDataSetChanged();
-                } else
+                }
+                else
                     Toast.makeText(getContext(), "Service not running", Toast.LENGTH_SHORT).show();
             }
         });

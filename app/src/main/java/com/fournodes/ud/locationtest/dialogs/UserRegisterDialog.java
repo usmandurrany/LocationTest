@@ -9,10 +9,10 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
-import com.fournodes.ud.locationtest.interfaces.RequestResult;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.apis.RegisterApi;
+import com.fournodes.ud.locationtest.interfaces.RequestResult;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;

@@ -34,7 +34,8 @@ public class GeofenceWrapper {
         this.context = context;
         locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
     }
-    private void getAttributes(Fence fence){
+
+    private void getAttributes(Fence fence) {
         this.fence = fence;
         id = fence.getId();
         title = fence.getTitle();
@@ -52,8 +53,8 @@ public class GeofenceWrapper {
     private PendingIntent getPendingIntent() {
         Intent intent = new Intent(context, GeofenceTransitionsIntentService.class);
         intent.putExtra("remote", true); //Don't generate notification of fence on this device as it is a remote fence
-        intent.putExtra("id",id);
-        return PendingIntent.getService(context,id, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        intent.putExtra("id", id);
+        return PendingIntent.getService(context, id, intent, PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     /**
@@ -62,25 +63,27 @@ public class GeofenceWrapper {
      **/
     public void create(Fence fence) {
         getAttributes(fence);
-        if (locationManager != null){
+        if (locationManager != null) {
             pendingIntent = getPendingIntent();
             fence.setArea(null);
             fence.setPendingIntent(pendingIntent);
 
-            locationManager.addProximityAlert(centerLatitude,centerLongitude,radius,-1,pendingIntent);
-        } else
-            FileLogger.e(TAG,"Location Manager is not available");
+            locationManager.addProximityAlert(centerLatitude, centerLongitude, radius, -1, pendingIntent);
+        }
+        else
+            FileLogger.e(TAG, "Location Manager is not available");
     }
 
-    public void remove(Fence fence){
+    public void remove(Fence fence) {
         getAttributes(fence);
-        if (locationManager != null){
+        if (locationManager != null) {
             pendingIntent = fence.getPendingIntent();
             if (pendingIntent == null)
                 pendingIntent = getPendingIntent();
             locationManager.removeProximityAlert(pendingIntent);
-        }else
-            FileLogger.e(TAG,"Location Manager is not available");
+        }
+        else
+            FileLogger.e(TAG, "Location Manager is not available");
 
     }
 }

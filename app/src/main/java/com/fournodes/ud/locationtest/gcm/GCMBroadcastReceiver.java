@@ -12,14 +12,14 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
-import com.fournodes.ud.locationtest.Database;
-import com.fournodes.ud.locationtest.objects.Fence;
-import com.fournodes.ud.locationtest.utils.FileLogger;
 import com.fournodes.ud.locationtest.GeofenceWrapper;
-import com.fournodes.ud.locationtest.activities.MainActivity;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.activities.MainActivity;
 import com.fournodes.ud.locationtest.apis.NotificationApi;
+import com.fournodes.ud.locationtest.objects.Fence;
+import com.fournodes.ud.locationtest.utils.Database;
+import com.fournodes.ud.locationtest.utils.FileLogger;
 import com.google.android.gms.gcm.GcmListenerService;
 
 import java.util.ArrayList;
@@ -91,16 +91,15 @@ public class GCMBroadcastReceiver extends GcmListenerService {
         FileLogger.e(TAG, "Description: " + data.getString("description"));
         FileLogger.e(TAG, "Center: Lat: " + data.getString("center_latitude") + " Long: " + data.getString("center_longitude"));
         FileLogger.e(TAG, "Radius: " + data.getString("radius"));
-        geofenceWrapper.create(fence);
+        //geofenceWrapper.create(fence);
         FileLogger.e(TAG, "Result: Success");
         db.saveFence(fence);
-
 
 
         NotificationApi notificationApi = new NotificationApi();
         notificationApi.execute("response",
                 "response=success&user_id=" + SharedPrefs.getUserId() + "&action=create_fence&fence_id=" + data.getString("fence_id"));
-
+        serviceMessage("calcDistance");
     }
 
     public void editFence(final Bundle data) {
@@ -124,6 +123,8 @@ public class GCMBroadcastReceiver extends GcmListenerService {
         NotificationApi notificationApi = new NotificationApi();
         notificationApi.execute("response",
                 "response=success&user_id=" + SharedPrefs.getUserId() + "&action=edit_fence&fence_id=" + data.getString("fence_id"));
+        serviceMessage("calcDistance");
+
     }
 
     public void removeFence(final Bundle data) {
@@ -131,7 +132,7 @@ public class GCMBroadcastReceiver extends GcmListenerService {
 
         FileLogger.e(TAG, "Fence: " + data.getString("fence_id"));
         FileLogger.e(TAG, "Action: Remove");
-        geofenceWrapper.remove(fence);
+        // geofenceWrapper.remove(fence);
         FileLogger.e(TAG, "Result: Success");
         db.removeFenceFromDatabase(fence.getId());
 
@@ -140,6 +141,7 @@ public class GCMBroadcastReceiver extends GcmListenerService {
         notificationApi.execute("response",
                 "response=success&user_id=" + SharedPrefs.getUserId() + "&action=remove_fence&fence_id=" + data.getString("fence_id"));
 
+        serviceMessage("calcDistance");
 
     }
 
@@ -165,8 +167,7 @@ public class GCMBroadcastReceiver extends GcmListenerService {
     private void serviceMessage(String message) {
         Log.d("Main Fragment", "Broadcasting message");
         Intent intent = new Intent("LOCATION_TEST_SERVICE");
-        intent.putExtra("message", "GCMReceiver");
-        intent.putExtra("body", message);
+        intent.putExtra("message", message);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 

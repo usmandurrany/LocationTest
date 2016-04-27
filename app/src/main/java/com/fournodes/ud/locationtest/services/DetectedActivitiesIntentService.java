@@ -5,8 +5,8 @@ import android.content.Intent;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
-import com.fournodes.ud.locationtest.utils.FileLogger;
 import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.utils.FileLogger;
 import com.google.android.gms.location.ActivityRecognitionResult;
 import com.google.android.gms.location.DetectedActivity;
 
@@ -19,7 +19,7 @@ public class DetectedActivitiesIntentService extends IntentService {
     protected static final String TAG = "DetectedActivitiesIS";
     public int fastMovement;
     public int slowMovement;
-    public int noMovement ;
+    public int noMovement;
 
     /**
      * This constructor is required, and calls the super IntentService(String)
@@ -36,7 +36,6 @@ public class DetectedActivitiesIntentService extends IntentService {
         if (SharedPrefs.pref == null)
             new SharedPrefs(this).initialize();
     }
-
 
 
     /**
@@ -67,21 +66,21 @@ public class DetectedActivitiesIntentService extends IntentService {
         }
         if (fastMovement >= 50) {
             FileLogger.e(TAG, "Fast Movement Detected.");
-            SharedPrefs.setLocationRequestInterval(15);
             serviceMessage("fastMovement");
-        }else if (slowMovement >= 50){
+        }
+        else if (slowMovement >= 50) {
             FileLogger.e(TAG, "Slow Movement Detected.");
-            SharedPrefs.setLocationRequestInterval(60);
             serviceMessage("slowMovement");
-        }else if (noMovement >= 50){
+        }
+        else if (noMovement >= 50) {
             FileLogger.e(TAG, "No Movement Detected.");
-            SharedPrefs.setLocationRequestInterval(900);
             serviceMessage("noMovement");
-        }else
-            FileLogger.e(TAG, "No enough data to change interval. Using last value of "+SharedPrefs.getLocationRequestInterval()+" seconds");
+        }
+        else
+            FileLogger.e(TAG, "No enough data to change interval. Using last value of " + SharedPrefs.getLocationRequestInterval() + " seconds");
     }
 
-    public  String getActivityString(DetectedActivity detectedActivity) {
+    public String getActivityString(DetectedActivity detectedActivity) {
         switch (detectedActivity.getType()) {
             case DetectedActivity.IN_VEHICLE:
                 fastMovement += detectedActivity.getConfidence();
@@ -107,6 +106,7 @@ public class DetectedActivitiesIntentService extends IntentService {
                 return "Undefined";
         }
     }
+
     private void serviceMessage(String message) {
         Log.d("Main Fragment", "Broadcasting message");
         Intent intent = new Intent("LOCATION_TEST_SERVICE");

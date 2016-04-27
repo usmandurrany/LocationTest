@@ -39,7 +39,7 @@ public class NotificationApi extends AsyncTask<String, String, String> {
     protected String doInBackground(String... params) {
         try {
             getData = params[0];
-            postData = params[1]+"&sent_time="+System.currentTimeMillis();
+            postData = params[1] + "&sent_time=" + System.currentTimeMillis();
             String url = SharedPrefs.SERVER_ADDRESS + "incoming.php?type=" + params[0];
             URL obj = new URL(url);
             HttpURLConnection con = (HttpURLConnection) obj.openConnection();
@@ -90,7 +90,8 @@ public class NotificationApi extends AsyncTask<String, String, String> {
                     Log.i(TAG, "Result: Success");
                 else
                     Log.i(TAG, "Result: Failure");
-            } else {
+            }
+            else {
                 Log.i(TAG, "Retrying..");
                 final Handler retry = new Handler();
                 retry.postDelayed(new Runnable() {
@@ -99,7 +100,8 @@ public class NotificationApi extends AsyncTask<String, String, String> {
                         if (retryCount != 7) {
                             new NotificationApi(retryCount++).execute(getData, postData);
                             retry.removeCallbacks(this);
-                        }else{
+                        }
+                        else {
                             Log.i(TAG, "Discarded Notification");
                             retry.removeCallbacks(this);
                         }

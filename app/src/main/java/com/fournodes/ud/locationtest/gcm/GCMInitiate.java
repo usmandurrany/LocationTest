@@ -35,7 +35,8 @@ public class GCMInitiate {
                 apiAvailability.getErrorDialog((Activity) context, resultCode, 9000)
                         .show();
                 Log.w("Play Services", "Play Services Not Found");
-            } else {
+            }
+            else {
                 Log.i("Play Services", "This device is not supported.");
             }
             return false;

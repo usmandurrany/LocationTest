@@ -3,8 +3,8 @@ package com.fournodes.ud.locationtest.apis;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.fournodes.ud.locationtest.interfaces.RequestResult;
 import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.interfaces.RequestResult;
 
 import org.json.JSONException;
 import org.json.JSONObject;

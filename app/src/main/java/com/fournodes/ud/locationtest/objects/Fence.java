@@ -9,25 +9,48 @@ import com.google.android.gms.maps.model.Marker;
 /**
  * Created by Usman on 16/2/2016.
  */
-public class Fence {
+public class Fence implements Comparable<Fence> {
     private int id;
+
+    private String userId;
     private String title;
     private String description;
+    private String create_on;
+
     private Marker centerMarker;
     private Marker edgeMarker;
-    private float radius;
-    private Geofence area;
-    private Circle visibleArea;
-    private PendingIntent pendingIntent;
-    private int transitionType;
-    private String userId;
-    private int onDevice;
+
     private double center_lat;
     private double center_lng;
     private double edge_lat;
     private double edge_lng;
-    private String create_on;
-    private int lastEvent=2;
+    private int radius;
+
+    private Circle visibleArea;
+    private PendingIntent pendingIntent;
+    private Geofence area;
+    private int transitionType;
+    private int onDevice;
+
+    private int lastEvent = 2;
+    private int distanceFrom;
+    private int isActive;
+
+    public int getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(int isActive) {
+        this.isActive = isActive;
+    }
+
+    public int getDistanceFrom() {
+        return distanceFrom;
+    }
+
+    public void setDistanceFrom(int distanceFrom) {
+        this.distanceFrom = distanceFrom;
+    }
 
     public int getLastEvent() {
         return lastEvent;
@@ -109,7 +132,7 @@ public class Fence {
         this.centerMarker = centerMarker;
     }
 
-    public float getRadius() {
+    public int getRadius() {
         return radius;
     }
 
@@ -122,7 +145,7 @@ public class Fence {
     }
 
     public void setRadius(float radius) {
-        this.radius = radius;
+        this.radius = (int) Math.ceil(radius);
     }
 
     public Geofence getArea() {
@@ -180,4 +203,18 @@ public class Fence {
         visibleArea.remove();
     }
 
+
+    @Override
+    public int compareTo(Fence fence) {
+
+        if (distanceFrom > fence.distanceFrom) {
+            return 1;
+        }
+        else if (distanceFrom < fence.distanceFrom) {
+            return -1;
+        }
+        else {
+            return 0;
+        }
+    }
 }

@@ -7,7 +7,9 @@ import org.json.JSONArray;
  */
 public interface TrackApiResult {
     void liveLocationUpdate(String lat, String lng, String track_id);
+
     void locationHistory(JSONArray location);
+
     void userList(JSONArray users);
 
 }

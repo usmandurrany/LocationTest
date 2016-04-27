@@ -4,9 +4,9 @@ import android.app.Dialog;
 import android.content.Context;
 import android.widget.ListView;
 
+import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.adapters.FenceAdapter;
 import com.fournodes.ud.locationtest.interfaces.MapFragmentInterface;
-import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.objects.Fence;
 
 import java.util.List;

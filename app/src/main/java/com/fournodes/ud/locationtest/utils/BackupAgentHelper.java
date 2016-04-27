@@ -11,7 +11,6 @@ import android.graphics.Color;
 import android.os.ParcelFileDescriptor;
 import android.support.v4.app.NotificationCompat;
 
-import com.fournodes.ud.locationtest.Database;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.activities.MainActivity;
 
@@ -28,28 +27,28 @@ public class BackupAgentHelper extends android.app.backup.BackupAgentHelper {
     @Override
     public void onCreate() {
         addHelper(DATABASE_BACKUP_KEY, new DbBackupHelper(this, Database.DATABASE_FILE_NAME));
-       // SharedPreferencesBackupHelper sharedPrefsBackup = new SharedPreferencesBackupHelper()
+        // SharedPreferencesBackupHelper sharedPrefsBackup = new SharedPreferencesBackupHelper()
 
     }
 
     @Override
     public void onRestoreFinished() {
         super.onRestoreFinished();
-        createNotification("LocationTest","Data restored");
+        createNotification("LocationTest", "Data restored");
 
     }
 
     @Override
     public void onFullBackup(FullBackupDataOutput data) throws IOException {
         super.onFullBackup(data);
-       // createNotification("LocationTest","Data backup complete");
+        // createNotification("LocationTest","Data backup complete");
 
     }
 
     @Override
     public void onBackup(ParcelFileDescriptor oldState, BackupDataOutput data, ParcelFileDescriptor newState) throws IOException {
         super.onBackup(oldState, data, newState);
-      //  createNotification("LocationTest","Data backup complete");
+        //  createNotification("LocationTest","Data backup complete");
     }
 
     private void createNotification(String from, String message) {

@@ -3,8 +3,8 @@ package com.fournodes.ud.locationtest.apis;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.fournodes.ud.locationtest.interfaces.RequestResult;
 import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.interfaces.RequestResult;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -75,14 +75,16 @@ public class FenceApi extends AsyncTask<String, String, String> {
                 Log.e(TAG, s);
                 JSONObject result = new JSONObject(s);
                 if (result.has("fence_id")) {
-                    if (delegate!=null)
+                    if (delegate != null)
                         delegate.onSuccess(String.valueOf(result.getInt("fence_id")));
-                }else {
-                    if (delegate!=null)
+                }
+                else {
+                    if (delegate != null)
                         delegate.onFailure();
                 }
-            }else{
-                if (delegate!=null)
+            }
+            else {
+                if (delegate != null)
                     delegate.onFailure();
             }
 

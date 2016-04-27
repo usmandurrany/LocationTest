@@ -10,8 +10,8 @@ import android.graphics.Color;
 import android.media.RingtoneManager;
 import android.support.v7.app.NotificationCompat;
 
-import com.fournodes.ud.locationtest.activities.MainActivity;
 import com.fournodes.ud.locationtest.R;
+import com.fournodes.ud.locationtest.activities.MainActivity;
 
 public class BackpackTrackReceiver extends BroadcastReceiver {
     public BackpackTrackReceiver() {
@@ -19,10 +19,11 @@ public class BackpackTrackReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (intent.getAction().equals("eu.faircode.backpacktrack2.PROXIMITY_ENTER")){
-            sendNotification(context,"Entered","Waypoint " + String.valueOf(intent.getLongExtra("Waypoint",-1)));
-        } else if (intent.getAction().equals("eu.faircode.backpacktrack2.PROXIMITY_EXIT")){
-            sendNotification(context,"Exited","Waypoint " + String.valueOf(intent.getLongExtra("Waypoint",-1)));
+        if (intent.getAction().equals("eu.faircode.backpacktrack2.PROXIMITY_ENTER")) {
+            sendNotification(context, "Entered", "Waypoint " + String.valueOf(intent.getLongExtra("Waypoint", -1)));
+        }
+        else if (intent.getAction().equals("eu.faircode.backpacktrack2.PROXIMITY_EXIT")) {
+            sendNotification(context, "Exited", "Waypoint " + String.valueOf(intent.getLongExtra("Waypoint", -1)));
         }
 
     }
