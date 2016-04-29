@@ -70,7 +70,7 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        /********************** Fragment Code ********************/
+
         CustomFrameLayout floatingMarker = (CustomFrameLayout) getView().findViewById(R.id.floatingMarker);
 
         btnService = (Button) getView().findViewById(R.id.btnService);
@@ -79,12 +79,15 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
         Button btnResetAll = (Button) getView().findViewById(R.id.btnRemoveAll);
         Button btnSetVicinity = (Button) getView().findViewById(R.id.btnSetVicinity);
         Button btnSetDistanceThreshold = (Button) getView().findViewById(R.id.btnSetDistanceThreshold);
+        Button btnSetFencePerimeterPercentage = (Button) getView().findViewById(R.id.btnSetFencePerimeterPercentage);
 
         final EditText edtVicinity = (EditText) getView().findViewById(R.id.edtVicinity);
         final EditText edtDistanceThreshold = (EditText) getView().findViewById(R.id.edtDistanceThreshold);
+        final EditText edtFencePerimeterPercentage = (EditText) getView().findViewById(R.id.edtFencePerimeterPercentage);
 
         edtVicinity.setText(String.valueOf(SharedPrefs.getVicinity()));
         edtDistanceThreshold.setText(String.valueOf(SharedPrefs.getDistanceThreshold()));
+        edtFencePerimeterPercentage.setText(String.valueOf(SharedPrefs.getFencePerimeterPercentage()));
 
 
         txtLog = (TextView) getView().findViewById(R.id.txtLog);
@@ -118,12 +121,11 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
         btnClearLogFile.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                File file = new File("sdcard/" + FileLogger.LOG_FILE_NAME);
-                if (file.exists() && !LocationService.isRunning)
-                    file.delete();
+                if (FileLogger.deleteFile())
+                    Toast.makeText(getActivity(), "Log cleared", Toast.LENGTH_SHORT).show();
                 else if (LocationService.isRunning)
                     Toast.makeText(getActivity(), "Cant clear log while service is running", Toast.LENGTH_SHORT).show();
-                else if (!file.exists())
+                else
                     Toast.makeText(getActivity(), "File doesn't exists", Toast.LENGTH_SHORT).show();
             }
         });
@@ -133,7 +135,7 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
             public void onClick(View v) {
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
-                sendIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(new File("sdcard/" + FileLogger.LOG_FILE_NAME)));
+                sendIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(FileLogger.logFile));
                 sendIntent.setType("text/plain");
                 startActivity(sendIntent);
             }
@@ -162,6 +164,15 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
             public void onClick(View v) {
                 SharedPrefs.setDistanceThreshold(Integer.parseInt(edtDistanceThreshold.getText().toString()));
                 Toast.makeText(getContext(), "Distance threshold value set", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnSetFencePerimeterPercentage.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                SharedPrefs.setFencePerimeterPercentage(Integer.parseInt(edtFencePerimeterPercentage.getText().toString()));
+                Toast.makeText(getContext(), "Fence perimeter percentage value set", Toast.LENGTH_SHORT).show();
+
             }
         });
 

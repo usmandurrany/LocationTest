@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.location.Location;
 import android.location.LocationManager;
 
-import com.fournodes.ud.locationtest.Constants;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.objects.Fence;
 import com.fournodes.ud.locationtest.services.GeofenceTransitionsIntentService;
@@ -35,9 +34,9 @@ public class DistanceCalculator {
             newDistance = calcHaversine(location1, fenceCenter);
             fence.setDistanceFrom(newDistance);
 
-            int fenceOuterPerimeter = (int) Math.ceil((10 / 100) * fence.getRadius());
+            int fencePerimeterInMeters = (int) ((float)SharedPrefs.getFencePerimeterPercentage() / 100) * fence.getRadius();
 
-            if (newDistance <= SharedPrefs.getVicinity() + fenceOuterPerimeter) {
+            if (newDistance <= SharedPrefs.getVicinity() + fencePerimeterInMeters) {
                 fence.setIsActive(1);
                 fenceListActive.add(fence);
             }
@@ -47,13 +46,13 @@ public class DistanceCalculator {
             FileLogger.e(TAG, "Is Active: " + String.valueOf(fence.getIsActive()));
 
 
-            if (newDistance <= fence.getRadius() + fenceOuterPerimeter && fence.getLastEvent() != 1 && fence.getIsActive() == 1) {
+            if (newDistance <= fence.getRadius() + fencePerimeterInMeters && fence.getLastEvent() != 1 && fence.getIsActive() == 1) {
                 Intent triggerFence = new Intent(context, GeofenceTransitionsIntentService.class);
                 triggerFence.putExtra(LocationManager.KEY_PROXIMITY_ENTERING, true);
                 triggerFence.putExtra("id", fence.getId());
                 context.startService(triggerFence);
             }
-            else if (newDistance >= fence.getRadius() + fenceOuterPerimeter && fence.getLastEvent() != 2 && fence.getIsActive() == 1) {
+            else if (newDistance >= fence.getRadius() + fencePerimeterInMeters && fence.getLastEvent() != 2 && fence.getIsActive() == 1) {
                 Intent triggerFence = new Intent(context, GeofenceTransitionsIntentService.class);
                 triggerFence.putExtra(LocationManager.KEY_PROXIMITY_ENTERING, false);
                 triggerFence.putExtra("id", fence.getId());

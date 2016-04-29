@@ -42,6 +42,7 @@ public class SharedPrefs {
 
     private static int vicinity;
     private static int distanceThreshold;
+    private static int fencePerimeterPercentage;
 
 
     public void initialize() {
@@ -68,6 +69,16 @@ public class SharedPrefs {
         isMoving = pref.getBoolean("isMoving", false);
         vicinity = pref.getInt("vicinity", 1000);
         distanceThreshold = pref.getInt("distanceThreshold", 500);
+        fencePerimeterPercentage = pref.getInt("fencePerimeterPercentage",10);
+    }
+
+    public static int getFencePerimeterPercentage() {
+        return fencePerimeterPercentage;
+    }
+
+    public static void setFencePerimeterPercentage(int fencePerimeterPercentage) {
+        pref.edit().putInt("fencePerimeterPercentage", fencePerimeterPercentage).apply();
+        SharedPrefs.fencePerimeterPercentage = fencePerimeterPercentage;
     }
 
     public static int getDistanceThreshold() {
@@ -157,7 +168,7 @@ public class SharedPrefs {
     }
 
     public static void setLocationRequestInterval(int locationRequestInterval) {
-        pref.edit().putInt("locationRequestInterval", locationRequestInterval).apply();
+        pref.edit().putInt("locationRequestInterval", locationRequestInterval).commit();
         SharedPrefs.locationRequestInterval = locationRequestInterval;
     }
 

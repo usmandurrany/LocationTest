@@ -37,6 +37,7 @@ import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.ActivityRecognition;
 
+import java.io.File;
 import java.text.DateFormat;
 import java.util.List;
 
@@ -154,6 +155,12 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                 case "simulationStarted": {
                     isSimulationRunning = true;
                     stopLocationUpdates();
+                    // Override activity
+                    SharedPrefs.setIsMoving(true);
+                    FileLogger.e(TAG, "Changing request interval to 15 seconds");
+                    SharedPrefs.setLocationRequestInterval(15);
+                    locationRequestHandler.removeCallbacksAndMessages(locationRequest);
+                    locationRequestHandler.post(locationRequest);
                     break;
                 }
                 default: {
@@ -473,6 +480,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
         if (delegate != null)
             delegate.serviceStopped();
+
+        FileLogger.closeFile();
 
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
         Log.e(TAG, "Service Destroyed");

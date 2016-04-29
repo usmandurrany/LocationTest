@@ -90,7 +90,32 @@
         android:id="@+id/btnSetDistanceThreshold"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/lytScrollLog"
+        android:layout_above="@+id/btnSetFencePerimeterPercentage"
+        android:layout_alignParentRight="true"
+        android:text="Set"/>
+
+    <android.support.design.widget.TextInputLayout
+        android:id="@+id/tilFencePerimeterPercentage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_below="@+id/tilDistanceThreshold"
+        android:layout_toLeftOf="@+id/btnSetFencePerimeterPercentage">
+
+        <android.support.design.widget.TextInputEditText
+            android:id="@+id/edtFencePerimeterPercentage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:inputType="number"
+            android:hint="Fence Perimeter Percentage"/>
+
+    </android.support.design.widget.TextInputLayout>
+    <Button
+        android:id="@+id/btnSetFencePerimeterPercentage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+                android:layout_above="@+id/lytScrollLog"
         android:layout_alignParentRight="true"
         android:text="Set"/>
 
@@ -101,7 +126,7 @@
         android:layout_above="@+id/btnService"
         android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
-        android:layout_below="@+id/tilDistanceThreshold"
+        android:layout_below="@+id/tilFencePerimeterPercentage"
         android:fillViewport="false">
 
         <TextView

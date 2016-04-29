@@ -20,56 +20,84 @@ import java.util.Calendar;
 
 public class FileLogger {
     private static final String TAG = "FileLogger";
-    private static File logFile;
+    public static File logFile;
 
     private static Calendar c = Calendar.getInstance();
     private static SimpleDateFormat df = new SimpleDateFormat("yyyyMMdd");
     private static final String LOG_FILE_PREFIX = "location_log_";
-    public static final String LOG_FILE_NAME = LOG_FILE_PREFIX + df.format(c.getTime()) + ".txt";
+    public static final String LOG_FILE_NAME = LOG_FILE_PREFIX + df.format(c.getTime());
+    public static final String LOG_FILE_EXT = ".txt";
+
+    public static BufferedWriter buf;
 
 
-    private static boolean createFile() {
+    private static void openFile() {
         try {
 
+            logFile = new File("sdcard/" + LOG_FILE_NAME + LOG_FILE_EXT);
 
-            logFile = new File("sdcard/" + LOG_FILE_NAME);
+            if (!logFile.exists())
+                logFile.createNewFile();
 
-            if (!logFile.exists()) {
-
-                int yesterday = Integer.parseInt(df.format(c.getTime())) - 1;
-                String oldLogFileName = LOG_FILE_PREFIX + String.valueOf(yesterday) + ".txt";
-                File oldLogFile = new File("sdcard/" + oldLogFileName);
-                if (oldLogFile.exists())
-                    oldLogFile.delete();
-
-                return logFile.createNewFile();
-            }
-
-            return true;
-
+            //BufferedWriter for performance, true to set append to file flag
+            buf = new BufferedWriter(new FileWriter(logFile, true));
 
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return false;
+    }
+
+    private static boolean dateChanged() {
+        String[] fileName = LOG_FILE_NAME.split("_");
+        if (Long.parseLong(fileName[2]) < Long.parseLong(df.format(c.getTime()))) {
+            deleteOldFile();
+            return true;
+        }
+        else
+            return false;
+    }
+
+    private static boolean deleteOldFile() {
+        long yesterday = Long.parseLong(df.format(c.getTime())) - 1;
+        String oldLogFileName = LOG_FILE_PREFIX + String.valueOf(yesterday) + LOG_FILE_EXT;
+        File oldLogFile = new File("sdcard/" + oldLogFileName);
+        return oldLogFile.exists() && oldLogFile.delete();
+    }
+
+    public static boolean deleteFile(){
+        File deleteFile = new File("sdcard/" + LOG_FILE_NAME + LOG_FILE_EXT);
+        return deleteFile.exists() && deleteFile.delete();
     }
 
     public static void e(String TAG, String message) {
-        if (createFile()) {
+        if (logFile == null || buf == null || dateChanged())
+            openFile();
+
+        try {
+            String formattedDate = SimpleDateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime());
+            buf.append(formattedDate).append(": ").append(TAG).append(": ").append(message);
+            buf.newLine();
+            buf.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            Log.e(TAG, message);
+        }
+
+    }
+
+    public static void closeFile() {
+        if (logFile != null && buf != null) {
             try {
-                //BufferedWriter for performance, true to set append to file flag
-                String formattedDate = SimpleDateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime());
-                BufferedWriter buf = new BufferedWriter(new FileWriter(logFile, true));
-                buf.append(formattedDate).append(": ").append(TAG).append(": ").append(message);
+                buf.append("Logging Stopped");
                 buf.newLine();
                 buf.close();
+                buf = null;
+                logFile = null;
             } catch (IOException e) {
                 e.printStackTrace();
-            } finally {
-                Log.e(TAG, message);
             }
         }
-        else Log.e(FileLogger.TAG, "Unable to create log file");
     }
 
 }
