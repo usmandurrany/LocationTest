@@ -140,11 +140,11 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
         if (SharedPrefs.getReCalcDistanceAtLatitude() != null && SharedPrefs.getLastDeviceLatitude() != null && fenceListActive != null) {
 
-            Location lastLocation = new Location("");
-            lastLocation.setLatitude(Double.parseDouble(SharedPrefs.getReCalcDistanceAtLatitude()));
-            lastLocation.setLongitude(Double.parseDouble(SharedPrefs.getReCalcDistanceAtLongitude()));
+            Location lastReCalcLocation = new Location("");
+            lastReCalcLocation.setLatitude(Double.parseDouble(SharedPrefs.getReCalcDistanceAtLatitude()));
+            lastReCalcLocation.setLongitude(Double.parseDouble(SharedPrefs.getReCalcDistanceAtLongitude()));
 
-            int displacement = DistanceCalculator.calcDistanceFromLocation(bestLocation, lastLocation);
+            int displacement = DistanceCalculator.calcDistanceFromLocation(bestLocation, lastReCalcLocation);
 
             FileLogger.e(TAG, "Displacement since last recalculation: " + String.valueOf(displacement));
             FileLogger.e(TAG, "Active fences:  " + fenceListActive.size());
@@ -209,24 +209,25 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     public void activeFenceList(List<Fence> fenceListActive) {
         if (fenceListActive.size() > 0) {
             if (fenceListActive.size() > 1) {
+                FileLogger.e(TAG, "Multiple active fences.");
+
                 // Sort the fences in ascending order of their distances
                 Collections.sort(fenceListActive);
+            }
+            else
+                FileLogger.e(TAG, "Single active fence.");
 
-                if (SharedPrefs.isMoving())
-                    SharedPrefs.setLocationRequestInterval(timeToFenceEdge(fenceListActive.get(0)));
 
-                FileLogger.e(TAG, "Multiple active fences. Next run after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
+
+            if (SharedPrefs.isMoving()) {
+                int timeInSec = timeToFenceEdge(fenceListActive.get(0));
+                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
+                SharedPrefs.setLocationRequestInterval(timeInSec);
                 locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
 
             }
-            else {
-                if (SharedPrefs.isMoving())
-                    SharedPrefs.setLocationRequestInterval(timeToFenceEdge(fenceListActive.get(0)));
 
-                FileLogger.e(TAG, "Single active fence. Next run after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
-                locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
-
-            }
+            FileLogger.e(TAG, "Next run after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
 
             activeLocationUpdateNotify();
         }
@@ -241,11 +242,13 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
                 if (timeInSec > 60)
                     timeInSec = 60;
             }
-            if (SharedPrefs.isMoving())
+            if (SharedPrefs.isMoving()) {
+                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
                 SharedPrefs.setLocationRequestInterval(timeInSec);
+                locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
 
+            }
             FileLogger.e(TAG, "No active fences. Next run after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
-            locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
         }
 
         // Return the list to the Location Service
@@ -263,7 +266,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
         int distanceFromCenter = fence.getDistanceFrom();
         int radius = fence.getRadius();
-        int fencePerimeterInMeters = (int) ((float)SharedPrefs.getFencePerimeterPercentage() / 100) * radius;
+        int fencePerimeterInMeters = (int) ((float) SharedPrefs.getFencePerimeterPercentage() / 100) * radius;
         int distanceFromEdge = distanceFromCenter - fencePerimeterInMeters;
         int timeInSec;
         // Enter distance

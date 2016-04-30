@@ -20,7 +20,7 @@ public class BootCompleteReceiver extends WakefulBroadcastReceiver {
         Runnable check = new Runnable() {
             @Override
             public void run() {
-                if (LocationService.isRunning && LocationService.mGoogleApiClient != null && LocationService.isGoogleApiConnected) {
+                if (LocationService.isServiceRunning && LocationService.mGoogleApiClient != null && LocationService.isGoogleApiConnected) {
                     Database db = new Database(context);
                     db.onDeviceFence("createAll");
                     checkService.removeCallbacks(this);

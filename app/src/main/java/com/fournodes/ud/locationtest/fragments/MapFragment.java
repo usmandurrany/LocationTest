@@ -354,6 +354,25 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
         }
     }
 
+    @Override
+    public void listenerLocation(Location location) {
+        if (isSimulationRunning) {
+            currentLocation = location;
+
+            Double reCalcDistanceAtLatitude = Double.parseDouble(SharedPrefs.getReCalcDistanceAtLatitude());
+            Double reCalcDistanceAtLongitude = Double.parseDouble(SharedPrefs.getReCalcDistanceAtLongitude());
+
+            Location reCalcDistanceLocation = new Location("");
+            reCalcDistanceLocation.setLatitude(reCalcDistanceAtLatitude);
+            reCalcDistanceLocation.setLongitude(reCalcDistanceAtLongitude);
+
+            distanceSinceLastRecalc = DistanceCalculator.calcDistanceFromLocation(reCalcDistanceLocation, location);
+            speedAtLocation = (int) Math.ceil(location.getSpeed());
+
+            serviceMessage("getFenceListActive");
+        }
+    }
+
     private static LatLng toRadiusLatLng(LatLng center, double radius) {
         double radiusAngle = Math.toDegrees(radius / 6371009) / //Radius of earth in meters 6371009
                 Math.cos(Math.toRadians(center.latitude));
@@ -517,63 +536,31 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                 }
                 break;
             case R.id.fabToggleSimulation:
-                if (isSimulationRunning)
+                if (isSimulationRunning) {
                     stopSimulation();
-                else
-                    startSimulation();
+
+                }
+                else {
+                    isSimulationRunning = true;
+                    serviceMessage("simulationStarted");
+
+                }
                 break;
         }
         fabMenu.close(true);
     }
 
     private void stopSimulation() {
-        if (locationManager != null)
-            locationManager.removeUpdates(simulationListener);
+
         isSimulationRunning = false;
-        curPosArea.remove();
-        currPos.remove();
+        if (curPosArea != null) {
+            curPosArea.remove();
+            currPos.remove();
+        }
         txtInfo.setText("");
         serviceMessage("simulationStopped");
     }
 
-    private void startSimulation() {
-        serviceMessage("simulationStarted");
-        isSimulationRunning = true;
-        if (locationManager == null)
-            locationManager = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
-        if (simulationListener == null) {
-            simulationListener = new LocationListener() {
-                @Override
-                public void onLocationChanged(Location location) {
-                    currentLocation = location;
-
-                    Double reCalcDistanceAtLatitude = Double.parseDouble(SharedPrefs.getReCalcDistanceAtLatitude());
-                    Double reCalcDistanceAtLongitude = Double.parseDouble(SharedPrefs.getReCalcDistanceAtLongitude());
-
-                    Location reCalcDistanceLocation = new Location("");
-                    reCalcDistanceLocation.setLatitude(reCalcDistanceAtLatitude);
-                    reCalcDistanceLocation.setLongitude(reCalcDistanceAtLongitude);
-
-                    distanceSinceLastRecalc = DistanceCalculator.calcDistanceFromLocation(reCalcDistanceLocation, location);
-                    speedAtLocation = (int) Math.ceil(location.getSpeed());
-
-                    serviceMessage("getFenceListActive");
-
-                }
-
-                @Override
-                public void onStatusChanged(String provider, int status, Bundle extras) {}
-
-                @Override
-                public void onProviderEnabled(String provider) {}
-
-                @Override
-                public void onProviderDisabled(String provider) {}
-            };
-        }
-        locationManager.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, 0, 0, simulationListener);
-
-    }
 
     @Override
     public void onSuccess(String result) {}

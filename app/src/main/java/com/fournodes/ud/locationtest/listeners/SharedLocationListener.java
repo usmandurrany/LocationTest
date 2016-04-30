@@ -28,7 +28,7 @@ public class SharedLocationListener implements LocationListener {
     @Override
     public void onLocationChanged(Location location) {
         float accuracy = location.getAccuracy();
-        // Discard anything above 250m and network location
+        // Discard anything above 250m
         if (accuracy < 250) {
 
             if ((className.equals("Location Service") && !location.getProvider().equals("network")) || (className.equals("RequestLocUpdateThread") && location.getProvider().equals("network"))) {

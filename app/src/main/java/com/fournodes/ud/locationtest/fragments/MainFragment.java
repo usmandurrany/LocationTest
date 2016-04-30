@@ -2,10 +2,10 @@ package com.fournodes.ud.locationtest.fragments;
 
 import android.content.Context;
 import android.content.Intent;
+import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.annotation.StringDef;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -29,7 +29,6 @@ import com.fournodes.ud.locationtest.services.LocationService;
 import com.fournodes.ud.locationtest.utils.Database;
 import com.fournodes.ud.locationtest.utils.FileLogger;
 
-import java.io.File;
 import java.util.List;
 
 import io.fabric.sdk.android.Fabric;
@@ -94,7 +93,7 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
         lytScrollLog = (ScrollView) getView().findViewById(R.id.lytScrollLog);
 
 
-        if (LocationService.isRunning) {
+        if (LocationService.isServiceRunning) {
             isServiceRunning = true;
             btnService.setText("Stop Service");
         }
@@ -123,7 +122,7 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
             public void onClick(View v) {
                 if (FileLogger.deleteFile())
                     Toast.makeText(getActivity(), "Log cleared", Toast.LENGTH_SHORT).show();
-                else if (LocationService.isRunning)
+                else if (LocationService.isServiceRunning)
                     Toast.makeText(getActivity(), "Cant clear log while service is running", Toast.LENGTH_SHORT).show();
                 else
                     Toast.makeText(getActivity(), "File doesn't exists", Toast.LENGTH_SHORT).show();
@@ -220,6 +219,11 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
                 .append("Lng: ").append(lng).append("\n");
         txtLog.append(locationLog.toString());
         lytScrollLog.scrollTo(0, View.FOCUS_DOWN);
+
+    }
+
+    @Override
+    public void listenerLocation(Location location) {
 
     }
 

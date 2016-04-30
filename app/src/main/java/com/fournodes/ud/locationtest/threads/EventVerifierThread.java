@@ -333,6 +333,7 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
     @Override
     public boolean quit() {
         FileLogger.e(TAG, "Thread killed");
+        serviceMessage("verificationComplete");
         return super.quit();
     }
 

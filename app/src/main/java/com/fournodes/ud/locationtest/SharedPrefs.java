@@ -2,6 +2,7 @@ package com.fournodes.ud.locationtest;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.provider.Settings;
 
 /**
  * Created by Usman on 15/2/2016.
@@ -44,6 +45,8 @@ public class SharedPrefs {
     private static int distanceThreshold;
     private static int fencePerimeterPercentage;
 
+    private static long locationRequestAt;
+
 
     public void initialize() {
         locUpdateInterval = pref.getInt("locUpdateInterval", 60000); //1 Min
@@ -70,6 +73,16 @@ public class SharedPrefs {
         vicinity = pref.getInt("vicinity", 1000);
         distanceThreshold = pref.getInt("distanceThreshold", 500);
         fencePerimeterPercentage = pref.getInt("fencePerimeterPercentage",10);
+        locationRequestAt = pref.getLong("locationRequestAt", System.currentTimeMillis());
+    }
+
+    public static long getLocationRequestAt() {
+        return locationRequestAt;
+    }
+
+    public static void setLocationRequestAt(long locationRequestAt) {
+        pref.edit().putLong("locationRequestAt", locationRequestAt).commit();
+        SharedPrefs.locationRequestAt = locationRequestAt;
     }
 
     public static int getFencePerimeterPercentage() {

@@ -16,7 +16,6 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.crashlytics.android.Crashlytics;
-import com.fournodes.ud.locationtest.Constants;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.apis.LocationUpdateApi;
 import com.fournodes.ud.locationtest.interfaces.FenceListInterface;
@@ -37,8 +36,8 @@ import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.ActivityRecognition;
 
-import java.io.File;
 import java.text.DateFormat;
+import java.util.Collections;
 import java.util.List;
 
 import io.fabric.sdk.android.Fabric;
@@ -55,9 +54,10 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
     private Handler locationRequestHandler;
     private Runnable locationRequest;
 
-    public static boolean isRunning = false;
+    public static boolean isServiceRunning = false;
     public static boolean isGoogleApiConnected = false;
-    public boolean isModeActive = false;
+    public boolean isLocationRequestRunning = false;
+    private boolean isVerifierRunning = false;
 
     private long lastLocationTime = System.currentTimeMillis();
 
@@ -74,6 +74,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
     private boolean isSimulationRunning = false;
 
+
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -82,7 +83,6 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
             switch (intent.getStringExtra("message")) {
                 case "switchToPassiveMode": {
                     switchToPassiveMode();
-                    runEventVerifier();
                     break;
                 }
                 case "trackDisabled": {
@@ -99,6 +99,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                         locationRequestHandler.removeCallbacksAndMessages(locationRequest);
                         FileLogger.e(TAG, "Changing request interval to 15 seconds");
                         SharedPrefs.setLocationRequestInterval(15);
+                        SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (15 * 1000));
                         SharedPrefs.setIsMoving(true);
                         locationRequestHandler.post(locationRequest);
                     }
@@ -109,6 +110,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                         locationRequestHandler.removeCallbacksAndMessages(locationRequest);
                         FileLogger.e(TAG, "Changing request interval to 60 seconds");
                         SharedPrefs.setLocationRequestInterval(60);
+                        SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (60 * 1000));
                         SharedPrefs.setIsMoving(true);
                         locationRequestHandler.post(locationRequest);
                     }
@@ -119,6 +121,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                         locationRequestHandler.removeCallbacksAndMessages(locationRequest);
                         FileLogger.e(TAG, "Changing request interval to 900 seconds");
                         SharedPrefs.setLocationRequestInterval(900);
+                        SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (900 * 1000));
                         SharedPrefs.setIsMoving(false);
                         locationRequestHandler.post(locationRequest);
                     }
@@ -129,8 +132,6 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                     break;
                 }
                 case "updateFenceListActive": {
-                    if (db == null)
-                        db = new Database(context);
                     fenceListActive = db.onDeviceFence("getActive");
                     break;
                 }
@@ -149,18 +150,17 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                 }
                 case "simulationStopped": {
                     isSimulationRunning = false;
-                    switchToPassiveMode();
                     break;
                 }
                 case "simulationStarted": {
                     isSimulationRunning = true;
-                    stopLocationUpdates();
                     // Override activity
                     SharedPrefs.setIsMoving(true);
-                    FileLogger.e(TAG, "Changing request interval to 15 seconds");
                     SharedPrefs.setLocationRequestInterval(15);
-                    locationRequestHandler.removeCallbacksAndMessages(locationRequest);
-                    locationRequestHandler.post(locationRequest);
+                    break;
+                }
+                case "verificationComplete": {
+                    isVerifierRunning = false;
                     break;
                 }
                 default: {
@@ -185,11 +185,6 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
         locationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
         sharedLocationListener = new SharedLocationListener(TAG);
-        eventVerifierThread = new EventVerifierThread(getApplicationContext());
-
-        // Initialize thread for first run
-        // Fence list will be null
-        locationRequestThread = new LocationRequestThread(getApplicationContext(), fenceListActive, locationRequestHandler, locationRequest);
 
         db = new Database(getApplicationContext());
 
@@ -204,7 +199,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         Log.e(TAG, "Service Started");
 
         lastLocationTime = SharedPrefs.getLocLastUpdateMillis();
-        isRunning = true;
+        isServiceRunning = true;
         self = this;
 
         if (delegate != null)
@@ -246,7 +241,6 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
     public void onConnected(Bundle bundle) {
         isGoogleApiConnected = true;
         Log.e(TAG, "Google API Connected");
-        //switchToPassiveMode();
 
         ActivityRecognition.ActivityRecognitionApi.requestActivityUpdates(
                 mGoogleApiClient,
@@ -280,7 +274,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
     protected void createPassiveLocationRequest() {
         sharedLocationListener.delegate = this;
         locationManager.requestLocationUpdates(LocationManager.PASSIVE_PROVIDER, 0, 0, sharedLocationListener);
-        isModeActive = false;
+        isLocationRequestRunning = false;
     }
 
     protected void stopLocationUpdates() {
@@ -289,11 +283,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
     }
 
     public void switchToPassiveMode() {
-        if (!isSimulationRunning) {
-            FileLogger.e(TAG, "Starting listener");
-            createPassiveLocationRequest();
-        }else
-            FileLogger.e(TAG,"Simulation is running cant start listener");
+        FileLogger.e(TAG, "Starting listener");
+        createPassiveLocationRequest();
     }
 
 
@@ -302,52 +293,61 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
     @Override
     public void lmLocation(Location location, int locationScore) {
-        this.location = location;
-        if (SharedPrefs.pref == null)
-            new SharedPrefs(getApplicationContext()).initialize();
-
         Location lastLocation = new Location("");
-        lastLocation.setLatitude(Double.parseDouble(SharedPrefs.getReCalcDistanceAtLatitude()));
-        lastLocation.setLongitude(Double.parseDouble(SharedPrefs.getReCalcDistanceAtLongitude()));
+        lastLocation.setLatitude(Double.parseDouble(SharedPrefs.getLastDeviceLatitude()));
+        lastLocation.setLongitude(Double.parseDouble(SharedPrefs.getLastDeviceLongitude()));
+        if (DistanceCalculator.calcDistanceFromLocation(location, lastLocation) > 100) {
+            this.location = location;
+            if (delegate != null)
+                delegate.listenerLocation(location);
+            if (SharedPrefs.pref == null)
+                new SharedPrefs(getApplicationContext()).initialize();
 
-        double displacement = DistanceCalculator.calcDistanceFromLocation(location, lastLocation);
+            // Get the last recalculation script run location
+            Location lastReCalcLocation = new Location("");
+            lastReCalcLocation.setLatitude(Double.parseDouble(SharedPrefs.getReCalcDistanceAtLatitude()));
+            lastReCalcLocation.setLongitude(Double.parseDouble(SharedPrefs.getReCalcDistanceAtLongitude()));
 
-        FileLogger.e(TAG, "Displacement since last recalculation: " + String.valueOf(displacement));
+            // Calculate displacement from recalculation script run location to current location
+            int displacement = DistanceCalculator.calcDistanceFromLocation(location, lastReCalcLocation);
+            FileLogger.e(TAG, "Displacement since last recalculation: " + String.valueOf(displacement));
 
-        if (displacement >= SharedPrefs.getDistanceThreshold()) {
-            if (reCalcDistance == null || (reCalcDistance.getState() == Thread.State.TERMINATED && !reCalcDistance.isAlive()))
-                reCalcDistance = new RecalculateDistanceThread(getApplicationContext(), location);
+            // If displacement is above or equal to specified value, run recalculation script at this location
+            if (displacement >= SharedPrefs.getDistanceThreshold()) {
+                if (reCalcDistance == null || (reCalcDistance.getState() == Thread.State.TERMINATED && !reCalcDistance.isAlive()))
+                    reCalcDistance = new RecalculateDistanceThread(getApplicationContext(), location);
 
-            reCalcDistance.delegate = this;
-            reCalcDistance.start();
+                reCalcDistance.delegate = this;
+                reCalcDistance.start();
 
+            }
+            // Otherwise just update the distances of all the ACTIVE fences in memory
+            else
+                activeFenceList(DistanceCalculator.updateDistanceFromFences(getApplicationContext(), location, fenceListActive, false));
+
+            // Save the location with time schedule server updater
+            lastLocationTime = System.currentTimeMillis();
+            SharedPrefs.setLocLastUpdateMillis(lastLocationTime);
+
+            String locationTime = String.valueOf(DateFormat.getTimeInstance().format(location.getTime()));
+            db.saveLocation(location.getLatitude(), location.getLongitude(), System.currentTimeMillis());
+            //Save in shared prefs after saving in db
+            SharedPrefs.setLastDeviceLatitude(String.valueOf(location.getLatitude()));
+            SharedPrefs.setLastDeviceLongitude(String.valueOf(location.getLongitude()));
+            SharedPrefs.setLastLocUpdateTime(locationTime);
+            SharedPrefs.setLastLocationAccuracy(location.getAccuracy());
+
+            if (delegate != null)
+                delegate.locationUpdated(String.valueOf(location.getLatitude()), String.valueOf(location.getLongitude()), locationTime);
+
+            int rowCount = db.getLocEntriesCount();
+
+            if (updateServer == null && update == null)
+                createServerUpdateHandler();
+            else if (rowCount >= 5 && updateServer != null && update != null)
+                updateServer.post(update);
         }
-        else {
-            fenceListActive = DistanceCalculator.updateDistanceFromFences(getApplicationContext(), location, fenceListActive, false);
-        }
-        lastLocationTime = System.currentTimeMillis();
-        SharedPrefs.setLocLastUpdateMillis(lastLocationTime);
 
-        String locationTime = String.valueOf(DateFormat.getTimeInstance().format(location.getTime()));
-        db.saveLocation(location.getLatitude(), location.getLongitude(), System.currentTimeMillis());
-        //Save in shared prefs after saving in db
-        SharedPrefs.setLastDeviceLatitude(String.valueOf(location.getLatitude()));
-        SharedPrefs.setLastDeviceLongitude(String.valueOf(location.getLongitude()));
-        SharedPrefs.setLastLocUpdateTime(locationTime);
-        SharedPrefs.setLastLocationAccuracy(location.getAccuracy());
-
-        if (delegate != null)
-            delegate.locationUpdated(String.valueOf(location.getLatitude()), String.valueOf(location.getLongitude()), locationTime);
-
-        int rowCount = db.getLocEntriesCount();
-
-        if (updateServer == null && update == null)
-            createServerUpdateHandler();
-        else if (rowCount >= 5 && updateServer != null && update != null)
-            updateServer.post(update);
-
-
-        runEventVerifier();
     }
 
 
@@ -399,76 +399,149 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                 if (SharedPrefs.pref == null)
                     new SharedPrefs(getApplicationContext()).initialize();
 
-                long lastLocElapsedTime = (System.currentTimeMillis() - lastLocationTime) / 1000; // In Seconds
-
 
                 FileLogger.e(TAG, "Checking last update");
 
-                if (locationRequestThread.getState() == Thread.State.NEW) {
-                    FileLogger.e(TAG, "Location request first run");
-                    locationRequestThread.delegate = LocationService.this;
-                    locationRequestThread.start();
-                    isModeActive = true;
-                    //locationRequestHandler.postDelayed(this, SharedPrefs.getLocationRequestInterval() * 1000);
-                }
-                else if (isRunning && isGoogleApiConnected && locationRequestThread.getState() == Thread.State.TERMINATED) {
-                    FileLogger.e(TAG, "Requesting location update");
-                    FileLogger.e(TAG, "Next check after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
+                if (isServiceRunning && !isLocationRequestRunning) {
                     stopLocationUpdates();
+                    FileLogger.e(TAG, "Requesting location update");
                     locationRequestThread = new LocationRequestThread(getApplicationContext(), fenceListActive, locationRequestHandler, locationRequest);
                     locationRequestThread.delegate = LocationService.this;
                     locationRequestThread.start();
-                    isModeActive = true;
-                    //locationRequestHandler.postDelayed(this, SharedPrefs.getLocationRequestInterval() * 1000);
+                    isLocationRequestRunning = true;
                 }
-                else if (!isRunning) {
-                    FileLogger.e(TAG, "Service not running. Stopping self");
-                    locationRequestHandler.removeCallbacksAndMessages(null);
-                }
-               /* else {
-                    FileLogger.e(TAG, "Update found. Next check after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
-                    locationRequestHandler.postDelayed(this, SharedPrefs.getLocationRequestInterval() * 1000);
-                }*/
+                else if (isServiceRunning && isLocationRequestRunning)
+                    FileLogger.e(TAG, "Location request already running");
+                else
+                    FileLogger.e(TAG, "Service not running, terminating");
+
             }
         };
     }
 
 
     public void runEventVerifier() {
-        if (eventVerifierThread.getState() == Thread.State.NEW) {
-            FileLogger.e(TAG, "Event verifier first run");
-            eventVerifierThread.start();
-        }
-        else if (eventVerifierThread.getState() == Thread.State.TERMINATED && SharedPrefs.getPendingEventCount() > 0) { //&& (System.currentTimeMillis() - lastEventVerifiedTime > 5000)) {
+
+        if (isServiceRunning && !isVerifierRunning) {
             FileLogger.e(TAG, "Pending events: " + String.valueOf(SharedPrefs.getPendingEventCount()));
             FileLogger.e(TAG, "Starting event verifier");
             eventVerifierThread = new EventVerifierThread(getApplicationContext());
+            isVerifierRunning = true;
             eventVerifierThread.start();
         }
-        else if (eventVerifierThread.isAlive()) {
-            FileLogger.e(TAG, "Event Verifier Thread is already running");
-        }
-        else if (SharedPrefs.getPendingEventCount() == 0)
-            FileLogger.e(TAG, "No events pending");
+        else if (isServiceRunning && isVerifierRunning)
+            FileLogger.e(TAG, "Event verifier is already running");
+        else
+            FileLogger.e(TAG, "Service not running, terminating");
 
     }
 
     @Override
     public void activeFenceList(List<Fence> fenceListActive) {
+        if (fenceListActive.size() > 0) {
+            if (fenceListActive.size() > 1) {
+                FileLogger.e(TAG, "Multiple active fences.");
+                // Sort the fences in ascending order of their distances
+                Collections.sort(fenceListActive);
+            }
+            else
+                FileLogger.e(TAG, "Single active fence.");
+
+
+            if (locationRequestTimeLeft() > 15000 && SharedPrefs.isMoving()) {
+                int timeInSec = timeToFenceEdge(fenceListActive.get(0));
+                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
+                SharedPrefs.setLocationRequestInterval(timeInSec);
+                locationRequestHandler.removeCallbacksAndMessages(null);
+                locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
+            }
+
+            FileLogger.e(TAG, "Next run after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
+
+
+        }
+        else {
+            // No active fences
+
+            int timeInSec;
+            if (location == null || location.getSpeed() == 0f)
+                timeInSec = 60;
+            else {
+                timeInSec = (int) Math.ceil(SharedPrefs.getDistanceThreshold() / location.getSpeed());
+                if (timeInSec > 60)
+                    timeInSec = 60;
+            }
+            if (locationRequestTimeLeft() > 15000 && SharedPrefs.isMoving()) {
+                SharedPrefs.setLocationRequestInterval(timeInSec);
+                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
+                locationRequestHandler.removeCallbacksAndMessages(null);
+                locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
+            }
+            FileLogger.e(TAG, "No active fences. Next run after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
+
+        }
+
         this.fenceListActive = fenceListActive;
     }
 
-    @Override
-    public void allFenceList(List<Fence> fenceListAll) {
+    public long locationRequestTimeLeft() {
+        long scheduledTime = SharedPrefs.getLocationRequestAt();
+        long timeLeftInMillis = scheduledTime - System.currentTimeMillis();
 
+        FileLogger.e(TAG, "Next Run Time: " + String.valueOf(timeLeftInMillis));
+        return timeLeftInMillis;
     }
+
+    @Override
+    public void allFenceList(List<Fence> fenceListAll) {}
+
+    // Time is in seconds
+    private int timeToFenceEdge(Fence fence) {
+        if (location == null || location.getSpeed() < 3.0)
+            return 5;
+
+        int distanceFromCenter = fence.getDistanceFrom();
+        int radius = fence.getRadius();
+        int fencePerimeterInMeters = (int) ((float) SharedPrefs.getFencePerimeterPercentage() / 100) * radius;
+        int distanceFromEdge = distanceFromCenter - fencePerimeterInMeters;
+        int timeInSec;
+        // Enter distance
+        if (distanceFromEdge > 0) {
+
+            timeInSec = (int) Math.ceil(distanceFromEdge / location.getSpeed());
+            FileLogger.e(TAG, "Time to enter fence: " + String.valueOf(timeInSec));
+
+            if (timeInSec < 5) {
+                Intent triggerFence = new Intent(getApplicationContext(), GeofenceTransitionsIntentService.class);
+                triggerFence.putExtra(LocationManager.KEY_PROXIMITY_ENTERING, true);
+                triggerFence.putExtra("id", fence.getId());
+                getApplicationContext().startService(triggerFence);
+                return 5;
+
+            }
+            return timeInSec;
+        }
+        // Exit distance
+        else if (distanceFromEdge < 0) {
+            // Convert to positive int
+            timeInSec = (int) Math.ceil((distanceFromEdge * -1) / location.getSpeed());
+            FileLogger.e(TAG, "Time to exit fence: " + String.valueOf(timeInSec));
+            if (timeInSec < 5)
+                return 5;
+            else
+                return timeInSec;
+        }
+        // You are at the center of the fence
+        else return 5;
+    }
+
 
     @Override
     public void onDestroy() {
         mGoogleApiClient.disconnect();
         isGoogleApiConnected = false;
-        isRunning = false;
-        isModeActive = false;
+        isServiceRunning = false;
+        isLocationRequestRunning = false;
 
         if (locationRequestHandler != null)
             locationRequestHandler.removeCallbacksAndMessages(null);

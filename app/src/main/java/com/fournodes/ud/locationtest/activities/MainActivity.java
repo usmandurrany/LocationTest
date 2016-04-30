@@ -1,6 +1,7 @@
 package com.fournodes.ud.locationtest.activities;
 
 import android.content.Intent;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.design.widget.TabLayout;
@@ -65,7 +66,7 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
         check = new Runnable() {
             @Override
             public void run() {
-                if (LocationService.isRunning) {
+                if (LocationService.isServiceRunning) {
                     locationService = LocationService.getServiceObject();
                     locationService.delegate = MainActivity.this;
                     if (mainDelegate != null)
@@ -175,6 +176,14 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
     public void locationUpdated(String lat, String lng, String time) {
         if (mainDelegate != null)
             mainDelegate.locationUpdated(lat, lng, time);
+    }
+
+    @Override
+    public void listenerLocation(Location location) {
+        if (fragmentAdapter.getItem(viewPager.getCurrentItem()) instanceof MapFragment) {
+            if (mapDelegate != null)
+                mapDelegate.listenerLocation(location);
+        }
     }
 
     @Override
