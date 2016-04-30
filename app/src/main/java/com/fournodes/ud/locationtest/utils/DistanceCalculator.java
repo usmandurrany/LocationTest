@@ -8,6 +8,9 @@ import android.location.LocationManager;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.objects.Fence;
 import com.fournodes.ud.locationtest.services.GeofenceTransitionsIntentService;
+import com.google.android.gcm.server.Message;
+import com.google.android.gcm.server.MulticastResult;
+import com.google.android.gcm.server.Sender;
 
 import java.util.ArrayList;
 import java.util.List;

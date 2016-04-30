@@ -46,6 +46,7 @@ dependencies {
     compile 'com.google.android.gms:play-services-location:8.3.0'
     compile 'com.android.support:support-v4:23.2.0'
     compile 'com.github.clans:fab:1.6.2'
+    compile 'com.ganyo:gcm-server:1.0.2'
     compile('com.crashlytics.sdk.android:crashlytics:2.5.5@aar') {
         transitive = true;
     }

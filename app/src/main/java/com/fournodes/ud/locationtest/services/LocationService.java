@@ -117,7 +117,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                     break;
                 }
                 case "noMovement": {
-                    if (SharedPrefs.getLocationRequestInterval() != 900 && !isSimulationRunning) {
+                    if (SharedPrefs.getLocationRequestInterval() != 900){// && !isSimulationRunning) {
                         locationRequestHandler.removeCallbacksAndMessages(locationRequest);
                         FileLogger.e(TAG, "Changing request interval to 900 seconds");
                         SharedPrefs.setLocationRequestInterval(900);
@@ -157,6 +157,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                     // Override activity
                     SharedPrefs.setIsMoving(true);
                     SharedPrefs.setLocationRequestInterval(15);
+                    SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (15 * 1000));
+
                     break;
                 }
                 case "verificationComplete": {
@@ -296,7 +298,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         Location lastLocation = new Location("");
         lastLocation.setLatitude(Double.parseDouble(SharedPrefs.getLastDeviceLatitude()));
         lastLocation.setLongitude(Double.parseDouble(SharedPrefs.getLastDeviceLongitude()));
-        if (DistanceCalculator.calcDistanceFromLocation(location, lastLocation) > 100) {
+
+        if (DistanceCalculator.calcDistanceFromLocation(location, lastLocation) >= 100) {
             this.location = location;
             if (delegate != null)
                 delegate.listenerLocation(location);
@@ -448,7 +451,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                 FileLogger.e(TAG, "Single active fence.");
 
 
-            if (locationRequestTimeLeft() > 15000 && SharedPrefs.isMoving()) {
+            if (locationRequestTimeLeft() > 0.5 && SharedPrefs.isMoving()) {
                 int timeInSec = timeToFenceEdge(fenceListActive.get(0));
                 SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
                 SharedPrefs.setLocationRequestInterval(timeInSec);
@@ -471,7 +474,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                 if (timeInSec > 60)
                     timeInSec = 60;
             }
-            if (locationRequestTimeLeft() > 15000 && SharedPrefs.isMoving()) {
+            if (locationRequestTimeLeft() > 0.5 && SharedPrefs.isMoving()) {
                 SharedPrefs.setLocationRequestInterval(timeInSec);
                 SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
                 locationRequestHandler.removeCallbacksAndMessages(null);
@@ -484,12 +487,14 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         this.fenceListActive = fenceListActive;
     }
 
-    public long locationRequestTimeLeft() {
+    public float locationRequestTimeLeft() {
         long scheduledTime = SharedPrefs.getLocationRequestAt();
+        int scheduledIntervalInMillis = SharedPrefs.getLocationRequestInterval() * 1000;
         long timeLeftInMillis = scheduledTime - System.currentTimeMillis();
-
+        float timeLeftValue = (float)timeLeftInMillis / scheduledIntervalInMillis;
         FileLogger.e(TAG, "Next Run Time: " + String.valueOf(timeLeftInMillis));
-        return timeLeftInMillis;
+        FileLogger.e(TAG, "Next Run Time value: " + String.valueOf(timeLeftValue));
+        return timeLeftValue;
     }
 
     @Override
