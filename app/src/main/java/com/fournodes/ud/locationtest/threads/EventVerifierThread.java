@@ -82,7 +82,16 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                 }
             }
         };
-        requestCurrentLocation();
+        FileLogger.e(TAG, "Last location provider: " + SharedPrefs.getLastLocationProvider());
+        if (SharedPrefs.getLastLocationProvider() != null && SharedPrefs.getLastLocationProvider().equals("gps")) {
+            Location location = new Location(SharedPrefs.getLastLocationProvider());
+            location.setLatitude(Double.parseDouble(SharedPrefs.getLastDeviceLatitude()));
+            location.setLongitude(Double.parseDouble(SharedPrefs.getLastDeviceLongitude()));
+            FileLogger.e(TAG, "Using last GPS location");
+            lmBestLocation(location, 10);
+        }
+        else
+            requestCurrentLocation();
     }
 
     private void requestCurrentLocation() {
@@ -128,30 +137,27 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
 
         Database db = new Database(context);
         List<Event> pendingEvents = db.getAllPendingEvents();
-        pendingEventCount = pendingEvents.size();
-        SharedPrefs.setPendingEventCount(pendingEventCount);
 
         for (Event event : pendingEvents) {
 
+            // Get the fence from the database of whose event needs to be verified
             Fence fence = db.getFence(String.valueOf(event.requestId));
+
+            // Convert the fence center coordinates into a location object
             Location fenceLocation = new Location("");
             fenceLocation.setLatitude(fence.getCenter_lat());
             fenceLocation.setLongitude(fence.getCenter_lng());
-            int distanceFromCenter = DistanceCalculator.calcDistanceFromLocation(fenceLocation,bestLocation);
+
+            // Calculate distance from the fence's center using the users current location
+            int distanceFromCenter = DistanceCalculator.calcDistanceFromLocation(fenceLocation, bestLocation);
 
             FileLogger.e(TAG, "Fence: " + fence.getTitle());
-            FileLogger.e(TAG, "Event: " + getTransitionType(event.transitionType));
+            FileLogger.e(TAG, "Current event: " + getTransitionType(event.transitionType));
+            FileLogger.e(TAG, "Last event: " + getTransitionType(fence.getLastEvent()));
             FileLogger.e(TAG, "Distance from fence: " + String.valueOf(distanceFromCenter));
 
 
-
-            /*
-            *   Discard event if its same as the last event of the fence
-            *   This maintains the event pairs
-            */
-            Log.e(TAG,"Event type: " + String.valueOf(event.transitionType));
-            Log.e(TAG,"Fence last event: " + String.valueOf(fence.getLastEvent()));
-
+            // If last event and current event are different proceed to verification otherwise discard the event
             if (fence.getLastEvent() != event.transitionType) {
 
                 switch (event.transitionType) {
@@ -163,29 +169,34 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                             if (locationScore > 0 || (event.retryCount < 2 && event.verifyCount > 1)) {
                                 event.isVerified = 1;
                                 fence.setLastEvent(Geofence.GEOFENCE_TRANSITION_ENTER);
-                                db.updateFence(fence);
+
+                                // Update the fence in the database so active fence list can be refreshed to account for the last verified event
+                                if (db.updateFence(fence))
+                                    serviceMessage("updateFenceListActive");
+
                                 FileLogger.e(TAG, "Event verified.");
-                                sendNotification("Event verified. Entered fence: " + fence.getTitle(), fence.getUserId());
-                                SharedPrefs.setPendingEventCount(pendingEventCount - 1);
-                                serviceMessage("updateFenceListActive");
+
+                                // Create local notification about the event as well as inform the owner of the fence through server
+                                sendNotification("Event verified. Entered fence: " + fence.getTitle(), fence.getUserId(),String.valueOf(bestLocation.getLatitude()),String.valueOf(bestLocation.getLongitude()));
+
+                                // Remove any further events of the same type
+                                db.removeSimilarEvents(fence.getId(), event.transitionType);
 
                             }
                             // if locationScore is not good enough then run three passes to verify event using best of three
                             else {
                                 event.verifyCount++;
+                                db.updateEvent(event);
                                 FileLogger.e(TAG, "Verify Count:  " + String.valueOf(event.verifyCount));
-
                             }
-                            db.updateEvent(event);
                         }
                         else {
                             // if locationScore is good enough but the condition wasn't satisfied then discard the event immediately
                             if (locationScore > 0 || (event.retryCount > 1 && event.verifyCount < 2)) {
                                 db.removeEvent(event.id);
                                 FileLogger.e(TAG, "Event not verified and discarded.");
-                                SharedPrefs.setPendingEventCount(pendingEventCount - 1);
                             }
-                            // if locationScore is not good enough then dont immediately discard event
+                            // if locationScore is not good enough then don't immediately discard event
                             else {
                                 event.retryCount++;
                                 db.updateEvent(event);
@@ -203,26 +214,32 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                             if (locationScore > 0 || (event.retryCount < 2 && event.verifyCount > 1)) {
                                 event.isVerified = 1;
                                 fence.setLastEvent(Geofence.GEOFENCE_TRANSITION_EXIT);
-                                db.updateFence(fence);
+
+                                // Update the fence in the database so active fence list can be refreshed to account for the last verified event
+                                if (db.updateFence(fence))
+                                    serviceMessage("updateFenceListActive");
+
                                 FileLogger.e(TAG, "Event verified.");
-                                sendNotification("Event verified. Exited fence: " + fence.getTitle(), fence.getUserId());
-                                SharedPrefs.setPendingEventCount(pendingEventCount - 1);
-                                serviceMessage("updateFenceListActive");
+
+                                // Create local notification about the event as well as inform the owner of the fence through server
+                                sendNotification("Event verified. Exited fence: " + fence.getTitle(), fence.getUserId(),String.valueOf(bestLocation.getLatitude()),String.valueOf(bestLocation.getLongitude()));
+
+                                // Remove any further events of the same type
+                                db.removeSimilarEvents(fence.getId(), event.transitionType);
+
                             }
                             // if locationScore is not good enough then run three passes to verify event using best of three
                             else {
                                 event.verifyCount++;
+                                db.updateEvent(event);
                                 FileLogger.e(TAG, "Verify Count:  " + String.valueOf(event.verifyCount));
-
                             }
-                            db.updateEvent(event);
                         }
                         else {
                             // if locationScore is good enough but the condition wasn't satisfied then discard the event immediately
                             if (locationScore > 0 || (event.retryCount > 1 && event.verifyCount < 2)) {
                                 db.removeEvent(event.id);
                                 FileLogger.e(TAG, "Event not verified and discarded.");
-                                SharedPrefs.setPendingEventCount(pendingEventCount - 1);
                             }
                             // if locationScore is not good enough then dont immediately discard event
                             else {
@@ -233,11 +250,6 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                         }
 
                         break;
-
-
-                    default:
-                        break;
-
                 }
 
             }
@@ -250,7 +262,6 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
             else {
                 db.removeEvent(event.id);
                 FileLogger.e(TAG, "Event discarded due to invalidation");
-                SharedPrefs.setPendingEventCount(pendingEventCount - 1);
             }
         }
         FileLogger.e(TAG, "Verification complete");
@@ -283,7 +294,7 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
         }
     }
 
-    private void sendNotification(String notificationDetails, String notify_id) {
+    private void sendNotification(String notificationDetails, String notify_id, String latitude, String longitude) {
         // Create an explicit content Intent that starts the main Activity.
         PendingIntent piActivityIntent = PendingIntent.getActivity(context, 0, new Intent(context, MainActivity.class), 0);
         // Get a notification builder that's compatible with platform versions >= 4
@@ -317,6 +328,8 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                     + SharedPrefs.getUserId() + "&notify_id=" + notify_id
                     + "&sender=" + URLEncoder.encode(SharedPrefs.getUserName(), "UTF-8")
                     + "&trigger_time=" + System.currentTimeMillis()
+                    + "&latitude=" + latitude
+                    + "&longitude=" + longitude
                     + "&message=" + URLEncoder.encode(notificationDetails, "UTF-8"));
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();

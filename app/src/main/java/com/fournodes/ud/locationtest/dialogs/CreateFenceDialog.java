@@ -185,8 +185,11 @@ public class CreateFenceDialog implements TrackApiResult, RequestResult {
         return -1; //Error
     }
 
+
     @Override
-    public void liveLocationUpdate(String lat, String lng, String track_id) {}
+    public void liveLocationUpdate(String lat, String lng, String time, String track_id) {
+
+    }
 
     @Override
     public void locationHistory(JSONArray location) {}
@@ -195,6 +198,11 @@ public class CreateFenceDialog implements TrackApiResult, RequestResult {
     public void userList(JSONArray users) {
         UserAdapter userAdapter = new UserAdapter(activity, null, R.layout.list_item_user, users);
         selectDevice.setAdapter(userAdapter);
+    }
+
+    @Override
+    public void trackDisabled() {
+
     }
 
     @Override

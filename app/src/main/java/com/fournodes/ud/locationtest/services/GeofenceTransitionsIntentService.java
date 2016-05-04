@@ -67,12 +67,11 @@ public class GeofenceTransitionsIntentService extends IntentService {
             int pendingEventsCount = SharedPrefs.getPendingEventCount();
             SharedPrefs.setPendingEventCount(pendingEventsCount + 1);
             db.savePendingEvent(event);
-            serviceMessage("runEventVerifier");
         }
         else {
             FileLogger.e(TAG, "Both checks failed, event discarded");
         }
-
+        serviceMessage("runEventVerifier");
     }
 
 

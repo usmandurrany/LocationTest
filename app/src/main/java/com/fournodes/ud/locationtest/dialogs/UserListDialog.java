@@ -39,8 +39,10 @@ public class UserListDialog implements TrackApiResult {
 
     }
 
+
+
     @Override
-    public void liveLocationUpdate(String lat, String lng, String track_id) {
+    public void liveLocationUpdate(String lat, String lng, String time, String track_id) {
 
     }
 
@@ -53,6 +55,11 @@ public class UserListDialog implements TrackApiResult {
     public void userList(final JSONArray users) {
         lstDevices.setAdapter(new UserAdapter(activity, this, R.layout.list_item_user_action, users));
         dialog.show();
+    }
+
+    @Override
+    public void trackDisabled() {
+
     }
 
     public void close() {

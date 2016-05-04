@@ -90,7 +90,7 @@ public class UserAdapter extends BaseAdapter {
 
                     TrackApi trackApi = new TrackApi();
                     trackApi.delegate = ((MainActivity) activity);
-                    trackApi.execute("user_id=" + SharedPrefs.getUserId() + "&track_id=" + userList.get(position).id, "track_user");
+                    trackApi.execute("user_id=" + SharedPrefs.getUserId() + "&track_id=" + userList.get(position).id, "enable_track");
                     dialog.showFabStopTrack();
                     dialog.close();
                 }

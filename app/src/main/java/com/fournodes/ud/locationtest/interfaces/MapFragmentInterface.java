@@ -15,4 +15,7 @@ public interface MapFragmentInterface extends FenceListInterface{
     void viewLiveLocation(LatLng coordinates, String track_id);
     void viewLocationHistory(JSONArray location);
     void listenerLocation (Location location);
-}
+    void trackUser(LatLng coordinates, String time, String track_id);
+    void trackDisabled();
+
+    }

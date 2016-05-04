@@ -67,6 +67,8 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     @Override
     public synchronized void start() {
         super.start();
+        locationRequestHandler.removeCallbacksAndMessages(locationRequest);
+
         locationListener = new SharedLocationListener(TAG);
         locationListener.delegate = this;
 
@@ -156,7 +158,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
             }
             else {
-                activeFenceList(DistanceCalculator.updateDistanceFromFences(context, bestLocation, fenceListActive, false));
+                activeFenceList(DistanceCalculator.updateDistanceFromFences(context, bestLocation, fenceListActive, false), TAG);
             }
 
         }
@@ -172,6 +174,8 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
         SharedPrefs.setLastDeviceLongitude(String.valueOf(bestLocation.getLongitude()));
         SharedPrefs.setLastLocUpdateTime(mLastUpdateTime);
         SharedPrefs.setLastLocationAccuracy(bestLocation.getAccuracy());
+        SharedPrefs.setLastLocationProvider(bestLocation.getProvider());
+
         quit();
     }
 
@@ -206,7 +210,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     }
 
     @Override
-    public void activeFenceList(List<Fence> fenceListActive) {
+    public void activeFenceList(List<Fence> fenceListActive, String className) {
         if (fenceListActive.size() > 0) {
             if (fenceListActive.size() > 1) {
                 FileLogger.e(TAG, "Multiple active fences.");
@@ -218,14 +222,21 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
                 FileLogger.e(TAG, "Single active fence.");
 
 
-
             if (SharedPrefs.isMoving()) {
+                FileLogger.e(TAG,"Activity type: Moving");
                 int timeInSec = timeToFenceEdge(fenceListActive.get(0));
-                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
                 SharedPrefs.setLocationRequestInterval(timeInSec);
+                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
                 locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
 
             }
+            else {
+                FileLogger.e(TAG,"Activity type: Still");
+                SharedPrefs.setLocationRequestInterval(900);
+                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (SharedPrefs.getLocationRequestInterval() * 1000));
+                locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
+            }
+
 
             FileLogger.e(TAG, "Next run after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
 
@@ -243,17 +254,23 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
                     timeInSec = 60;
             }
             if (SharedPrefs.isMoving()) {
-                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
+                FileLogger.e(TAG,"Activity type: Moving");
                 SharedPrefs.setLocationRequestInterval(timeInSec);
+                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
                 locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
-
+            }
+            else {
+                FileLogger.e(TAG,"Activity type: Still");
+                SharedPrefs.setLocationRequestInterval(900);
+                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (SharedPrefs.getLocationRequestInterval() * 1000));
+                locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
             }
             FileLogger.e(TAG, "No active fences. Next run after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
         }
 
         // Return the list to the Location Service
         if (delegate != null)
-            delegate.activeFenceList(fenceListActive);
+            delegate.activeFenceList(fenceListActive, TAG);
     }
 
     @Override
@@ -267,13 +284,14 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
         int distanceFromCenter = fence.getDistanceFrom();
         int radius = fence.getRadius();
         int fencePerimeterInMeters = (int) ((float) SharedPrefs.getFencePerimeterPercentage() / 100) * radius;
-        int distanceFromEdge = distanceFromCenter - fencePerimeterInMeters;
+        int distanceFromEdge = distanceFromCenter - (radius + fencePerimeterInMeters);
         int timeInSec;
         // Enter distance
         if (distanceFromEdge > 0) {
 
             timeInSec = (int) Math.ceil(distanceFromEdge / bestLocation.getSpeed());
             FileLogger.e(TAG, "Time to enter fence: " + String.valueOf(timeInSec));
+            FileLogger.e(TAG, "Current speed: " + String.valueOf(bestLocation.getSpeed()));
 
             if (timeInSec < 5) {
                 Intent triggerFence = new Intent(context, GeofenceTransitionsIntentService.class);
@@ -281,15 +299,17 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
                 triggerFence.putExtra("id", fence.getId());
                 context.startService(triggerFence);
                 return 5;
-
             }
-            return timeInSec;
+            else
+                return timeInSec;
         }
         // Exit distance
         else if (distanceFromEdge < 0) {
             // Convert to positive int
             timeInSec = (int) Math.ceil((distanceFromEdge * -1) / bestLocation.getSpeed());
             FileLogger.e(TAG, "Time to exit fence: " + String.valueOf(timeInSec));
+            FileLogger.e(TAG, "Current speed: " + String.valueOf(bestLocation.getSpeed()));
+
             if (timeInSec < 5)
                 return 5;
             else

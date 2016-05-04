@@ -1,24 +1,20 @@
 package com.fournodes.ud.locationtest.utils;
 
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.backup.BackupManager;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.location.Location;
-import android.support.v4.app.NotificationCompat;
+import android.os.Handler;
 import android.util.Log;
 
 import com.fournodes.ud.locationtest.GeofenceWrapper;
-import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
-import com.fournodes.ud.locationtest.activities.MainActivity;
+import com.fournodes.ud.locationtest.apis.LocationUpdateApi;
+import com.fournodes.ud.locationtest.interfaces.RequestResult;
 import com.fournodes.ud.locationtest.objects.Event;
 import com.fournodes.ud.locationtest.objects.Fence;
 import com.google.android.gms.maps.GoogleMap;
@@ -40,6 +36,9 @@ import java.util.List;
 public class Database extends SQLiteOpenHelper {
     private static final String TAG = "Database";
     private Context context;
+    private Handler updateServer;
+    private Runnable update;
+
     public static final String DATABASE_NAME = "LocationTest";
     public static final String DATABASE_FILE_NAME = "LocationTest.db";
     public static final int DATABASE_VERSION = 10;
@@ -160,8 +159,32 @@ public class Database extends SQLiteOpenHelper {
         values.put(COLUMN_TIME, time);
         long rowId = db.insert(TABLE_LOCATION, null, values);
         db.close();
+
+        int rowCount = getLocEntriesCount();
+
+        FileLogger.e(TAG, "Row count: " + String.valueOf(rowCount));
+        FileLogger.e(TAG, "Row threshold: " + String.valueOf(SharedPrefs.getUpdateServerRowThreshold()));
+
+        if (rowCount >= SharedPrefs.getUpdateServerRowThreshold()) {
+            FileLogger.e(TAG, "Updating location on server");
+            LocationUpdateApi locationUpdateApi = new LocationUpdateApi(context);
+            locationUpdateApi.delegate = new RequestResult() {
+                @Override
+                public void onSuccess(String result) {
+                    FileLogger.e(TAG, "Location update on server successful");
+                }
+
+                @Override
+                public void onFailure() {
+                    FileLogger.e(TAG, "Location update on server failed");
+
+                }
+            };
+            locationUpdateApi.execute(System.currentTimeMillis());
+        }
         return rowId;
     }
+
 
     private static float toRadiusMeters(LatLng center, LatLng radius) {
         float[] result = new float[1];
@@ -275,7 +298,7 @@ public class Database extends SQLiteOpenHelper {
             fence.setCreate_on(cursor.getString(cursor.getColumnIndex(COLUMN_CREATE_ON)));
             fence.setLastEvent(cursor.getInt(cursor.getColumnIndex(COLUMN_LAST_EVENT)));
             fence.setTransitionType(cursor.getInt(cursor.getColumnIndex(COLUMN_TRANSITION_TYPE)));
-            fence.setDistanceFrom((int)cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE_FROM)));
+            fence.setDistanceFrom((int) cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE_FROM)));
             fence.setIsActive(cursor.getInt(cursor.getColumnIndex(COLUMN_IS_ACTIVE)));
 
 /*            FileLogger.e(TAG, "Fence: " + fence.getId());
@@ -312,7 +335,7 @@ public class Database extends SQLiteOpenHelper {
         return mFenceList;
     }
 
-    public void resetAll(){
+    public void resetAll() {
         if (updateEventsAfterReboot())
             FileLogger.e(TAG, "Pending events removed successfully.");
         else
@@ -411,7 +434,7 @@ public class Database extends SQLiteOpenHelper {
             fence.setLastEvent(cursor.getInt(cursor.getColumnIndex(COLUMN_LAST_EVENT)));
             fence.setIsActive(cursor.getInt(cursor.getColumnIndex(COLUMN_IS_ACTIVE)));
             fence.setTransitionType(cursor.getInt(cursor.getColumnIndex(COLUMN_TRANSITION_TYPE)));
-            fence.setDistanceFrom((int)cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE_FROM)));
+            fence.setDistanceFrom((int) cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE_FROM)));
         }
 
         cursor.close();
@@ -484,6 +507,14 @@ public class Database extends SQLiteOpenHelper {
         return pendingEvents;
     }
 
+    public int getFencePendingEventCount(int requestId) {
+        //COLUMN_IS_VERIFIED
+        SQLiteDatabase db = getWritableDatabase();
+        String selection = COLUMN_REQUEST_ID + " = " + requestId;
+        Cursor cursor = db.query(TABLE_GEOFENCE_EVENT, null, selection, null, null, null, null);
+        return cursor != null ? cursor.getCount() : -1;
+    }
+
     public Event getLastVerifiedEvent(int requestId) {
         FileLogger.e(TAG, "-- Begin Pending Event Removal --");
 
@@ -542,9 +573,10 @@ public class Database extends SQLiteOpenHelper {
 
     public Boolean updateEventsAfterReboot() {
         SQLiteDatabase db = getWritableDatabase();
-        ContentValues values = new ContentValues();
-        values.put(COLUMN_IS_VERIFIED, 2); //Special value
-        int result = db.update(TABLE_GEOFENCE_EVENT, values, null, null);
+        //ContentValues values = new ContentValues();
+        //values.put(COLUMN_IS_VERIFIED, 2); //Special value
+        //int result = db.update(TABLE_GEOFENCE_EVENT, values, null, null);
+        int result = db.delete(TABLE_GEOFENCE_EVENT, null, null);
         db.close();
         return result > 0;
 
@@ -564,6 +596,14 @@ public class Database extends SQLiteOpenHelper {
         int result = db.delete(TABLE_GEOFENCE_EVENT, COLUMN_ID + "=? AND " + COLUMN_IS_VERIFIED + "=?", new String[]{String.valueOf(id), "0"});
         db.close();
         return result > 0;
+    }
+
+    public Boolean removeSimilarEvents(int requestId, int transitionType) {
+        SQLiteDatabase db = getWritableDatabase();
+        int result = db.delete(TABLE_GEOFENCE_EVENT, COLUMN_REQUEST_ID + "=? AND " + COLUMN_TRANSITION_TYPE + "=? AND " + COLUMN_IS_VERIFIED + "=? ", new String[]{String.valueOf(requestId), String.valueOf(transitionType), "0"});
+        db.close();
+        return result > 0;
+
     }
 
 

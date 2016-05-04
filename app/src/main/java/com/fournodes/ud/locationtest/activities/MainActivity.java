@@ -49,6 +49,36 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
 
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        Intent notificationIntent = getIntent();
+        if (notificationIntent != null) {
+            String action = notificationIntent.getAction();
+            if (action != null && action.equals("showNotificationOnMap")) {
+                Bundle showNotificationOnMap = new Bundle();
+                showNotificationOnMap.putString("action", notificationIntent.getAction());
+                showNotificationOnMap.putString("latitude", notificationIntent.getStringExtra("latitude"));
+                showNotificationOnMap.putString("longitude", notificationIntent.getStringExtra("longitude"));
+                showNotificationOnMap.putString("time", notificationIntent.getStringExtra("time"));
+                showNotificationOnMap.putString("user", notificationIntent.getStringExtra("user"));
+                showNotificationOnMap.putString("message", notificationIntent.getStringExtra("message"));
+                List<Fragment> fragments = new ArrayList<>();
+
+                MapFragment mapFragment = new MapFragment();
+                mapFragment.setArguments(showNotificationOnMap);
+
+                fragments.add(new MainFragment());
+                fragments.add(mapFragment);
+
+                fragmentAdapter = new FragmentAdapter(getSupportFragmentManager(), fragments);
+
+                viewPager.setAdapter(fragmentAdapter);
+                viewPager.setCurrentItem(1, true);
+            }
+        }
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Fabric.with(this, new Crashlytics());
@@ -129,16 +159,15 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
 
 
     @Override
-    public void liveLocationUpdate(String lat, String lng, final String track_id) {
+    public void liveLocationUpdate(String lat, String lng, String time, String track_id) {
         if (fragmentAdapter.getItem(viewPager.getCurrentItem()) instanceof MapFragment) {
             try {
                 if (mapDelegate != null)
-                    mapDelegate.viewLiveLocation(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)), track_id);
+                    mapDelegate.trackUser(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)), time, track_id);
             } catch (NumberFormatException e) {
                 e.printStackTrace();
             }
         }
-
     }
 
     @Override
@@ -152,6 +181,14 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
     @Override
     public void userList(JSONArray users) {
 
+    }
+
+    @Override
+    public void trackDisabled() {
+        if (fragmentAdapter.getItem(viewPager.getCurrentItem()) instanceof MapFragment) {
+            if (mapDelegate != null)
+                mapDelegate.trackDisabled();
+        }
     }
 
     @Override
@@ -194,10 +231,10 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
 
 
     @Override
-    public void activeFenceList(List<Fence> fenceListActive) {
+    public void activeFenceList(List<Fence> fenceListActive, String className) {
         if (fragmentAdapter.getItem(viewPager.getCurrentItem()) instanceof MapFragment) {
             if (mapDelegate != null)
-                mapDelegate.activeFenceList(fenceListActive);
+                mapDelegate.activeFenceList(fenceListActive, TAG);
         }
     }
 

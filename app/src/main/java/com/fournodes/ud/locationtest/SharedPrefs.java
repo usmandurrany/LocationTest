@@ -12,7 +12,6 @@ public class SharedPrefs {
     private static final String SHARED_PREF_FILE = "LocationTest";
     //public static final String SERVER_ADDRESS = "http://192.168.1.110/locationtest/";
     public static final String SERVER_ADDRESS = "http://www.studentspot.pk/locationtest/";
-    //public static final String SERVER_ADDRESS = "http://52.34.131.77/locationtest/";
 
     public SharedPrefs(Context context) {
         pref = context.getSharedPreferences(SharedPrefs.SHARED_PREF_FILE, 0);
@@ -47,6 +46,13 @@ public class SharedPrefs {
 
     private static long locationRequestAt;
 
+    private static int updateServerRowThreshold;
+    private static String lastLocationProvider;
+
+    private static int liveSessionId;
+
+    private static boolean trackingEnabled;
+
 
     public void initialize() {
         locUpdateInterval = pref.getInt("locUpdateInterval", 60000); //1 Min
@@ -74,6 +80,46 @@ public class SharedPrefs {
         distanceThreshold = pref.getInt("distanceThreshold", 500);
         fencePerimeterPercentage = pref.getInt("fencePerimeterPercentage",10);
         locationRequestAt = pref.getLong("locationRequestAt", System.currentTimeMillis());
+        updateServerRowThreshold = pref.getInt("updateServerRowThreshold", 5);
+        lastLocationProvider = pref.getString("lastLocationProvider",null);
+        liveSessionId=pref.getInt("liveSessionId",-1);
+        trackingEnabled=pref.getBoolean("trackingEnabled",false);
+    }
+
+    public static boolean isTrackingEnabled() {
+        return trackingEnabled;
+    }
+
+    public static void setTrackingEnabled(boolean trackingEnabled) {
+        pref.edit().putBoolean("trackingEnabled",trackingEnabled).apply();
+        SharedPrefs.trackingEnabled = trackingEnabled;
+    }
+
+    public static int getLiveSessionId() {
+        return liveSessionId;
+    }
+
+    public static void setLiveSessionId(int liveSessionId) {
+        pref.edit().putInt("liveSessionId",liveSessionId).apply();
+        SharedPrefs.liveSessionId = liveSessionId;
+    }
+
+    public static String getLastLocationProvider() {
+        return lastLocationProvider;
+    }
+
+    public static void setLastLocationProvider(String lastLocationProvider) {
+        pref.edit().putString("lastLocationProvider", lastLocationProvider).apply();
+        SharedPrefs.lastLocationProvider = lastLocationProvider;
+    }
+
+    public static int getUpdateServerRowThreshold() {
+        return updateServerRowThreshold;
+    }
+
+    public static void setUpdateServerRowThreshold(int updateServerRowThreshold) {
+        pref.edit().putInt("updateServerRowThreshold", updateServerRowThreshold).apply();
+        SharedPrefs.updateServerRowThreshold = updateServerRowThreshold;
     }
 
     public static long getLocationRequestAt() {
@@ -81,8 +127,8 @@ public class SharedPrefs {
     }
 
     public static void setLocationRequestAt(long locationRequestAt) {
-        pref.edit().putLong("locationRequestAt", locationRequestAt).commit();
         SharedPrefs.locationRequestAt = locationRequestAt;
+        pref.edit().putLong("locationRequestAt", locationRequestAt).apply();
     }
 
     public static int getFencePerimeterPercentage() {
@@ -136,8 +182,8 @@ public class SharedPrefs {
     }
 
     public static void setReCalcDistanceAtLongitude(String reCalcDistanceAtLongitude) {
-        pref.edit().putString("reCalcDistanceAtLongitude", reCalcDistanceAtLongitude).commit();
         SharedPrefs.reCalcDistanceAtLongitude = reCalcDistanceAtLongitude;
+        pref.edit().putString("reCalcDistanceAtLongitude", reCalcDistanceAtLongitude).apply();
     }
 
     public static float getCurrentDisplacement() {
@@ -181,8 +227,8 @@ public class SharedPrefs {
     }
 
     public static void setLocationRequestInterval(int locationRequestInterval) {
-        pref.edit().putInt("locationRequestInterval", locationRequestInterval).commit();
         SharedPrefs.locationRequestInterval = locationRequestInterval;
+        pref.edit().putInt("locationRequestInterval", locationRequestInterval).apply();
     }
 
     public static int getLocUpdateInterval() {

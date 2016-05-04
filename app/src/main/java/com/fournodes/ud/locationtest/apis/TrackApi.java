@@ -76,10 +76,19 @@ public class TrackApi extends AsyncTask<String, String, String> {
                 Log.i(TAG, s);
                 if (type != null) {
                     switch (type) {
+                        case "enable_track":
                         case "track_user":
                             if (delegate != null) {
                                 JSONObject result = new JSONObject(s);
-                                delegate.liveLocationUpdate(result.getString("latitude"), result.getString("longitude"), result.getString("track_id"));
+                                if (type.equals("enable_track")) {
+                                    SharedPrefs.setLiveSessionId(Integer.parseInt(result.getString("live_session_id")));
+                                    SharedPrefs.setTrackingEnabled(true);
+                                }
+                                delegate.liveLocationUpdate(result.getString("latitude"),
+                                        result.getString("longitude"),
+                                        result.getString("time"),
+                                        result.getString("track_id"));
+
                             }
                             break;
                         case "location_history":
@@ -90,6 +99,12 @@ public class TrackApi extends AsyncTask<String, String, String> {
                         case "user_list":
                             if (delegate != null) {
                                 delegate.userList(new JSONArray(s));
+                            }
+                            break;
+                        case "disable_track":
+                            SharedPrefs.setTrackingEnabled(false);
+                            if (delegate != null) {
+                                delegate.trackDisabled();
                             }
                             break;
                     }

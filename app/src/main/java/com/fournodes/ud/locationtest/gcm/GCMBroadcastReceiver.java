@@ -60,7 +60,15 @@ public class GCMBroadcastReceiver extends GcmListenerService {
                 removeFence(data);
                 break;
             case "notification":
-                createNotification(data.getString("sender"), data.getString("message"));
+                createNotification(data.getString("sender"), data.getString("message"), data.getString("latitude"),data.getString("longitude"),data.getString("trigger_time"));
+                break;
+            case "enable_track":
+                SharedPrefs.setUpdateServerRowThreshold(1);
+                SharedPrefs.setTrackingEnabled(true);
+                break;
+            case "disable_track":
+                SharedPrefs.setUpdateServerRowThreshold(5);
+                SharedPrefs.setTrackingEnabled(false);
                 break;
 
         }
@@ -145,11 +153,19 @@ public class GCMBroadcastReceiver extends GcmListenerService {
 
     }
 
-    private void createNotification(String from, String message) {
+    private void createNotification(String from, String message, String latitude,String longitude,String time) {
         NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
 
-        PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), 0, new Intent(getApplicationContext(), MainActivity.class), 0);
+        PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), 0,
+                new Intent(getApplicationContext(), MainActivity.class)
+                .setAction("showNotificationOnMap")
+                .putExtra("latitude",latitude)
+                .putExtra("longitude",longitude)
+                .putExtra("time",time)
+                .putExtra("user",from)
+                .putExtra("message",message), 0);
+
         builder.setSmallIcon(R.mipmap.ic_launcher)
                 .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher))
                 .setColor(Color.BLUE)

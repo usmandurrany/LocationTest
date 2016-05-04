@@ -32,25 +32,26 @@ public class RecalculateDistanceThread extends HandlerThread {
         if (SharedPrefs.pref == null)
             new SharedPrefs(context).initialize();
 
-        SharedPrefs.setReCalcDistanceAtLatitude(String.valueOf(location.getLatitude()));
-        SharedPrefs.setReCalcDistanceAtLongitude(String.valueOf(location.getLongitude()));
+            SharedPrefs.setReCalcDistanceAtLatitude(String.valueOf(location.getLatitude()));
+            SharedPrefs.setReCalcDistanceAtLongitude(String.valueOf(location.getLongitude()));
+
     }
 
     @Override
     public synchronized void start() {
         super.start();
-        FileLogger.e(TAG,"Thread started");
+        FileLogger.e(TAG, "Thread started");
         Database db = new Database(context);
-        fenceListAll = DistanceCalculator.updateDistanceFromFences(context, location, db.onDeviceFence("getAll"),true);
+        fenceListAll = DistanceCalculator.updateDistanceFromFences(context, location, db.onDeviceFence("getAll"), true);
         if (delegate != null) {
-            delegate.activeFenceList(fenceListAll);
+            delegate.activeFenceList(fenceListAll, TAG);
         }
         quit();
     }
 
     @Override
     public boolean quit() {
-        FileLogger.e(TAG,"Thread killed");
+        FileLogger.e(TAG, "Thread killed");
         return super.quit();
     }
 }

@@ -111,6 +111,11 @@ public class LocationUpdateApi extends AsyncTask<Long, String, String> {
                         delegate.onFailure();
                     Log.i(TAG, "Result: Failure");
                 }
+
+                if (SharedPrefs.isTrackingEnabled() && !response.getBoolean("is_tracking")) {
+                    SharedPrefs.setTrackingEnabled(false);
+                    SharedPrefs.setUpdateServerRowThreshold(5);
+                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }

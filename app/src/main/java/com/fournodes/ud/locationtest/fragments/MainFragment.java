@@ -144,9 +144,13 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
         btnResetAll.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Database db = new Database(getContext());
-                db.resetAll();
-                serviceMessage("calcDistance");
+                if (SharedPrefs.getLastDeviceLatitude() != null) {
+                    Database db = new Database(getContext());
+                    db.resetAll();
+                    serviceMessage("calcDistance");
+                }
+                else
+                    Toast.makeText(getContext(), "Can't reset, Location not availble. Try again later", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -244,7 +248,7 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
 
 
     @Override
-    public void activeFenceList(List<Fence> fenceListActive) {
+    public void activeFenceList(List<Fence> fenceListActive, String className) {
 
     }
 
