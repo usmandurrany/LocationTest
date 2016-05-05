@@ -31,7 +31,8 @@ public class SharedLocationListener implements LocationListener {
         // Discard anything above 250m
         if (accuracy < 250) {
 
-            if ((className.equals("Location Service") && !location.getProvider().equals("network")) || (className.equals("RequestLocUpdateThread") && location.getProvider().equals("network"))) {
+            if ((className.equals("Location Service") && !location.getProvider().equals("network"))
+                    || (className.equals("RequestLocUpdateThread") && !location.getProvider().equals("gps"))) {
 
                 FileLogger.e(className, "Location obtained from " + location.getProvider());
                 FileLogger.e(className, "Lat: " + String.valueOf(location.getLatitude()) + " Long: " + String.valueOf(location.getLongitude()));
@@ -40,7 +41,9 @@ public class SharedLocationListener implements LocationListener {
 
                 delegate.lmLocation(location, 0);
             }
-            else if (className.equals("RequestLocUpdateThread") || className.equals("EventVerifierThread")) {
+            else if (className.equals("RequestLocUpdateThread") && location.getProvider().equals("gps")
+                    || className.equals("EventVerifierThread")) {
+
                 calculateLocationScore(accuracy);
 
                 if (bestLocation.getAccuracy() > accuracy) {

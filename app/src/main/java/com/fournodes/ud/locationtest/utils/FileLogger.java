@@ -81,6 +81,7 @@ public class FileLogger {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
+           // if (TAG.equals("Location Service") || TAG.equals("RequestLocUpdateThread"))
             Log.e(TAG, message);
         }
 

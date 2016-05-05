@@ -12,5 +12,6 @@ public class Constants {
 
 
     public static final int GPS_TIMEOUT_INTERVAL = 5000; // Milliseconds
+    public static final int NETWORK_TIMEOUT_INTERVAL = 10000; // Milliseconds
 
 }

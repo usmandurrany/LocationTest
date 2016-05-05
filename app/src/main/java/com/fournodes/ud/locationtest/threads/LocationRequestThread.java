@@ -51,7 +51,9 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     private List<Fence> fenceListActive;
     private Handler locationRequestHandler;
     private Runnable locationRequest;
+    private boolean isFallbackActive = false;
 
+    private Handler getLastLocation;
 
     public LocationRequestThread(Context context, List<Fence> fenceListActive, Handler locationRequestHandler, Runnable locationRequest) {
         super(TAG);
@@ -67,7 +69,6 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     @Override
     public synchronized void start() {
         super.start();
-        locationRequestHandler.removeCallbacksAndMessages(locationRequest);
 
         locationListener = new SharedLocationListener(TAG);
         locationListener.delegate = this;
@@ -81,9 +82,13 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
                 locationManager.removeUpdates(locationListener);
 
-                if (bestLocation == null) {
+                if (bestLocation == null && !isFallbackActive) {
                     FileLogger.e(TAG, "GPS not available");
                     activeLocationFallback();
+                }
+                else if (bestLocation == null && isFallbackActive) {
+                    FileLogger.e(TAG, "Location not available. Will retry");
+                    quit();
                 }
                 else if (bestLocation != null) {
                     saveLocation(bestLocation);
@@ -102,15 +107,39 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
             locationUpdateTimeout.postDelayed(timeout, Constants.GPS_TIMEOUT_INTERVAL);
         }
         else {
-            FileLogger.e(TAG, "GPS not available");
+            FileLogger.e(TAG, "GPS location is disabled");
             activeLocationFallback();
         }
 
     }
 
     private void activeLocationFallback() {
-        FileLogger.e(TAG, "Requesting location from network");
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener, getLooper());
+        if (locationManager.isProviderEnabled("network")) {
+            FileLogger.e(TAG, "Requesting location from network");
+            isFallbackActive = true;
+
+ /*       Criteria criteria = new Criteria();
+        criteria.setAccuracy(Criteria.NO_REQUIREMENT);
+        criteria.setPowerRequirement(Criteria.POWER_LOW);
+        criteria.setCostAllowed(true);
+        String provider = locationManager.getBestProvider(criteria,false);
+        FileLogger.e(TAG,"Fallback provider: " + provider);*/
+        /* getLastLocation = new Handler();
+        Runnable lastlocation = new Runnable() {
+            @Override
+            public void run() {
+                FileLogger.e(TAG, "Last known location " + locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER).getTime());
+                getLastLocation.postDelayed(this, 5000);
+            }
+        };*/
+            //getLastLocation.post(lastlocation);
+
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener, getLooper());
+            locationUpdateTimeout.postDelayed(timeout, Constants.NETWORK_TIMEOUT_INTERVAL);
+        }else{
+            FileLogger.e(TAG,"Network location is disabled");
+            quit();
+        }
     }
 
 
@@ -122,6 +151,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     @Override
     public void lmLocation(Location location, int locationScore) {
         lmRemoveUpdates();
+        lmRemoveTimeoutHandler();
         saveLocation(location);
     }
 
@@ -133,12 +163,21 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
     @Override
     public void lmRemoveTimeoutHandler() {
-        locationUpdateTimeout.removeCallbacksAndMessages(null);
+        locationUpdateTimeout.removeCallbacks(timeout);
     }
 
     public void saveLocation(Location bestLocation) {
         this.bestLocation = bestLocation;
         Database db = new Database(context);
+
+        final String mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+        db.saveLocation(bestLocation.getLatitude(), bestLocation.getLongitude(), System.currentTimeMillis());
+        //Save in shared prefs after saving in db
+        SharedPrefs.setLastDeviceLatitude(String.valueOf(bestLocation.getLatitude()));
+        SharedPrefs.setLastDeviceLongitude(String.valueOf(bestLocation.getLongitude()));
+        SharedPrefs.setLastLocUpdateTime(mLastUpdateTime);
+        SharedPrefs.setLastLocationAccuracy(bestLocation.getAccuracy());
+        SharedPrefs.setLastLocationProvider(bestLocation.getProvider());
 
         if (SharedPrefs.getReCalcDistanceAtLatitude() != null && SharedPrefs.getLastDeviceLatitude() != null && fenceListActive != null) {
 
@@ -167,14 +206,6 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
             reCalcDistance.delegate = this;
             reCalcDistance.start();
         }
-        final String mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-        db.saveLocation(bestLocation.getLatitude(), bestLocation.getLongitude(), System.currentTimeMillis());
-        //Save in shared prefs after saving in db
-        SharedPrefs.setLastDeviceLatitude(String.valueOf(bestLocation.getLatitude()));
-        SharedPrefs.setLastDeviceLongitude(String.valueOf(bestLocation.getLongitude()));
-        SharedPrefs.setLastLocUpdateTime(mLastUpdateTime);
-        SharedPrefs.setLastLocationAccuracy(bestLocation.getAccuracy());
-        SharedPrefs.setLastLocationProvider(bestLocation.getProvider());
 
         quit();
     }
@@ -221,20 +252,22 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
             else
                 FileLogger.e(TAG, "Single active fence.");
 
-
+            int timeInSec = 0;
             if (SharedPrefs.isMoving()) {
-                FileLogger.e(TAG,"Activity type: Moving");
-                int timeInSec = timeToFenceEdge(fenceListActive.get(0));
+                FileLogger.e(TAG, "Activity type: Moving");
+                locationRequestHandler.removeCallbacks(locationRequest);
+                timeInSec = timeToFenceEdge(fenceListActive.get(0));
                 SharedPrefs.setLocationRequestInterval(timeInSec);
                 SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
-                locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
+                locationRequestHandler.postDelayed(locationRequest, timeInSec * 1000);
 
             }
             else {
-                FileLogger.e(TAG,"Activity type: Still");
+                FileLogger.e(TAG, "Activity type: Still");
+                locationRequestHandler.removeCallbacks(locationRequest);
                 SharedPrefs.setLocationRequestInterval(900);
-                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (SharedPrefs.getLocationRequestInterval() * 1000));
-                locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
+                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (900 * 1000));
+                locationRequestHandler.postDelayed(locationRequest, 900 * 1000);
             }
 
 
@@ -254,16 +287,18 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
                     timeInSec = 60;
             }
             if (SharedPrefs.isMoving()) {
-                FileLogger.e(TAG,"Activity type: Moving");
+                FileLogger.e(TAG, "Activity type: Moving");
+                locationRequestHandler.removeCallbacks(locationRequest);
                 SharedPrefs.setLocationRequestInterval(timeInSec);
                 SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
-                locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
+                locationRequestHandler.postDelayed(locationRequest, timeInSec * 1000);
             }
             else {
-                FileLogger.e(TAG,"Activity type: Still");
+                FileLogger.e(TAG, "Activity type: Still");
+                locationRequestHandler.removeCallbacks(locationRequest);
                 SharedPrefs.setLocationRequestInterval(900);
-                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (SharedPrefs.getLocationRequestInterval() * 1000));
-                locationRequestHandler.postDelayed(locationRequest, SharedPrefs.getLocationRequestInterval() * 1000);
+                SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (900 * 1000));
+                locationRequestHandler.postDelayed(locationRequest, 900 * 1000);
             }
             FileLogger.e(TAG, "No active fences. Next run after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
         }
@@ -323,7 +358,12 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     @Override
     public boolean quit() {
         FileLogger.e(TAG, "Thread killed");
-        serviceMessage("switchToPassiveMode");
+        // Only switch to passive if this thread was successful in obtaining location
+        if (bestLocation != null || (bestLocation == null && !isFallbackActive))
+            serviceMessage("switchToPassiveMode");
+        else if (bestLocation == null && isFallbackActive)
+            serviceMessage("locationRequestThreadFailed");
+
         if (mNotificationManager != null)
             mNotificationManager.cancel(0);
         return super.quit();

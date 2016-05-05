@@ -157,14 +157,16 @@ public class GCMBroadcastReceiver extends GcmListenerService {
         NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
 
-        PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), 0,
+        int id = (int) System.currentTimeMillis();
+
+        PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(),id,
                 new Intent(getApplicationContext(), MainActivity.class)
                 .setAction("showNotificationOnMap")
                 .putExtra("latitude",latitude)
                 .putExtra("longitude",longitude)
                 .putExtra("time",time)
                 .putExtra("user",from)
-                .putExtra("message",message), 0);
+                .putExtra("message",message),0);
 
         builder.setSmallIcon(R.mipmap.ic_launcher)
                 .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher))
@@ -175,7 +177,7 @@ public class GCMBroadcastReceiver extends GcmListenerService {
                 .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))
                 .setAutoCancel(false);
 
-        mNotificationManager.notify((int) System.currentTimeMillis(), builder.build());
+        mNotificationManager.notify(id, builder.build());
 
 
     }
