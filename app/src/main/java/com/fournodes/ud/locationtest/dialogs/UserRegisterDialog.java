@@ -11,11 +11,14 @@ import android.widget.EditText;
 
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
-import com.fournodes.ud.locationtest.apis.RegisterApi;
+import com.fournodes.ud.locationtest.apis.IncomingApi;
 import com.fournodes.ud.locationtest.interfaces.RequestResult;
+import com.fournodes.ud.locationtest.objects.Coordinate;
+import com.fournodes.ud.locationtest.objects.User;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -62,11 +65,16 @@ public class UserRegisterDialog implements RequestResult {
                     SharedPrefs.setUserEmail(edtEmail.getText().toString());
                     SharedPrefs.setUserPicture(edtPicture.getText().toString());
                     if (SharedPrefs.getDeviceGcmId() != null) {
-                        RegisterApi registerApi = new RegisterApi();
-                        registerApi.delegate = UserRegisterDialog.this;
 
-                        registerApi.execute("email=" + URLEncoder.encode(SharedPrefs.getUserEmail(), "UTF-8") + "&name=" + URLEncoder.encode(SharedPrefs.getUserName(), "UTF-8") +
-                                "&picture=" + URLEncoder.encode(SharedPrefs.getUserPicture(), "UTF-8"));
+                        String payload = "email=" + URLEncoder.encode(SharedPrefs.getUserEmail(), "UTF-8")
+                                + "&name=" + URLEncoder.encode(SharedPrefs.getUserName(), "UTF-8")
+                                + "&picture=" + URLEncoder.encode(SharedPrefs.getUserPicture(), "UTF-8")
+                                + "&gcm_id=" + SharedPrefs.getDeviceGcmId()
+                                + "&user_id=null";
+
+                        IncomingApi incomingApi = new IncomingApi(context, "register", payload, 0);
+                        incomingApi.delegate = UserRegisterDialog.this;
+                        incomingApi.execute();
 
                     }
                 } catch (UnsupportedEncodingException e) {
@@ -86,6 +94,31 @@ public class UserRegisterDialog implements RequestResult {
 
     @Override
     public void onFailure() {
+
+    }
+
+    @Override
+    public void userList(List<User> users) {
+
+    }
+
+    @Override
+    public void trackEnabled() {
+
+    }
+
+    @Override
+    public void trackDisabled() {
+
+    }
+
+    @Override
+    public void liveLocationUpdate(String lat, String lng, String time, String trackId) {
+
+    }
+
+    @Override
+    public void locationHistory(List<Coordinate> coordinates) {
 
     }
 

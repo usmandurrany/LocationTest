@@ -19,7 +19,7 @@ import com.fournodes.ud.locationtest.Constants;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.activities.MainActivity;
-import com.fournodes.ud.locationtest.apis.NotificationApi;
+import com.fournodes.ud.locationtest.apis.IncomingApi;
 import com.fournodes.ud.locationtest.interfaces.LocationUpdateListener;
 import com.fournodes.ud.locationtest.listeners.SharedLocationListener;
 import com.fournodes.ud.locationtest.objects.Event;
@@ -177,7 +177,7 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                                 FileLogger.e(TAG, "Event verified.");
 
                                 // Create local notification about the event as well as inform the owner of the fence through server
-                                sendNotification("Event verified. Entered fence: " + fence.getTitle(), fence.getUserId(),String.valueOf(bestLocation.getLatitude()),String.valueOf(bestLocation.getLongitude()));
+                                sendNotification("Event verified. Entered fence: " + fence.getTitle(), fence.getUserId(), String.valueOf(bestLocation.getLatitude()), String.valueOf(bestLocation.getLongitude()));
 
                                 // Remove any further events of the same type
                                 db.removeSimilarEvents(fence.getId(), event.transitionType);
@@ -222,7 +222,7 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                                 FileLogger.e(TAG, "Event verified.");
 
                                 // Create local notification about the event as well as inform the owner of the fence through server
-                                sendNotification("Event verified. Exited fence: " + fence.getTitle(), fence.getUserId(),String.valueOf(bestLocation.getLatitude()),String.valueOf(bestLocation.getLongitude()));
+                                sendNotification("Event verified. Exited fence: " + fence.getTitle(), fence.getUserId(), String.valueOf(bestLocation.getLatitude()), String.valueOf(bestLocation.getLongitude()));
 
                                 // Remove any further events of the same type
                                 db.removeSimilarEvents(fence.getId(), event.transitionType);
@@ -324,13 +324,14 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
         try {
             if (SharedPrefs.pref == null)
                 new SharedPrefs(context).initialize();
-            new NotificationApi().execute("notification", "user_id="
-                    + SharedPrefs.getUserId() + "&notify_id=" + notify_id
+            String payload = "user_id=" + SharedPrefs.getUserId()
+                    + "&notify_id=" + notify_id
                     + "&sender=" + URLEncoder.encode(SharedPrefs.getUserName(), "UTF-8")
                     + "&trigger_time=" + System.currentTimeMillis()
                     + "&latitude=" + latitude
                     + "&longitude=" + longitude
-                    + "&message=" + URLEncoder.encode(notificationDetails, "UTF-8"));
+                    + "&message=" + URLEncoder.encode(notificationDetails, "UTF-8");
+            new IncomingApi(null, "notify", payload, 6).execute();
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }

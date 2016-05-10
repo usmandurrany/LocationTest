@@ -11,10 +11,12 @@ import android.widget.Toast;
 
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
-import com.fournodes.ud.locationtest.apis.FenceApi;
+import com.fournodes.ud.locationtest.apis.IncomingApi;
 import com.fournodes.ud.locationtest.dialogs.FenceListDialog;
+import com.fournodes.ud.locationtest.interfaces.RequestResult;
+import com.fournodes.ud.locationtest.objects.Coordinate;
 import com.fournodes.ud.locationtest.objects.Fence;
-import com.fournodes.ud.locationtest.services.LocationService;
+import com.fournodes.ud.locationtest.objects.User;
 import com.fournodes.ud.locationtest.utils.Database;
 
 import java.util.List;
@@ -63,18 +65,54 @@ public class FenceAdapter extends ArrayAdapter {
         holder.btnRemoveFence.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (LocationService.isGoogleApiConnected) {
-                    Database db = new Database(getContext());
-                    fenceListOrig.get(position).removeFence(); //Remove form map
-                    db.removeFenceFromDatabase(fenceListOrig.get(position).getId()); //Remove from database
-                    FenceApi fenceApi = new FenceApi();
-                    fenceApi.execute("user_id=" + SharedPrefs.getUserId() + "&fence_id=" + fenceListOrig.get(position).getId() +
-                            "&create_on=" + fenceListOrig.get(position).getCreate_on(), "remove_fence");
-                    fenceListOrig.remove(position); //Remove from list
-                    notifyDataSetChanged();
-                }
-                else
-                    Toast.makeText(getContext(), "Service not running", Toast.LENGTH_SHORT).show();
+                String payload = "user_id=" + SharedPrefs.getUserId() + "&fence_id=" + fenceListOrig.get(position).getId() +
+                        "&create_on=" + fenceListOrig.get(position).getCreate_on();
+                IncomingApi incomingApi = new IncomingApi(null, "remove_fence", payload, 0);
+                incomingApi.delegate = new RequestResult() {
+                    @Override
+                    public void onSuccess(String result) {
+                        Database db = new Database(getContext());
+                        db.removeFenceFromDatabase(fenceListOrig.get(position).getId()); //Remove from database
+                        fenceListOrig.get(position).removeFence(); //Remove form map
+                        fenceListOrig.remove(position); //Remove from list
+                        notifyDataSetChanged();
+
+                    }
+
+                    @Override
+                    public void onFailure() {
+                        Toast.makeText(context, "Network or server error", Toast.LENGTH_SHORT).show();
+
+                    }
+
+                    @Override
+                    public void userList(List<User> users) {
+
+                    }
+
+                    @Override
+                    public void trackEnabled() {
+
+                    }
+
+                    @Override
+                    public void trackDisabled() {
+
+                    }
+
+                    @Override
+                    public void liveLocationUpdate(String lat, String lng, String time, String trackId) {
+
+                    }
+
+                    @Override
+                    public void locationHistory(List<Coordinate> coordinates) {
+
+                    }
+                };
+                incomingApi.execute();
+
+
             }
         });
         return convertView;

@@ -10,8 +10,8 @@ import android.provider.Settings;
 public class SharedPrefs {
     public static SharedPreferences pref;
     private static final String SHARED_PREF_FILE = "LocationTest";
-    //public static final String SERVER_ADDRESS = "http://192.168.1.110/locationtest/";
-    public static final String SERVER_ADDRESS = "http://www.studentspot.pk/locationtest/";
+    public static final String SERVER_ADDRESS = "http://192.168.1.110/locationtest/v2/";
+    //public static final String SERVER_ADDRESS = "http://www.studentspot.pk/locationtest/v2/";
 
     public SharedPrefs(Context context) {
         pref = context.getSharedPreferences(SharedPrefs.SHARED_PREF_FILE, 0);
@@ -52,6 +52,7 @@ public class SharedPrefs {
     private static int liveSessionId;
 
     private static boolean trackingEnabled;
+    private static boolean isLive;
 
 
     public void initialize() {
@@ -84,6 +85,16 @@ public class SharedPrefs {
         lastLocationProvider = pref.getString("lastLocationProvider",null);
         liveSessionId=pref.getInt("liveSessionId",-1);
         trackingEnabled=pref.getBoolean("trackingEnabled",false);
+        isLive=pref.getBoolean("isLive",false);
+    }
+
+    public static boolean isLive() {
+        return isLive;
+    }
+
+    public static void setIsLive(boolean isLive) {
+        pref.edit().putBoolean("isLive",isLive).apply();
+        SharedPrefs.isLive = isLive;
     }
 
     public static boolean isTrackingEnabled() {

@@ -16,7 +16,7 @@ import com.fournodes.ud.locationtest.GeofenceWrapper;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.activities.MainActivity;
-import com.fournodes.ud.locationtest.apis.NotificationApi;
+import com.fournodes.ud.locationtest.apis.IncomingApi;
 import com.fournodes.ud.locationtest.objects.Fence;
 import com.fournodes.ud.locationtest.utils.Database;
 import com.fournodes.ud.locationtest.utils.FileLogger;
@@ -60,15 +60,15 @@ public class GCMBroadcastReceiver extends GcmListenerService {
                 removeFence(data);
                 break;
             case "notification":
-                createNotification(data.getString("sender"), data.getString("message"), data.getString("latitude"),data.getString("longitude"),data.getString("trigger_time"));
+                createNotification(data.getString("sender"), data.getString("message"), data.getString("latitude"), data.getString("longitude"), data.getString("trigger_time"));
                 break;
             case "enable_track":
                 SharedPrefs.setUpdateServerRowThreshold(1);
-                SharedPrefs.setTrackingEnabled(true);
+                SharedPrefs.setIsLive(true);
                 break;
             case "disable_track":
                 SharedPrefs.setUpdateServerRowThreshold(5);
-                SharedPrefs.setTrackingEnabled(false);
+                SharedPrefs.setIsLive(false);
                 break;
 
         }
@@ -103,10 +103,9 @@ public class GCMBroadcastReceiver extends GcmListenerService {
         FileLogger.e(TAG, "Result: Success");
         db.saveFence(fence);
 
-
-        NotificationApi notificationApi = new NotificationApi();
-        notificationApi.execute("response",
-                "response=success&user_id=" + SharedPrefs.getUserId() + "&action=create_fence&fence_id=" + data.getString("fence_id"));
+        String payload = "response=success&user_id=" + SharedPrefs.getUserId() + "&action=create_fence&fence_id=" + data.getString("fence_id");
+        IncomingApi incomingApi = new IncomingApi(null, "acknowledge", payload, 0);
+        incomingApi.execute();
         serviceMessage("calcDistance");
     }
 
@@ -128,9 +127,9 @@ public class GCMBroadcastReceiver extends GcmListenerService {
         db.updateFence(fence);
 
 
-        NotificationApi notificationApi = new NotificationApi();
-        notificationApi.execute("response",
-                "response=success&user_id=" + SharedPrefs.getUserId() + "&action=edit_fence&fence_id=" + data.getString("fence_id"));
+        String payload = "response=success&user_id=" + SharedPrefs.getUserId() + "&action=edit_fence&fence_id=" + data.getString("fence_id");
+        IncomingApi incomingApi = new IncomingApi(null, "acknowledge", payload, 0);
+        incomingApi.execute();
         serviceMessage("calcDistance");
 
     }
@@ -145,28 +144,27 @@ public class GCMBroadcastReceiver extends GcmListenerService {
         db.removeFenceFromDatabase(fence.getId());
 
 
-        NotificationApi notificationApi = new NotificationApi();
-        notificationApi.execute("response",
-                "response=success&user_id=" + SharedPrefs.getUserId() + "&action=remove_fence&fence_id=" + data.getString("fence_id"));
-
+        String payload = "response=success&user_id=" + SharedPrefs.getUserId() + "&action=remove_fence&fence_id=" + data.getString("fence_id");
+        IncomingApi incomingApi = new IncomingApi(null, "acknowledge", payload, 0);
+        incomingApi.execute();
         serviceMessage("calcDistance");
 
     }
 
-    private void createNotification(String from, String message, String latitude,String longitude,String time) {
+    private void createNotification(String from, String message, String latitude, String longitude, String time) {
         NotificationManager mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this);
 
         int id = (int) System.currentTimeMillis();
 
-        PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(),id,
+        PendingIntent piActivityIntent = PendingIntent.getActivity(getApplicationContext(), id,
                 new Intent(getApplicationContext(), MainActivity.class)
-                .setAction("showNotificationOnMap")
-                .putExtra("latitude",latitude)
-                .putExtra("longitude",longitude)
-                .putExtra("time",time)
-                .putExtra("user",from)
-                .putExtra("message",message),0);
+                        .setAction("showNotificationOnMap")
+                        .putExtra("latitude", latitude)
+                        .putExtra("longitude", longitude)
+                        .putExtra("time", time)
+                        .putExtra("user", from)
+                        .putExtra("message", message), 0);
 
         builder.setSmallIcon(R.mipmap.ic_launcher)
                 .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher))

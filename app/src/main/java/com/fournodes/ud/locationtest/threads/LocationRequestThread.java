@@ -28,9 +28,7 @@ import com.fournodes.ud.locationtest.utils.Database;
 import com.fournodes.ud.locationtest.utils.DistanceCalculator;
 import com.fournodes.ud.locationtest.utils.FileLogger;
 
-import java.text.DateFormat;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -136,8 +134,9 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener, getLooper());
             locationUpdateTimeout.postDelayed(timeout, Constants.NETWORK_TIMEOUT_INTERVAL);
-        }else{
-            FileLogger.e(TAG,"Network location is disabled");
+        }
+        else {
+            FileLogger.e(TAG, "Network location is disabled");
             quit();
         }
     }
@@ -170,12 +169,11 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
         this.bestLocation = bestLocation;
         Database db = new Database(context);
 
-        final String mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
         db.saveLocation(bestLocation.getLatitude(), bestLocation.getLongitude(), System.currentTimeMillis());
         //Save in shared prefs after saving in db
         SharedPrefs.setLastDeviceLatitude(String.valueOf(bestLocation.getLatitude()));
         SharedPrefs.setLastDeviceLongitude(String.valueOf(bestLocation.getLongitude()));
-        SharedPrefs.setLastLocUpdateTime(mLastUpdateTime);
+        SharedPrefs.setLastLocUpdateTime(String.valueOf(bestLocation.getTime()));
         SharedPrefs.setLastLocationAccuracy(bestLocation.getAccuracy());
         SharedPrefs.setLastLocationProvider(bestLocation.getProvider());
 

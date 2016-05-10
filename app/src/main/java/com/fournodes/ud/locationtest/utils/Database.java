@@ -13,10 +13,12 @@ import android.util.Log;
 
 import com.fournodes.ud.locationtest.GeofenceWrapper;
 import com.fournodes.ud.locationtest.SharedPrefs;
-import com.fournodes.ud.locationtest.apis.LocationUpdateApi;
+import com.fournodes.ud.locationtest.apis.IncomingApi;
 import com.fournodes.ud.locationtest.interfaces.RequestResult;
+import com.fournodes.ud.locationtest.objects.Coordinate;
 import com.fournodes.ud.locationtest.objects.Event;
 import com.fournodes.ud.locationtest.objects.Fence;
+import com.fournodes.ud.locationtest.objects.User;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CircleOptions;
@@ -139,7 +141,7 @@ public class Database extends SQLiteOpenHelper {
     }
 
 
-    public long saveLocation(double lat, double lng, long time) {
+    public long saveLocation(double lat, double lng, final long time) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
         Float displacement;
@@ -165,12 +167,15 @@ public class Database extends SQLiteOpenHelper {
         FileLogger.e(TAG, "Row count: " + String.valueOf(rowCount));
         FileLogger.e(TAG, "Row threshold: " + String.valueOf(SharedPrefs.getUpdateServerRowThreshold()));
 
-        if (rowCount >= SharedPrefs.getUpdateServerRowThreshold()) {
+        if (SharedPrefs.getLastLocationProvider() == null || rowCount >= SharedPrefs.getUpdateServerRowThreshold()) {
             FileLogger.e(TAG, "Updating location on server");
-            LocationUpdateApi locationUpdateApi = new LocationUpdateApi(context);
-            locationUpdateApi.delegate = new RequestResult() {
+            final long currentTimeMillis = System.currentTimeMillis();
+            String payload = "payload="+ getLocEntries(currentTimeMillis).toString()+"&user_id="+SharedPrefs.getUserId();
+            IncomingApi incomingApi = new IncomingApi(null, "location_update", payload, 0);
+            incomingApi.delegate = new RequestResult() {
                 @Override
                 public void onSuccess(String result) {
+                    removeLocEntries(currentTimeMillis); //Remove from db after successfully sending to server
                     FileLogger.e(TAG, "Location update on server successful");
                 }
 
@@ -179,8 +184,33 @@ public class Database extends SQLiteOpenHelper {
                     FileLogger.e(TAG, "Location update on server failed");
 
                 }
+
+                @Override
+                public void userList(List<User> users) {
+
+                }
+
+                @Override
+                public void trackEnabled() {
+
+                }
+
+                @Override
+                public void trackDisabled() {
+
+                }
+
+                @Override
+                public void liveLocationUpdate(String lat, String lng, String time, String trackId) {
+
+                }
+
+                @Override
+                public void locationHistory(List<Coordinate> coordinates) {
+
+                }
             };
-            locationUpdateApi.execute(System.currentTimeMillis());
+            incomingApi.execute();
         }
         return rowId;
     }

@@ -20,13 +20,13 @@ import com.fournodes.ud.locationtest.fragments.MapFragment;
 import com.fournodes.ud.locationtest.gcm.GCMInitiate;
 import com.fournodes.ud.locationtest.interfaces.MainFragmentInterface;
 import com.fournodes.ud.locationtest.interfaces.MapFragmentInterface;
+import com.fournodes.ud.locationtest.interfaces.RequestResult;
 import com.fournodes.ud.locationtest.interfaces.ServiceMessage;
-import com.fournodes.ud.locationtest.interfaces.TrackApiResult;
+import com.fournodes.ud.locationtest.objects.Coordinate;
 import com.fournodes.ud.locationtest.objects.Fence;
+import com.fournodes.ud.locationtest.objects.User;
 import com.fournodes.ud.locationtest.services.LocationService;
 import com.google.android.gms.maps.model.LatLng;
-
-import org.json.JSONArray;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +34,7 @@ import java.util.List;
 import io.fabric.sdk.android.Fabric;
 
 
-public class MainActivity extends FragmentActivity implements TrackApiResult, ServiceMessage {
+public class MainActivity extends FragmentActivity implements RequestResult, ServiceMessage {
     public MainFragmentInterface mainDelegate;
     public MapFragmentInterface mapDelegate;
 
@@ -171,15 +171,35 @@ public class MainActivity extends FragmentActivity implements TrackApiResult, Se
     }
 
     @Override
-    public void locationHistory(JSONArray location) {
+    public void locationHistory(List<Coordinate> coordinates) {
         if (fragmentAdapter.getItem(viewPager.getCurrentItem()) instanceof MapFragment) {
             if (mapDelegate != null)
-                mapDelegate.viewLocationHistory(location);
+                mapDelegate.viewLocationHistory(coordinates);
         }
     }
 
+
     @Override
-    public void userList(JSONArray users) {
+    public void onSuccess(String result) {
+
+    }
+
+    @Override
+    public void onFailure() {
+
+    }
+
+    @Override
+    public void userList(List<User> users) {
+
+    }
+
+    @Override
+    public void trackEnabled() {
+        if (fragmentAdapter.getItem(viewPager.getCurrentItem()) instanceof MapFragment) {
+            if (mapDelegate != null)
+                mapDelegate.trackEnabled();
+        }
 
     }
 

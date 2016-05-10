@@ -34,7 +34,6 @@ import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.ActivityRecognition;
 
-import java.text.DateFormat;
 import java.util.Collections;
 import java.util.List;
 
@@ -70,6 +69,11 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
     private boolean isSimulationRunning = false;
 
+    private Handler liveLocationUpdate;
+    private Runnable locationUpdate;
+    private LocationManager lmLive;
+    private SharedLocationListener liveLocationListener;
+
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -85,7 +89,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                     break;
                 }
                 case "locationRequestThreadFailed": {
-                    isLocationRequestRunning=false;
+                    isLocationRequestRunning = false;
                     locationRequestHandler.post(locationRequest);
                     break;
                 }
@@ -114,7 +118,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                     break;
                 }
                 case "noMovement": {
-                    if (SharedPrefs.getLocationRequestInterval() != 900){// && !isSimulationRunning) {
+                    if (SharedPrefs.getLocationRequestInterval() != 900) {// && !isSimulationRunning) {
                         locationRequestHandler.removeCallbacks(locationRequest);
                         SharedPrefs.setIsMoving(false);
                         FileLogger.e(TAG, "Activity changed starting force location request");
@@ -163,6 +167,15 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                     isVerifierRunning = false;
                     break;
                 }
+                case "isLive": {
+                    if (liveLocationUpdate != null)
+                        liveLocationUpdate.post(locationUpdate);
+                    else {
+                        liveLocationUpdate();
+                        liveLocationUpdate.post(locationUpdate);
+                    }
+                    break;
+                }
                 default: {
                     if (delegate != null)
                         delegate.fenceTriggered(intent.getStringExtra("message"));
@@ -181,6 +194,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         Fabric.with(this, new Crashlytics());
 
         createLocRequestHandler();
+        liveLocationUpdate();
 
         locationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
         sharedLocationListener = new SharedLocationListener(TAG);
@@ -328,21 +342,17 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
             else
                 activeFenceList(DistanceCalculator.updateDistanceFromFences(getApplicationContext(), location, fenceListActive, false), TAG);
 
-            // Save the location with time schedule server updater
-            lastLocationTime = System.currentTimeMillis();
-            SharedPrefs.setLocLastUpdateMillis(lastLocationTime);
 
-            String locationTime = String.valueOf(DateFormat.getTimeInstance().format(location.getTime()));
             db.saveLocation(location.getLatitude(), location.getLongitude(), System.currentTimeMillis());
             //Save in shared prefs after saving in db
             SharedPrefs.setLastDeviceLatitude(String.valueOf(location.getLatitude()));
             SharedPrefs.setLastDeviceLongitude(String.valueOf(location.getLongitude()));
-            SharedPrefs.setLastLocUpdateTime(locationTime);
+            SharedPrefs.setLastLocUpdateTime(String.valueOf(location.getTime()));
             SharedPrefs.setLastLocationAccuracy(location.getAccuracy());
             SharedPrefs.setLastLocationProvider(location.getProvider());
 
             if (delegate != null)
-                delegate.locationUpdated(String.valueOf(location.getLatitude()), String.valueOf(location.getLongitude()), locationTime);
+                delegate.locationUpdated(String.valueOf(location.getLatitude()), String.valueOf(location.getLongitude()), String.valueOf(location.getTime()));
 
         }
 
@@ -510,6 +520,55 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         }
         // You are at the center of the fence
         else return 5;
+    }
+
+    public void liveLocationUpdate() {
+        liveLocationUpdate = new Handler();
+        locationUpdate = new Runnable() {
+            @Override
+            public void run() {
+                long lastLocationTime = Long.parseLong(SharedPrefs.getLastLocUpdateTime());
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastLocationTime > 5000) {
+                    liveLocationListener = new SharedLocationListener(TAG);
+                    liveLocationListener.delegate = new LocationUpdateListener() {
+                        @Override
+                        public void lmBestLocation(Location bestLocation, int locationScore) {
+
+                        }
+
+                        @Override
+                        public void lmLocation(Location location, int locationScore) {
+                            lmLive.removeUpdates(liveLocationListener);
+                            db.saveLocation(location.getLatitude(), location.getLongitude(), System.currentTimeMillis());
+                            //Save in shared prefs after saving in db
+                            SharedPrefs.setLastDeviceLatitude(String.valueOf(location.getLatitude()));
+                            SharedPrefs.setLastDeviceLongitude(String.valueOf(location.getLongitude()));
+                            SharedPrefs.setLastLocUpdateTime(String.valueOf(location.getTime()));
+                            SharedPrefs.setLastLocationAccuracy(location.getAccuracy());
+                            SharedPrefs.setLastLocationProvider(location.getProvider());
+                            if (SharedPrefs.isLive())
+                                liveLocationUpdate.postDelayed(locationUpdate, 5000);
+
+                        }
+
+                        @Override
+                        public void lmRemoveUpdates() {
+
+                        }
+
+                        @Override
+                        public void lmRemoveTimeoutHandler() {
+
+                        }
+                    };
+                    lmLive = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+                    lmLive.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, liveLocationListener);
+                }
+
+
+            }
+        };
     }
 
 

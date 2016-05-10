@@ -1,5 +1,8 @@
 package com.fournodes.ud.locationtest.fragments;
 
+import android.animation.ObjectAnimator;
+import android.animation.TypeEvaluator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
@@ -12,9 +15,11 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.util.Property;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
 import android.widget.TextView;
@@ -25,18 +30,19 @@ import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.activities.MainActivity;
 import com.fournodes.ud.locationtest.adapters.MultilineInfoWindowAdapter;
-import com.fournodes.ud.locationtest.apis.FenceApi;
-import com.fournodes.ud.locationtest.apis.NotificationApi;
-import com.fournodes.ud.locationtest.apis.TrackApi;
+import com.fournodes.ud.locationtest.apis.IncomingApi;
 import com.fournodes.ud.locationtest.dialogs.CreateFenceDialog;
 import com.fournodes.ud.locationtest.dialogs.FenceListDialog;
 import com.fournodes.ud.locationtest.dialogs.UserListDialog;
 import com.fournodes.ud.locationtest.interfaces.MapFragmentInterface;
 import com.fournodes.ud.locationtest.interfaces.RequestResult;
+import com.fournodes.ud.locationtest.objects.Coordinate;
 import com.fournodes.ud.locationtest.objects.Fence;
+import com.fournodes.ud.locationtest.objects.User;
 import com.fournodes.ud.locationtest.services.LocationService;
 import com.fournodes.ud.locationtest.utils.Database;
 import com.fournodes.ud.locationtest.utils.DistanceCalculator;
+import com.fournodes.ud.locationtest.utils.LatLngInterpolator;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
 import com.google.android.gms.common.api.Result;
@@ -55,16 +61,14 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import io.fabric.sdk.android.Fabric;
 
-public class MapFragment extends Fragment implements OnMapReadyCallback, ResultCallback, MapFragmentInterface, View.OnClickListener, RequestResult {
+public class MapFragment extends Fragment implements OnMapReadyCallback,
+        ResultCallback, MapFragmentInterface, View.OnClickListener, RequestResult {
     MapView mMapView;
     private GoogleMap map;
     private FloatingActionButton fabAddFence;
@@ -173,9 +177,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
         update = new Runnable() {
             @Override
             public void run() {
-                TrackApi trackApi = new TrackApi();
-                trackApi.delegate = ((MainActivity) getActivity());
-                trackApi.execute("user_id=" + SharedPrefs.getUserId() + "&track_id=" + track_id + "&live_session_id=" + SharedPrefs.getLiveSessionId(), "track_user");
+                String payload = "user_id=" + SharedPrefs.getUserId() + "&track_id=" + track_id + "&live_session_id=" + SharedPrefs.getLiveSessionId();
+                IncomingApi incomingApi = new IncomingApi(null, "track_user", payload, 0);
+                incomingApi.delegate = ((MainActivity) getActivity());
+                incomingApi.execute();
+                if (SharedPrefs.isTrackingEnabled())
+                    updateLocation.postDelayed(this, 5000);
             }
         };
     }
@@ -242,8 +249,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                 db = new Database(getContext());
                 db.updateFence(mGeofenceList.get(dragMarkerID));
 
-                StringBuilder fenceDetails = new StringBuilder();
-                fenceDetails
+                StringBuilder payload = new StringBuilder();
+                payload
                         .append("title=").append(mGeofenceList.get(dragMarkerID).getTitle())
                         .append("&description=").append(mGeofenceList.get(dragMarkerID).getDescription())
                         .append("&center_latitude=").append(center.latitude)
@@ -257,9 +264,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                         .append("&fence_id=").append(mGeofenceList.get(dragMarkerID).getId());
 
 
-                FenceApi fenceApi = new FenceApi();
-                fenceApi.delegate = MapFragment.this;
-                fenceApi.execute(fenceDetails.toString(), "edit_fence");
+                IncomingApi incomingApi = new IncomingApi(null, "edit_fence", payload.toString(), 0);
+                incomingApi.delegate = MapFragment.this;
+                incomingApi.execute();
 
 
             }
@@ -344,26 +351,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     }
 
     @Override
-    public void viewLocationHistory(JSONArray location) {
+    public void viewLocationHistory(List<Coordinate> coordinates) {
         if (map != null) {
             //map.clear();
-            try {
-                PolylineOptions lineOptions = new PolylineOptions();
-                for (int i = 0; i < location.length(); i++) {
 
-                    lineOptions.add(new LatLng(Double.parseDouble(location.getJSONObject(i).getString("latitude")),
-                            Double.parseDouble(location.getJSONObject(i).getString("longitude"))));
+            PolylineOptions lineOptions = new PolylineOptions();
+            for (int i = 0; i < coordinates.size(); i++) {
 
-                }
-                polyline = map.addPolyline(lineOptions);
-                moveToLocation(new LatLng(Double.parseDouble(location.getJSONObject(0).getString("latitude")),
-                        Double.parseDouble(location.getJSONObject(0).getString("longitude"))), 15);
+                lineOptions.add(new LatLng(coordinates.get(i).latitude, coordinates.get(i).longitude));
 
-            } catch (JSONException e) {
-                e.printStackTrace();
-            } catch (NullPointerException e) {
-                e.printStackTrace();
             }
+            polyline = map.addPolyline(lineOptions);
+            moveToLocation(new LatLng(coordinates.get(0).latitude, coordinates.get(0).longitude), 15);
+
+
         }
     }
 
@@ -390,16 +391,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
     public void trackUser(LatLng coordinates, String time, final String track_id) {
         this.track_id = track_id;
 
-        if (SharedPrefs.isTrackingEnabled())
-            updateLocation.postDelayed(update, 5000);
-
-
         if (map != null) {
             if (trackPos != null) {
 
                 trackPos.setSnippet("Lat: " + String.valueOf(coordinates.latitude)
                         + "\nLng: " + String.valueOf(coordinates.longitude));
-                animateMarker(trackPos, coordinates, false);
+                animateMarkerToHC(trackPos,coordinates,new LatLngInterpolator.Linear());
+                //animateMarker(trackPos, coordinates, false);
 
             }
             else {
@@ -408,9 +406,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                         .title(track_id)
                         .snippet("Lat: " + String.valueOf(coordinates.latitude)
                                 + "\nLng: " + String.valueOf(coordinates.longitude)));
+                moveToLocation(coordinates, 15);
             }
 
-            moveToLocation(coordinates, 15);
         }
 
 
@@ -437,26 +435,28 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
 
     @Override
     public void trackDisabled() {
+        SharedPrefs.setTrackingEnabled(false);
         updateLocation.removeCallbacksAndMessages(null);
         fabStopTrack.setVisibility(View.GONE);
     }
 
+    @Override
+    public void liveLocationUpdate(String lat, String lng, String time, String trackId) {
+
+    }
+
+    @Override
+    public void locationHistory(List<Coordinate> coordinates) {
+
+    }
+
     public void notificationAction() {
         if (map != null) {
-            //Toast.makeText(getContext(), "map not null", Toast.LENGTH_SHORT).show();
             if (arguments != null && arguments.getString("action") != null) {
-                //Toast.makeText(getContext(), "arguments not null", Toast.LENGTH_SHORT).show();
 
                 String action = arguments.getString("action");
                 switch (action) {
                     case "showNotificationOnMap":
-                        //Toast.makeText(getContext(), "Hello", Toast.LENGTH_SHORT).show();
-/*                              arguments.getString("latitude"),
-                                arguments.getString("longitude"),
-                                arguments.getString("time"),
-                                arguments.getString("user"),
-                                arguments.getString("message"));*/
-
                         LatLng coordinates = new LatLng(Double.parseDouble(arguments.getString("latitude")),
                                 Double.parseDouble(arguments.getString("longitude")));
                         Marker userMarker = map.addMarker(new MarkerOptions()
@@ -466,6 +466,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                         userMarker.showInfoWindow();
                         moveToLocation(coordinates, 15);
 
+                        trackEnabled();
                         break;
                 }
             }
@@ -517,6 +518,38 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
         mMapView.onLowMemory();
     }
 
+
+    static void animateMarkerToHC(final Marker marker, final LatLng finalPosition, final LatLngInterpolator latLngInterpolator) {
+        final LatLng startPosition = marker.getPosition();
+
+        ValueAnimator valueAnimator = new ValueAnimator();
+        valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                float v = animation.getAnimatedFraction();
+                LatLng newPosition = latLngInterpolator.interpolate(v, startPosition, finalPosition);
+                marker.setPosition(newPosition);
+            }
+        });
+        valueAnimator.setFloatValues(0, 1); // Ignored.
+        valueAnimator.setDuration(3000);
+        valueAnimator.start();
+    }
+
+    static void animateMarkerToICS(Marker marker, LatLng finalPosition, final LatLngInterpolator latLngInterpolator) {
+        TypeEvaluator<LatLng> typeEvaluator = new TypeEvaluator<LatLng>() {
+            @Override
+            public LatLng evaluate(float fraction, LatLng startValue, LatLng endValue) {
+                return latLngInterpolator.interpolate(fraction, startValue, endValue);
+            }
+        };
+        Property<Marker, LatLng> property = Property.of(Marker.class, LatLng.class, "position");
+        ObjectAnimator animator = ObjectAnimator.ofObject(marker, property, typeEvaluator, finalPosition);
+        animator.setDuration(3000);
+        animator.start();
+    }
+
+
     public void animateMarker(final Marker marker, final LatLng toPosition,
                               final boolean hideMarker) {
         final Handler handler = new Handler();
@@ -524,7 +557,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
         Projection proj = map.getProjection();
         Point startPoint = proj.toScreenLocation(marker.getPosition());
         final LatLng startLatLng = proj.fromScreenLocation(startPoint);
-        final long duration = 500;
+        final long duration = 4000;
 
         final Interpolator interpolator = new LinearInterpolator();
 
@@ -542,7 +575,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
 
                 if (t < 1.0) {
                     // Post again 16ms later.
-                    handler.postDelayed(this, 16);
+                    handler.postDelayed(this, 10);
                 }
                 else {
                     if (hideMarker) {
@@ -601,17 +634,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
                 userListDialog.show();
                 break;
             case R.id.fabStopTrack:
-                TrackApi trackApi = new TrackApi();
-                trackApi.delegate = ((MainActivity) getActivity());
-                trackApi.execute("user_id=" + SharedPrefs.getUserId() + "&track_id=" + track_id + "&live_session_id=" + SharedPrefs.getLiveSessionId(), "disable_track");
+                String payload = "user_id=" + SharedPrefs.getUserId() + "&track_id=" + track_id + "&live_session_id=" + SharedPrefs.getLiveSessionId();
+                IncomingApi incomingApi = new IncomingApi(null, "disable_track", payload, 0);
+                incomingApi.delegate = ((MainActivity) getActivity());
+                incomingApi.execute();
                 break;
             case R.id.fabDeleteHistory:
                 fabDeleteHistory.setVisibility(View.GONE);
                 if (polyline != null)
                     polyline.remove();
 
-                NotificationApi notificationApi = new NotificationApi();
-                notificationApi.execute("delete_history", "user_id=" + SharedPrefs.getUserId());
+                payload = "user_id=" + SharedPrefs.getUserId();
+                IncomingApi notificationApi = new IncomingApi(null, "delete_history", payload, 0);
+                notificationApi.execute();
                 break;
             case R.id.fabToggleSimulation:
                 if (isSimulationRunning) {
@@ -673,6 +708,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback, ResultC
 
     @Override
     public void onFailure() {}
+
+    @Override
+    public void userList(List<User> users) {
+
+    }
+
+    @Override
+    public void trackEnabled() {
+        SharedPrefs.setTrackingEnabled(true);
+        updateLocation.postDelayed(update, 5000);
+        showFabStopTrack();
+    }
 
     public void showFabStopTrack() {
         fabStopTrack.setVisibility(View.VISIBLE);

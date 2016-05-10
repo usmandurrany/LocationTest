@@ -50,13 +50,12 @@
             android:text="Create fence on:"
             android:textAppearance="?android:attr/textAppearanceSmall"/>
 
-        <Spinner
+        <com.fournodes.ud.locationtest.MultiSpinner
             android:id="@+id/selectDevice"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:spinnerMode="dropdown">
+            android:layout_height="wrap_content">
 
-        </Spinner>
+        </com.fournodes.ud.locationtest.MultiSpinner>
 
         <TextView
             android:id="@+id/textView"

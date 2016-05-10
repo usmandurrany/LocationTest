@@ -7,20 +7,22 @@ import android.widget.ListView;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.adapters.UserAdapter;
-import com.fournodes.ud.locationtest.apis.TrackApi;
+import com.fournodes.ud.locationtest.apis.IncomingApi;
 import com.fournodes.ud.locationtest.fragments.MapFragment;
-import com.fournodes.ud.locationtest.interfaces.TrackApiResult;
+import com.fournodes.ud.locationtest.interfaces.RequestResult;
+import com.fournodes.ud.locationtest.objects.Coordinate;
+import com.fournodes.ud.locationtest.objects.User;
 
-import org.json.JSONArray;
+import java.util.List;
 
 /**
  * Created by Usman on 14/3/2016.
  */
-public class UserListDialog implements TrackApiResult {
+public class UserListDialog implements RequestResult {
     private Dialog dialog;
     private Activity activity;
     private ListView lstDevices;
-    private TrackApi trackApi;
+    private IncomingApi incomingApi;
     private MapFragment fragment;
 
     public UserListDialog(Activity activity, MapFragment fragment) {
@@ -32,13 +34,13 @@ public class UserListDialog implements TrackApiResult {
     }
 
     public void show() {
-        trackApi = new TrackApi();
-        trackApi.delegate = this;
-        trackApi.execute("user_id=" + SharedPrefs.getUserId(), "user_list");
+        String payload = "user_id=" + SharedPrefs.getUserId();
+        incomingApi = new IncomingApi(null, "user_list", payload, 0);
+        incomingApi.delegate = this;
+        incomingApi.execute();
         lstDevices = (ListView) dialog.findViewById(R.id.lstDevices);
 
     }
-
 
 
     @Override
@@ -47,14 +49,31 @@ public class UserListDialog implements TrackApiResult {
     }
 
     @Override
-    public void locationHistory(JSONArray location) {
+    public void locationHistory(List<Coordinate> coordinates) {
+
+    }
+
+
+    @Override
+    public void userList(List<User> users) {
+        lstDevices.setAdapter(new UserAdapter(activity, this, R.layout.list_item_user_action, users));
+        dialog.show();
+    }
+
+    @Override
+    public void onSuccess(String result) {
 
     }
 
     @Override
-    public void userList(final JSONArray users) {
-        lstDevices.setAdapter(new UserAdapter(activity, this, R.layout.list_item_user_action, users));
-        dialog.show();
+    public void onFailure() {
+
+    }
+
+
+    @Override
+    public void trackEnabled() {
+
     }
 
     @Override

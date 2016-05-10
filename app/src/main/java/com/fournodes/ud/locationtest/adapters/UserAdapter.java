@@ -11,14 +11,10 @@ import android.widget.TextView;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.activities.MainActivity;
-import com.fournodes.ud.locationtest.apis.TrackApi;
+import com.fournodes.ud.locationtest.apis.IncomingApi;
 import com.fournodes.ud.locationtest.dialogs.UserListDialog;
 import com.fournodes.ud.locationtest.objects.User;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -30,24 +26,11 @@ public class UserAdapter extends BaseAdapter {
     private Activity activity;
     private UserListDialog dialog;
 
-    public UserAdapter(Activity activity, UserListDialog dialog, int layout, JSONArray array) {
-        userList = new ArrayList<>();
+    public UserAdapter(Activity activity, UserListDialog dialog, int layout, List<User> userList) {
+        this.userList = userList;
         this.layout = layout;
         this.activity = activity;
         this.dialog = dialog;
-        try {
-            for (int i = 0; i < array.length(); i++) {
-                User user = new User();
-                user.id = array.getJSONObject(i).getInt("user_id");
-                user.name = array.getJSONObject(i).getString("user_name");
-                user.email = array.getJSONObject(i).getString("user_email");
-                user.picture = array.getJSONObject(i).getString("user_picture");
-                userList.add(user);
-
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
     }
 
     @Override
@@ -75,9 +58,10 @@ public class UserAdapter extends BaseAdapter {
             holder.btnHistory.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    TrackApi trackApi = new TrackApi();
-                    trackApi.delegate = ((MainActivity) activity);
-                    trackApi.execute("user_id=" + SharedPrefs.getUserId() + "&track_id=" + userList.get(position).id, "location_history");
+                    String payload = "user_id=" + SharedPrefs.getUserId() + "&track_id=" + userList.get(position).id;
+                    IncomingApi incomingApi = new IncomingApi(null, "location_history", payload, 0);
+                    incomingApi.delegate = ((MainActivity) activity);
+                    incomingApi.execute();
                     if (userList.get(position).id == Integer.parseInt(SharedPrefs.getUserId()))
                         dialog.showFabDeleteHistory();
                     dialog.close();
@@ -88,10 +72,10 @@ public class UserAdapter extends BaseAdapter {
                 @Override
                 public void onClick(View v) {
 
-                    TrackApi trackApi = new TrackApi();
-                    trackApi.delegate = ((MainActivity) activity);
-                    trackApi.execute("user_id=" + SharedPrefs.getUserId() + "&track_id=" + userList.get(position).id, "enable_track");
-                    dialog.showFabStopTrack();
+                    String payload = "user_id=" + SharedPrefs.getUserId() + "&track_id=" + userList.get(position).id;
+                    IncomingApi incomingApi = new IncomingApi(null, "enable_track", payload, 0);
+                    incomingApi.delegate = ((MainActivity) activity);
+                    incomingApi.execute();
                     dialog.close();
                 }
             });
@@ -120,6 +104,13 @@ public class UserAdapter extends BaseAdapter {
         return userList.size();
     }
 
+    public String[] getNames(){
+        String[] names = new String[userList.size()];
+        for (int i =0; i< userList.size();i++){
+            names[i]= userList.get(i).name;
+        }
+        return names;
+    }
 
     public static class viewHolder {
         TextView txtName;

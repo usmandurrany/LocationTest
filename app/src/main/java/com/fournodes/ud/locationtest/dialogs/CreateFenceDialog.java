@@ -3,6 +3,7 @@ package com.fournodes.ud.locationtest.dialogs;
 import android.app.Activity;
 import android.app.Dialog;
 import android.graphics.Color;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -10,15 +11,18 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import com.fournodes.ud.locationtest.MultiSpinner;
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.adapters.UserAdapter;
-import com.fournodes.ud.locationtest.apis.FenceApi;
-import com.fournodes.ud.locationtest.apis.TrackApi;
+import com.fournodes.ud.locationtest.apis.IncomingApi;
 import com.fournodes.ud.locationtest.interfaces.RequestResult;
-import com.fournodes.ud.locationtest.interfaces.TrackApiResult;
+import com.fournodes.ud.locationtest.objects.Coordinate;
 import com.fournodes.ud.locationtest.objects.Fence;
+import com.fournodes.ud.locationtest.objects.User;
 import com.fournodes.ud.locationtest.utils.Database;
+import com.fournodes.ud.locationtest.utils.FileLogger;
+import com.google.android.gms.gcm.Task;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.Circle;
@@ -28,15 +32,18 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * Created by Usman on 17/2/2016.
  */
-public class CreateFenceDialog implements TrackApiResult, RequestResult {
+public class CreateFenceDialog implements RequestResult, MultiSpinner.MultiSpinnerListener {
     private Activity activity;
     private LatLng center;
     private Dialog dialog;
@@ -49,9 +56,11 @@ public class CreateFenceDialog implements TrackApiResult, RequestResult {
     private Database db;
     private EditText edtTitle;
     private EditText edtDescription;
-    private Spinner selectDevice;
-    private TrackApi trackApi;
+    private MultiSpinner selectDevice;
     private Fence fence;
+    private IncomingApi incomingApi;
+    private Button btnSaveFence;
+    private String[] selectedUserIds;
 
 
     public CreateFenceDialog(Activity activity, LatLng center, int radius, List<Fence> mGeofenceList, GoogleMap map) {
@@ -67,20 +76,21 @@ public class CreateFenceDialog implements TrackApiResult, RequestResult {
 
     public void details() {
         Button btnCancelFence = (Button) dialog.findViewById(R.id.btnCancelFence);
-        Button btnSaveFence = (Button) dialog.findViewById(R.id.btnSaveFence);
+        btnSaveFence = (Button) dialog.findViewById(R.id.btnSaveFence);
         edtTitle = (EditText) dialog.findViewById(R.id.edtTitle);
         edtDescription = (EditText) dialog.findViewById(R.id.edtDescription);
         chkEntry = (CheckBox) dialog.findViewById(R.id.chkEntry);
         chkRoaming = (CheckBox) dialog.findViewById(R.id.chkRoaming);
         chkExit = (CheckBox) dialog.findViewById(R.id.chkExit);
-        selectDevice = (Spinner) dialog.findViewById(R.id.selectDevice);
+        selectDevice = (MultiSpinner) dialog.findViewById(R.id.selectDevice);
 
         chkEntry.setChecked(true);
         chkExit.setChecked(true);
 
-        trackApi = new TrackApi();
-        trackApi.delegate = this;
-        trackApi.execute("user_id=" + SharedPrefs.getUserId(), "user_list");
+        String payload = "user_id="+SharedPrefs.getUserId();
+        incomingApi = new IncomingApi(null,"user_list",payload,0);
+        incomingApi.delegate = this;
+        incomingApi.execute();
 
         btnCancelFence.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -88,12 +98,15 @@ public class CreateFenceDialog implements TrackApiResult, RequestResult {
                 dialog.dismiss();
             }
         });
+        btnSaveFence.setEnabled(false);
         btnSaveFence.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (edtTitle.getText().length() > 0 && !edtTitle.getText().toString().equals("My Device") && edtDescription.getText().length() > 0 && (chkEntry.isChecked() || chkExit.isChecked() || chkRoaming.isChecked())) {
                     if (getFenceId(edtTitle.getText().toString()) == -1) {
-                        createFence(center, radius);
+                        if (createFence(center, radius)== null){
+                            Toast.makeText(activity, "Something went work, try again", Toast.LENGTH_SHORT).show();
+                        }
                     }
                     else
                         Toast.makeText(activity, "You already have a fence called " + edtTitle.getText().toString(), Toast.LENGTH_SHORT).show();
@@ -109,66 +122,68 @@ public class CreateFenceDialog implements TrackApiResult, RequestResult {
     }
 
     public Fence createFence(LatLng center, int radius) {
-        if (radius == 0)
-            radius = 1000;
-
-        Marker centerMarker = map.addMarker(new MarkerOptions()
-                .position(center)
-                .snippet(edtDescription.getText().toString())
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-                .title(edtTitle.getText().toString()));
-
-        Marker end = map.addMarker(new MarkerOptions()
-                .position(toRadiusLatLng(center, radius))
-                .draggable(true)
-                .snippet(edtDescription.getText().toString())
-                .alpha(0.4f)
-                .title(edtTitle.getText().toString()));
-
-        Circle circle = map.addCircle(new CircleOptions()
-                .center(center)
-                .radius(radius)
-                .fillColor(0)
-                .strokeColor(Color.parseColor("#000000"))
-                .strokeWidth(3f)
-        );
-
-
-        fence = new Fence();
-        fence.setOnDevice(0);
-        fence.setVisibleArea(circle);
-        fence.setCenterMarker(centerMarker);
-        fence.setEdgeMarker(end);
-        fence.setRadius(radius);
-        fence.setTitle(edtTitle.getText().toString());
-        fence.setDescription(edtDescription.getText().toString());
-        fence.setTransitionType(getTransitionType());
-        fence.setUserId(SharedPrefs.getUserId());
-        fence.setCreate_on(String.valueOf(selectDevice.getSelectedItemId()));
-
-        StringBuilder fenceDetails = new StringBuilder();
         try {
-            fenceDetails
-                    .append("title=").append(URLEncoder.encode(fence.getTitle(), "UTF-8"))
-                    .append("&description=").append(URLEncoder.encode(fence.getDescription(), "UTF-8"))
-                    .append("&center_latitude=").append(center.latitude)
-                    .append("&center_longitude=").append(center.longitude)
-                    .append("&radius=").append(radius)
-                    .append("&edge_latitude=").append(toRadiusLatLng(center, radius).latitude)
-                    .append("&edge_longitude=").append(toRadiusLatLng(center, radius).longitude)
-                    .append("&transition_type=").append(fence.getTransitionType())
-                    .append("&user_id=").append(SharedPrefs.getUserId())
-                    .append("&create_on=").append(selectDevice.getSelectedItemId());
+            if (radius == 0)
+                radius = 1000;
+
+            Marker centerMarker = map.addMarker(new MarkerOptions()
+                    .position(center)
+                    .snippet(edtDescription.getText().toString())
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                    .title(edtTitle.getText().toString()));
+
+            Marker end = map.addMarker(new MarkerOptions()
+                    .position(toRadiusLatLng(center, radius))
+                    .draggable(true)
+                    .snippet(edtDescription.getText().toString())
+                    .alpha(0.4f)
+                    .title(edtTitle.getText().toString()));
+
+            Circle circle = map.addCircle(new CircleOptions()
+                    .center(center)
+                    .radius(radius)
+                    .fillColor(0)
+                    .strokeColor(Color.parseColor("#000000"))
+                    .strokeWidth(3f)
+            );
 
 
-            FenceApi fenceApi = new FenceApi();
-            fenceApi.delegate = this;
-            fenceApi.execute(fenceDetails.toString(), "create_fence");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
-        return fence;
+            fence = new Fence();
+            fence.setOnDevice(0);
+            fence.setVisibleArea(circle);
+            fence.setCenterMarker(centerMarker);
+            fence.setEdgeMarker(end);
+            fence.setRadius(radius);
+            fence.setTitle(edtTitle.getText().toString());
+            fence.setDescription(edtDescription.getText().toString());
+            fence.setTransitionType(getTransitionType());
+            fence.setUserId(SharedPrefs.getUserId());
+            fence.setCreate_on(Arrays.toString(selectedUserIds));
 
+            try {
+                StringBuilder payload = new StringBuilder();
+                payload
+                        .append("title=").append(URLEncoder.encode(fence.getTitle(), "UTF-8"))
+                        .append("&description=").append(URLEncoder.encode(fence.getDescription(), "UTF-8"))
+                        .append("&center_latitude=").append(center.latitude)
+                        .append("&center_longitude=").append(center.longitude)
+                        .append("&radius=").append(radius)
+                        .append("&edge_latitude=").append(toRadiusLatLng(center, radius).latitude)
+                        .append("&edge_longitude=").append(toRadiusLatLng(center, radius).longitude)
+                        .append("&transition_type=").append(fence.getTransitionType())
+                        .append("&user_id=").append(SharedPrefs.getUserId())
+                        .append("&create_on=").append(new JSONArray(fence.getCreate_on()));
+
+
+                incomingApi = new IncomingApi(null, "create_fence", payload.toString(), 0);
+                incomingApi.delegate = this;
+                incomingApi.execute();
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+            return fence;
+        }catch (JSONException e){e.printStackTrace();}
+        return null;
     }
 
     private static LatLng toRadiusLatLng(LatLng center, double radius) {
@@ -192,12 +207,20 @@ public class CreateFenceDialog implements TrackApiResult, RequestResult {
     }
 
     @Override
-    public void locationHistory(JSONArray location) {}
+    public void locationHistory(List<Coordinate> coordinates) {
+
+    }
+
 
     @Override
-    public void userList(JSONArray users) {
+    public void userList(List<User> users) {
         UserAdapter userAdapter = new UserAdapter(activity, null, R.layout.list_item_user, users);
-        selectDevice.setAdapter(userAdapter);
+        selectDevice.setUserAdapter(userAdapter,this);
+    }
+
+    @Override
+    public void trackEnabled() {
+
     }
 
     @Override
@@ -241,5 +264,15 @@ public class CreateFenceDialog implements TrackApiResult, RequestResult {
             return 4;
         else
             return -1; //Error
+    }
+
+    @Override
+    public void onItemsSelected(boolean[] selected, List<String> selectedUserIds) {
+        this.selectedUserIds = new String[selectedUserIds.size()];
+        selectedUserIds.toArray(this.selectedUserIds);
+        btnSaveFence.setEnabled(true);
+        FileLogger.e("Create fence on ",selectedUserIds.toString());
+
+
     }
 }

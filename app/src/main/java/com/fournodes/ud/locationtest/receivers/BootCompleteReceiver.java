@@ -22,7 +22,7 @@ public class BootCompleteReceiver extends WakefulBroadcastReceiver {
             public void run() {
                 if (LocationService.isServiceRunning && LocationService.mGoogleApiClient != null && LocationService.isGoogleApiConnected) {
                     Database db = new Database(context);
-                    db.onDeviceFence("createAll");
+                    db.updateEventsAfterReboot();
                     checkService.removeCallbacks(this);
                 }
                 else
