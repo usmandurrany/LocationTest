@@ -141,26 +141,26 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
         for (Event event : pendingEvents) {
 
             // Get the fence from the database of whose event needs to be verified
-            Fence fence = db.getFence(String.valueOf(event.requestId));
+            Fence fence = db.getFence(String.valueOf(event.fenceId));
 
             // Convert the fence center coordinates into a location object
             Location fenceLocation = new Location("");
-            fenceLocation.setLatitude(fence.getCenter_lat());
-            fenceLocation.setLongitude(fence.getCenter_lng());
+            fenceLocation.setLatitude(fence.getCenterLat());
+            fenceLocation.setLongitude(fence.getCenterLng());
 
             // Calculate distance from the fence's center using the users current location
             int distanceFromCenter = DistanceCalculator.calcDistanceFromLocation(fenceLocation, bestLocation);
 
             FileLogger.e(TAG, "Fence: " + fence.getTitle());
-            FileLogger.e(TAG, "Current event: " + getTransitionType(event.transitionType));
+            FileLogger.e(TAG, "Current event: " + getTransitionType(event.eventType));
             FileLogger.e(TAG, "Last event: " + getTransitionType(fence.getLastEvent()));
             FileLogger.e(TAG, "Distance from fence: " + String.valueOf(distanceFromCenter));
 
 
             // If last event and current event are different proceed to verification otherwise discard the event
-            if (fence.getLastEvent() != event.transitionType) {
+            if (fence.getLastEvent() != event.eventType) {
 
-                switch (event.transitionType) {
+                switch (event.eventType) {
                     case Geofence.GEOFENCE_TRANSITION_ENTER:
                         // If device is inside the fence
                         if (distanceFromCenter < fence.getRadius()) {
@@ -171,16 +171,16 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                                 fence.setLastEvent(Geofence.GEOFENCE_TRANSITION_ENTER);
 
                                 // Update the fence in the database so active fence list can be refreshed to account for the last verified event
-                                if (db.updateFence(fence))
+                                if (db.updateFenceInformation(fence))
                                     serviceMessage("updateFenceListActive");
 
                                 FileLogger.e(TAG, "Event verified.");
 
                                 // Create local notification about the event as well as inform the owner of the fence through server
-                                sendNotification("Event verified. Entered fence: " + fence.getTitle(), fence.getUserId(), String.valueOf(bestLocation.getLatitude()), String.valueOf(bestLocation.getLongitude()));
+                                sendNotification("Event verified. Entered fence: " + fence.getTitle(), fence.getNotifyId(), String.valueOf(bestLocation.getLatitude()), String.valueOf(bestLocation.getLongitude()));
 
                                 // Remove any further events of the same type
-                                db.removeSimilarEvents(fence.getId(), event.transitionType);
+                                db.removeSimilarEvents(fence.getFenceId(), event.eventType);
 
                             }
                             // if locationScore is not good enough then run three passes to verify event using best of three
@@ -216,16 +216,16 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                                 fence.setLastEvent(Geofence.GEOFENCE_TRANSITION_EXIT);
 
                                 // Update the fence in the database so active fence list can be refreshed to account for the last verified event
-                                if (db.updateFence(fence))
+                                if (db.updateFenceInformation(fence))
                                     serviceMessage("updateFenceListActive");
 
                                 FileLogger.e(TAG, "Event verified.");
 
                                 // Create local notification about the event as well as inform the owner of the fence through server
-                                sendNotification("Event verified. Exited fence: " + fence.getTitle(), fence.getUserId(), String.valueOf(bestLocation.getLatitude()), String.valueOf(bestLocation.getLongitude()));
+                                sendNotification("Event verified. Exited fence: " + fence.getTitle(), fence.getNotifyId(), String.valueOf(bestLocation.getLatitude()), String.valueOf(bestLocation.getLongitude()));
 
                                 // Remove any further events of the same type
-                                db.removeSimilarEvents(fence.getId(), event.transitionType);
+                                db.removeSimilarEvents(fence.getFenceId(), event.eventType);
 
                             }
                             // if locationScore is not good enough then run three passes to verify event using best of three
@@ -294,7 +294,7 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
         }
     }
 
-    private void sendNotification(String notificationDetails, String notify_id, String latitude, String longitude) {
+    private void sendNotification(String notificationDetails, int notify_id, String latitude, String longitude) {
         // Create an explicit content Intent that starts the main Activity.
         PendingIntent piActivityIntent = PendingIntent.getActivity(context, 0, new Intent(context, MainActivity.class), 0);
         // Get a notification builder that's compatible with platform versions >= 4

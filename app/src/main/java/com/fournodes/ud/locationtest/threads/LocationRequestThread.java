@@ -24,9 +24,11 @@ import com.fournodes.ud.locationtest.interfaces.LocationUpdateListener;
 import com.fournodes.ud.locationtest.listeners.SharedLocationListener;
 import com.fournodes.ud.locationtest.objects.Fence;
 import com.fournodes.ud.locationtest.services.GeofenceTransitionsIntentService;
+import com.fournodes.ud.locationtest.services.LocationService;
 import com.fournodes.ud.locationtest.utils.Database;
 import com.fournodes.ud.locationtest.utils.DistanceCalculator;
 import com.fournodes.ud.locationtest.utils.FileLogger;
+import com.fournodes.ud.locationtest.utils.RequestLocationHandler;
 
 import java.util.Collections;
 import java.util.List;
@@ -47,18 +49,18 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     private SharedLocationListener locationListener;
     private NotificationManager mNotificationManager;
     private List<Fence> fenceListActive;
-    private Handler locationRequestHandler;
-    private Runnable locationRequest;
+    private RequestLocationHandler requestLocationHandler;
+    private  LocationService locationService;
     private boolean isFallbackActive = false;
 
     private Handler getLastLocation;
 
-    public LocationRequestThread(Context context, List<Fence> fenceListActive, Handler locationRequestHandler, Runnable locationRequest) {
+    public LocationRequestThread(Context context, List<Fence> fenceListActive, RequestLocationHandler requestLocationHandler, LocationService locationService) {
         super(TAG);
         this.context = context;
         this.fenceListActive = fenceListActive;
-        this.locationRequestHandler = locationRequestHandler;
-        this.locationRequest = locationRequest;
+        this.requestLocationHandler = requestLocationHandler;
+        this.locationService = locationService;
         if (SharedPrefs.pref == null)
             new SharedPrefs(context).initialize();
     }
@@ -167,21 +169,13 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
     public void saveLocation(Location bestLocation) {
         this.bestLocation = bestLocation;
-        Database db = new Database(context);
-
-        db.saveLocation(bestLocation.getLatitude(), bestLocation.getLongitude(), System.currentTimeMillis());
-        //Save in shared prefs after saving in db
-        SharedPrefs.setLastDeviceLatitude(String.valueOf(bestLocation.getLatitude()));
-        SharedPrefs.setLastDeviceLongitude(String.valueOf(bestLocation.getLongitude()));
-        SharedPrefs.setLastLocUpdateTime(String.valueOf(bestLocation.getTime()));
-        SharedPrefs.setLastLocationAccuracy(bestLocation.getAccuracy());
-        SharedPrefs.setLastLocationProvider(bestLocation.getProvider());
 
         if (SharedPrefs.getReCalcDistanceAtLatitude() != null && SharedPrefs.getLastDeviceLatitude() != null && fenceListActive != null) {
 
             Location lastReCalcLocation = new Location("");
             lastReCalcLocation.setLatitude(Double.parseDouble(SharedPrefs.getReCalcDistanceAtLatitude()));
             lastReCalcLocation.setLongitude(Double.parseDouble(SharedPrefs.getReCalcDistanceAtLongitude()));
+
 
             int displacement = DistanceCalculator.calcDistanceFromLocation(bestLocation, lastReCalcLocation);
 
@@ -200,6 +194,9 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
         }
         else {
+            SharedPrefs.setLast100mLatitude(String.valueOf(bestLocation.getLatitude()));
+            SharedPrefs.setLast100mLongitude(String.valueOf(bestLocation.getLongitude()));
+
             RecalculateDistanceThread reCalcDistance = new RecalculateDistanceThread(context, bestLocation);
             reCalcDistance.delegate = this;
             reCalcDistance.start();
@@ -253,19 +250,23 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
             int timeInSec = 0;
             if (SharedPrefs.isMoving()) {
                 FileLogger.e(TAG, "Activity type: Moving");
-                locationRequestHandler.removeCallbacks(locationRequest);
                 timeInSec = timeToFenceEdge(fenceListActive.get(0));
                 SharedPrefs.setLocationRequestInterval(timeInSec);
                 SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
-                locationRequestHandler.postDelayed(locationRequest, timeInSec * 1000);
+
+                locationService.setRunnableValue(TAG);
+                requestLocationHandler.clearQueue(locationService.requestLocationRunnable);
+                requestLocationHandler.runAfterSeconds(locationService.requestLocationRunnable,timeInSec);
 
             }
             else {
                 FileLogger.e(TAG, "Activity type: Still");
-                locationRequestHandler.removeCallbacks(locationRequest);
                 SharedPrefs.setLocationRequestInterval(900);
                 SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (900 * 1000));
-                locationRequestHandler.postDelayed(locationRequest, 900 * 1000);
+
+                locationService.setRunnableValue(TAG);
+                requestLocationHandler.clearQueue(locationService.requestLocationRunnable);
+                requestLocationHandler.runAfterSeconds(locationService.requestLocationRunnable,900);
             }
 
 
@@ -286,17 +287,24 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
             }
             if (SharedPrefs.isMoving()) {
                 FileLogger.e(TAG, "Activity type: Moving");
-                locationRequestHandler.removeCallbacks(locationRequest);
                 SharedPrefs.setLocationRequestInterval(timeInSec);
                 SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (timeInSec * 1000));
-                locationRequestHandler.postDelayed(locationRequest, timeInSec * 1000);
+
+                locationService.setRunnableValue(TAG);
+                requestLocationHandler.clearQueue(locationService.requestLocationRunnable);
+                requestLocationHandler.runAfterSeconds(locationService.requestLocationRunnable,timeInSec);
+
             }
             else {
                 FileLogger.e(TAG, "Activity type: Still");
-                locationRequestHandler.removeCallbacks(locationRequest);
                 SharedPrefs.setLocationRequestInterval(900);
                 SharedPrefs.setLocationRequestAt(System.currentTimeMillis() + (900 * 1000));
-                locationRequestHandler.postDelayed(locationRequest, 900 * 1000);
+
+                locationService.setRunnableValue(TAG);
+                requestLocationHandler.clearQueue(locationService.requestLocationRunnable);
+                requestLocationHandler.runAfterSeconds(locationService.requestLocationRunnable,900);
+
+
             }
             FileLogger.e(TAG, "No active fences. Next run after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
         }
@@ -314,8 +322,8 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
         if (bestLocation.getSpeed() < 3.0)
             return 5;
 
-        int distanceFromCenter = fence.getDistanceFrom();
-        int radius = fence.getRadius();
+        int distanceFromCenter = fence.getDistanceFromUser();
+        int radius = (int)fence.getRadius();
         int fencePerimeterInMeters = (int) ((float) SharedPrefs.getFencePerimeterPercentage() / 100) * radius;
         int distanceFromEdge = distanceFromCenter - (radius + fencePerimeterInMeters);
         int timeInSec;
@@ -329,7 +337,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
             if (timeInSec < 5) {
                 Intent triggerFence = new Intent(context, GeofenceTransitionsIntentService.class);
                 triggerFence.putExtra(LocationManager.KEY_PROXIMITY_ENTERING, true);
-                triggerFence.putExtra("id", fence.getId());
+                triggerFence.putExtra("id", fence.getFenceId());
                 context.startService(triggerFence);
                 return 5;
             }

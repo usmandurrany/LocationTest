@@ -29,7 +29,7 @@ public class UserListDialog implements RequestResult {
         this.activity = activity;
         this.fragment = fragment;
         dialog = new Dialog(activity, android.R.style.Theme_DeviceDefault_Light_Dialog_NoActionBar);
-        dialog.setContentView(R.layout.list_devices);
+        dialog.setContentView(R.layout.list_view_common);
 
     }
 
@@ -38,7 +38,7 @@ public class UserListDialog implements RequestResult {
         incomingApi = new IncomingApi(null, "user_list", payload, 0);
         incomingApi.delegate = this;
         incomingApi.execute();
-        lstDevices = (ListView) dialog.findViewById(R.id.lstDevices);
+        lstDevices = (ListView) dialog.findViewById(R.id.lstCommon);
 
     }
 

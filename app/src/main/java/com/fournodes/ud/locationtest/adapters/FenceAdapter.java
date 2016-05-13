@@ -13,6 +13,7 @@ import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.apis.IncomingApi;
 import com.fournodes.ud.locationtest.dialogs.FenceListDialog;
+import com.fournodes.ud.locationtest.dialogs.MultiUserSelectDialog;
 import com.fournodes.ud.locationtest.interfaces.RequestResult;
 import com.fournodes.ud.locationtest.objects.Coordinate;
 import com.fournodes.ud.locationtest.objects.Fence;
@@ -24,10 +25,12 @@ import java.util.List;
 /**
  * Created by Usman on 17/2/2016.
  */
-public class FenceAdapter extends ArrayAdapter {
+public class FenceAdapter extends ArrayAdapter implements RequestResult {
     private List<Fence> fenceListOrig;
     private Context context;
     private FenceListDialog fenceListDialog;
+    private int activeItemPostion;
+    private int activeItemId;
 
     public FenceAdapter(Context context, FenceListDialog fenceListDialog, List<Fence> fenceListOrig) {
         super(context, 0, fenceListOrig);
@@ -38,7 +41,7 @@ public class FenceAdapter extends ArrayAdapter {
 
     @Override
     public View getView(final int position, View convertView, ViewGroup parent) {
-        viewHolder holder;
+        final viewHolder holder;
 
         if (convertView == null) {
             LayoutInflater inflater = LayoutInflater.from(parent.getContext());
@@ -47,6 +50,7 @@ public class FenceAdapter extends ArrayAdapter {
             holder.txtFence = (TextView) convertView.findViewById(R.id.txtFence);
             holder.txtFenceDesc = (TextView) convertView.findViewById(R.id.txtFenceDesc);
             holder.btnRemoveFence = (ImageButton) convertView.findViewById(R.id.btnRemoveFence);
+            holder.btnEditFence = (ImageButton) convertView.findViewById(R.id.btnEditFence);
             convertView.setTag(holder);
         }
         else {
@@ -65,54 +69,33 @@ public class FenceAdapter extends ArrayAdapter {
         holder.btnRemoveFence.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String payload = "user_id=" + SharedPrefs.getUserId() + "&fence_id=" + fenceListOrig.get(position).getId() +
-                        "&create_on=" + fenceListOrig.get(position).getCreate_on();
+                activeItemPostion = position;
+
+                String payload = "user_id=" + SharedPrefs.getUserId() + "&fence_id=" + fenceListOrig.get(position).getFenceId();
                 IncomingApi incomingApi = new IncomingApi(null, "remove_fence", payload, 0);
-                incomingApi.delegate = new RequestResult() {
-                    @Override
-                    public void onSuccess(String result) {
-                        Database db = new Database(getContext());
-                        db.removeFenceFromDatabase(fenceListOrig.get(position).getId()); //Remove from database
-                        fenceListOrig.get(position).removeFence(); //Remove form map
-                        fenceListOrig.remove(position); //Remove from list
-                        notifyDataSetChanged();
-
-                    }
-
-                    @Override
-                    public void onFailure() {
-                        Toast.makeText(context, "Network or server error", Toast.LENGTH_SHORT).show();
-
-                    }
-
-                    @Override
-                    public void userList(List<User> users) {
-
-                    }
-
-                    @Override
-                    public void trackEnabled() {
-
-                    }
-
-                    @Override
-                    public void trackDisabled() {
-
-                    }
-
-                    @Override
-                    public void liveLocationUpdate(String lat, String lng, String time, String trackId) {
-
-                    }
-
-                    @Override
-                    public void locationHistory(List<Coordinate> coordinates) {
-
-                    }
-                };
+                incomingApi.delegate = FenceAdapter.this;
                 incomingApi.execute();
 
 
+            }
+        });
+        holder.btnEditFence.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                MultiUserSelectDialog multiUserSelectDialog = new MultiUserSelectDialog(getContext(),fenceListOrig.get(position).getFenceId(),fenceListOrig.get(position).getAssignment());
+                multiUserSelectDialog.delegate = new MultiUserSelectDialog.editAssignmentInterface() {
+                    @Override
+                    public void fenceUpdated(String assignmentData) {
+                        Database db = new Database(context);
+                        if (db.updateFenceAssignment(fenceListOrig.get(position).getFenceId(), assignmentData))
+                            Toast.makeText(getContext(), "Success", Toast.LENGTH_SHORT).show();
+                        else
+                            Toast.makeText(getContext(), "Failed", Toast.LENGTH_SHORT).show();
+                        fenceListOrig.get(position).setAssignment(assignmentData);
+                    }
+                };
+                multiUserSelectDialog.show();
             }
         });
         return convertView;
@@ -123,9 +106,51 @@ public class FenceAdapter extends ArrayAdapter {
         return fenceListOrig.get(position).getTitle();
     }
 
+    @Override
+    public void onSuccess(String result) {
+        Database db = new Database(getContext());
+        db.removeFenceFromDatabase(fenceListOrig.get(activeItemPostion).getFenceId(),0); //Remove from database
+        fenceListOrig.get(activeItemPostion).removeFence(); //Remove form map
+        fenceListOrig.remove(activeItemPostion); //Remove from list
+        notifyDataSetChanged();
+
+    }
+
+    @Override
+    public void onFailure() {
+        Toast.makeText(context, "Network or server error", Toast.LENGTH_SHORT).show();
+
+    }
+
+    @Override
+    public void userList(List<User> users) {
+
+    }
+
+    @Override
+    public void trackEnabled() {
+
+    }
+
+    @Override
+    public void trackDisabled() {
+
+    }
+
+    @Override
+    public void liveLocationUpdate(String lat, String lng, String time, String trackId) {
+
+    }
+
+    @Override
+    public void locationHistory(List<Coordinate> coordinates) {
+
+    }
+
     public static class viewHolder {
         TextView txtFence;
         TextView txtFenceDesc;
         ImageButton btnRemoveFence;
+        ImageButton btnEditFence;
     }
 }

@@ -40,7 +40,6 @@ public class FenceListDialog {
         dialog.show();
 
     }
-
     public void close() {
         dialog.dismiss();
     }

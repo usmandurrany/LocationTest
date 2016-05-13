@@ -2,7 +2,6 @@ package com.fournodes.ud.locationtest;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.provider.Settings;
 
 /**
  * Created by Usman on 15/2/2016.
@@ -10,8 +9,8 @@ import android.provider.Settings;
 public class SharedPrefs {
     public static SharedPreferences pref;
     private static final String SHARED_PREF_FILE = "LocationTest";
-    public static final String SERVER_ADDRESS = "http://192.168.1.110/locationtest/v2/";
-    //public static final String SERVER_ADDRESS = "http://www.studentspot.pk/locationtest/v2/";
+    //public static final String SERVER_ADDRESS = "http://192.168.1.110/locationtest/v2/";
+    public static final String SERVER_ADDRESS = "http://www.studentspot.pk/locationtest/v2/";
 
     public SharedPrefs(Context context) {
         pref = context.getSharedPreferences(SharedPrefs.SHARED_PREF_FILE, 0);
@@ -38,6 +37,7 @@ public class SharedPrefs {
     private static String reCalcDistanceAtLatitude;
     private static String reCalcDistanceAtLongitude;
 
+
     private static boolean isMoving;
 
     private static int vicinity;
@@ -53,6 +53,12 @@ public class SharedPrefs {
 
     private static boolean trackingEnabled;
     private static boolean isLive;
+
+
+    private static String last100mLatitude;
+    private static String last100mLongitude;
+
+    private static int locationRequestRunnableId;
 
 
     public void initialize() {
@@ -79,13 +85,44 @@ public class SharedPrefs {
         isMoving = pref.getBoolean("isMoving", false);
         vicinity = pref.getInt("vicinity", 1000);
         distanceThreshold = pref.getInt("distanceThreshold", 500);
-        fencePerimeterPercentage = pref.getInt("fencePerimeterPercentage",10);
+        fencePerimeterPercentage = pref.getInt("fencePerimeterPercentage", 10);
         locationRequestAt = pref.getLong("locationRequestAt", System.currentTimeMillis());
         updateServerRowThreshold = pref.getInt("updateServerRowThreshold", 5);
-        lastLocationProvider = pref.getString("lastLocationProvider",null);
-        liveSessionId=pref.getInt("liveSessionId",-1);
-        trackingEnabled=pref.getBoolean("trackingEnabled",false);
-        isLive=pref.getBoolean("isLive",false);
+        lastLocationProvider = pref.getString("lastLocationProvider", null);
+        liveSessionId = pref.getInt("liveSessionId", -1);
+        trackingEnabled = pref.getBoolean("trackingEnabled", false);
+        isLive = pref.getBoolean("isLive", false);
+
+        last100mLatitude = pref.getString("last100mLatitude", null);
+        last100mLongitude = pref.getString("last100mLongitude", null);
+        locationRequestRunnableId = pref.getInt("locationRequestRunnableId", 0);
+    }
+
+    public static int getLocationRequestRunnableId() {
+        return locationRequestRunnableId;
+    }
+
+    public static void setLocationRequestRunnableId(int locationRequestRunnableId) {
+        pref.edit().putInt("locationRequestRunnableId", locationRequestRunnableId).apply();
+        SharedPrefs.locationRequestRunnableId = locationRequestRunnableId;
+    }
+
+    public static String getLast100mLatitude() {
+        return last100mLatitude;
+    }
+
+    public static void setLast100mLatitude(String last100mLatitude) {
+        pref.edit().putString("last100mLatitude", last100mLatitude).apply();
+        SharedPrefs.last100mLatitude = last100mLatitude;
+    }
+
+    public static String getLast100mLongitude() {
+        return last100mLongitude;
+    }
+
+    public static void setLast100mLongitude(String last100mLongitude) {
+        pref.edit().putString("last100mLongitude", last100mLongitude).apply();
+        SharedPrefs.last100mLongitude = last100mLongitude;
     }
 
     public static boolean isLive() {
@@ -93,7 +130,7 @@ public class SharedPrefs {
     }
 
     public static void setIsLive(boolean isLive) {
-        pref.edit().putBoolean("isLive",isLive).apply();
+        pref.edit().putBoolean("isLive", isLive).apply();
         SharedPrefs.isLive = isLive;
     }
 
@@ -102,7 +139,7 @@ public class SharedPrefs {
     }
 
     public static void setTrackingEnabled(boolean trackingEnabled) {
-        pref.edit().putBoolean("trackingEnabled",trackingEnabled).apply();
+        pref.edit().putBoolean("trackingEnabled", trackingEnabled).apply();
         SharedPrefs.trackingEnabled = trackingEnabled;
     }
 
@@ -111,7 +148,7 @@ public class SharedPrefs {
     }
 
     public static void setLiveSessionId(int liveSessionId) {
-        pref.edit().putInt("liveSessionId",liveSessionId).apply();
+        pref.edit().putInt("liveSessionId", liveSessionId).apply();
         SharedPrefs.liveSessionId = liveSessionId;
     }
 

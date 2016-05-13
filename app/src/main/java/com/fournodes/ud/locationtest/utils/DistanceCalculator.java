@@ -8,9 +8,6 @@ import android.location.LocationManager;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.objects.Fence;
 import com.fournodes.ud.locationtest.services.GeofenceTransitionsIntentService;
-import com.google.android.gcm.server.Message;
-import com.google.android.gcm.server.MulticastResult;
-import com.google.android.gcm.server.Sender;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,26 +27,26 @@ public class DistanceCalculator {
         for (Fence fence : fenceList) {
 
             Location fenceCenter = new Location("");
-            fenceCenter.setLatitude(fence.getCenter_lat());
-            fenceCenter.setLongitude(fence.getCenter_lng());
+            fenceCenter.setLatitude(fence.getCenterLat());
+            fenceCenter.setLongitude(fence.getCenterLng());
 
             newDistance = calcHaversine(location1, fenceCenter);
 
-            int fencePerimeterInMeters = (int) ((float)SharedPrefs.getFencePerimeterPercentage() / 100) * fence.getRadius();
+            int fencePerimeterInMeters = (int) (((float)SharedPrefs.getFencePerimeterPercentage() / 100) * fence.getRadius());
 
 
             // Enter will trigger once user is inside the outer perimeter perimeter of the fence
             if (newDistance <= fence.getRadius() + fencePerimeterInMeters && fence.getLastEvent() != 1 && fence.getIsActive() == 1) {
                 Intent triggerFence = new Intent(context, GeofenceTransitionsIntentService.class);
                 triggerFence.putExtra(LocationManager.KEY_PROXIMITY_ENTERING, true);
-                triggerFence.putExtra("id", fence.getId());
+                triggerFence.putExtra("id", fence.getFenceId());
                 context.startService(triggerFence);
             }
             // Exit will trigger once user is outside the outer perimeter of the fence
             else if (newDistance >= fence.getRadius() + fencePerimeterInMeters && fence.getLastEvent() != 2 && fence.getIsActive() == 1) {
                 Intent triggerFence = new Intent(context, GeofenceTransitionsIntentService.class);
                 triggerFence.putExtra(LocationManager.KEY_PROXIMITY_ENTERING, false);
-                triggerFence.putExtra("id", fence.getId());
+                triggerFence.putExtra("id", fence.getFenceId());
                 context.startService(triggerFence);
             }
 
@@ -63,10 +60,10 @@ public class DistanceCalculator {
 
             FileLogger.e(TAG, "Fence: " + fence.getTitle());
             FileLogger.e(TAG, "Last event: " + String.valueOf(fence.getLastEvent()));
-            FileLogger.e(TAG, "Old Distance: " + String.valueOf(fence.getDistanceFrom()));
+            FileLogger.e(TAG, "Old Distance: " + String.valueOf(fence.getDistanceFromUser()));
             FileLogger.e(TAG, "New Distance: " + String.valueOf(newDistance));
             FileLogger.e(TAG, "Is Active: " + String.valueOf(fence.getIsActive()));
-            fence.setDistanceFrom(newDistance);
+            fence.setDistanceFromUser(newDistance);
 
             if (updateDb)
                 db.updateFenceDistance(fence);

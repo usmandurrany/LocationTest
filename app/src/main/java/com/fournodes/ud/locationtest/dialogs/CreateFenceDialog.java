@@ -3,12 +3,9 @@ package com.fournodes.ud.locationtest.dialogs;
 import android.app.Activity;
 import android.app.Dialog;
 import android.graphics.Color;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.fournodes.ud.locationtest.MultiSpinner;
@@ -22,7 +19,6 @@ import com.fournodes.ud.locationtest.objects.Fence;
 import com.fournodes.ud.locationtest.objects.User;
 import com.fournodes.ud.locationtest.utils.Database;
 import com.fournodes.ud.locationtest.utils.FileLogger;
-import com.google.android.gms.gcm.Task;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.Circle;
@@ -31,10 +27,8 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-import org.json.JSONArray;
-import org.json.JSONException;
+import org.json.JSONObject;
 
-import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Arrays;
@@ -50,9 +44,6 @@ public class CreateFenceDialog implements RequestResult, MultiSpinner.MultiSpinn
     private int radius;
     private List<Fence> mGeofenceList;
     private GoogleMap map;
-    private CheckBox chkEntry;
-    private CheckBox chkExit;
-    private CheckBox chkRoaming;
     private Database db;
     private EditText edtTitle;
     private EditText edtDescription;
@@ -60,7 +51,7 @@ public class CreateFenceDialog implements RequestResult, MultiSpinner.MultiSpinn
     private Fence fence;
     private IncomingApi incomingApi;
     private Button btnSaveFence;
-    private String[] selectedUserIds;
+    private JSONObject assignment;
 
 
     public CreateFenceDialog(Activity activity, LatLng center, int radius, List<Fence> mGeofenceList, GoogleMap map) {
@@ -79,16 +70,12 @@ public class CreateFenceDialog implements RequestResult, MultiSpinner.MultiSpinn
         btnSaveFence = (Button) dialog.findViewById(R.id.btnSaveFence);
         edtTitle = (EditText) dialog.findViewById(R.id.edtTitle);
         edtDescription = (EditText) dialog.findViewById(R.id.edtDescription);
-        chkEntry = (CheckBox) dialog.findViewById(R.id.chkEntry);
-        chkRoaming = (CheckBox) dialog.findViewById(R.id.chkRoaming);
-        chkExit = (CheckBox) dialog.findViewById(R.id.chkExit);
         selectDevice = (MultiSpinner) dialog.findViewById(R.id.selectDevice);
 
-        chkEntry.setChecked(true);
-        chkExit.setChecked(true);
 
-        String payload = "user_id="+SharedPrefs.getUserId();
-        incomingApi = new IncomingApi(null,"user_list",payload,0);
+
+        String payload = "user_id=" + SharedPrefs.getUserId();
+        incomingApi = new IncomingApi(null, "user_list", payload, 0);
         incomingApi.delegate = this;
         incomingApi.execute();
 
@@ -102,9 +89,9 @@ public class CreateFenceDialog implements RequestResult, MultiSpinner.MultiSpinn
         btnSaveFence.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (edtTitle.getText().length() > 0 && !edtTitle.getText().toString().equals("My Device") && edtDescription.getText().length() > 0 && (chkEntry.isChecked() || chkExit.isChecked() || chkRoaming.isChecked())) {
+                if (edtTitle.getText().length() > 0 && !edtTitle.getText().toString().equals("My Device") && edtDescription.getText().length() > 0) {
                     if (getFenceId(edtTitle.getText().toString()) == -1) {
-                        if (createFence(center, radius)== null){
+                        if (createFence(center, radius) == null) {
                             Toast.makeText(activity, "Something went work, try again", Toast.LENGTH_SHORT).show();
                         }
                     }
@@ -132,7 +119,7 @@ public class CreateFenceDialog implements RequestResult, MultiSpinner.MultiSpinn
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
                     .title(edtTitle.getText().toString()));
 
-            Marker end = map.addMarker(new MarkerOptions()
+            Marker edgeMarker = map.addMarker(new MarkerOptions()
                     .position(toRadiusLatLng(center, radius))
                     .draggable(true)
                     .snippet(edtDescription.getText().toString())
@@ -149,40 +136,42 @@ public class CreateFenceDialog implements RequestResult, MultiSpinner.MultiSpinn
 
 
             fence = new Fence();
-            fence.setOnDevice(0);
-            fence.setVisibleArea(circle);
-            fence.setCenterMarker(centerMarker);
-            fence.setEdgeMarker(end);
-            fence.setRadius(radius);
             fence.setTitle(edtTitle.getText().toString());
             fence.setDescription(edtDescription.getText().toString());
-            fence.setTransitionType(getTransitionType());
-            fence.setUserId(SharedPrefs.getUserId());
-            fence.setCreate_on(Arrays.toString(selectedUserIds));
-
-            try {
-                StringBuilder payload = new StringBuilder();
-                payload
-                        .append("title=").append(URLEncoder.encode(fence.getTitle(), "UTF-8"))
-                        .append("&description=").append(URLEncoder.encode(fence.getDescription(), "UTF-8"))
-                        .append("&center_latitude=").append(center.latitude)
-                        .append("&center_longitude=").append(center.longitude)
-                        .append("&radius=").append(radius)
-                        .append("&edge_latitude=").append(toRadiusLatLng(center, radius).latitude)
-                        .append("&edge_longitude=").append(toRadiusLatLng(center, radius).longitude)
-                        .append("&transition_type=").append(fence.getTransitionType())
-                        .append("&user_id=").append(SharedPrefs.getUserId())
-                        .append("&create_on=").append(new JSONArray(fence.getCreate_on()));
+            fence.setCenterLat(centerMarker.getPosition().latitude);
+            fence.setCenterLng(centerMarker.getPosition().longitude);
+            fence.setEdgeLat(edgeMarker.getPosition().latitude);
+            fence.setEdgeLng(edgeMarker.getPosition().longitude);
+            fence.setRadius(radius);
+            fence.setCenterMarker(centerMarker);
+            fence.setEdgeMarker(edgeMarker);
+            fence.setCircle(circle);
+            fence.setNotifyId(Integer.parseInt(SharedPrefs.getUserId()));
+            fence.setOnDevice(0);
+            fence.setAssignment(assignment.toString());
 
 
-                incomingApi = new IncomingApi(null, "create_fence", payload.toString(), 0);
-                incomingApi.delegate = this;
-                incomingApi.execute();
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            }
+            StringBuilder payload = new StringBuilder();
+            payload
+                    .append("title=").append(URLEncoder.encode(fence.getTitle(), "UTF-8"))
+                    .append("&description=").append(URLEncoder.encode(fence.getDescription(), "UTF-8"))
+                    .append("&center_latitude=").append(center.latitude)
+                    .append("&center_longitude=").append(center.longitude)
+                    .append("&radius=").append(radius)
+                    .append("&edge_latitude=").append(toRadiusLatLng(center, radius).latitude)
+                    .append("&edge_longitude=").append(toRadiusLatLng(center, radius).longitude)
+                    .append("&user_id=").append(SharedPrefs.getUserId())
+                    .append("&assignment_data=").append(assignment);
+
+
+            incomingApi = new IncomingApi(null, "create_fence", payload.toString(), 0);
+            incomingApi.delegate = this;
+            incomingApi.execute();
             return fence;
-        }catch (JSONException e){e.printStackTrace();}
+
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
         return null;
     }
 
@@ -214,8 +203,8 @@ public class CreateFenceDialog implements RequestResult, MultiSpinner.MultiSpinn
 
     @Override
     public void userList(List<User> users) {
-        UserAdapter userAdapter = new UserAdapter(activity, null, R.layout.list_item_user, users);
-        selectDevice.setUserAdapter(userAdapter,this);
+        UserAdapter userAdapter = new UserAdapter(activity, null, R.layout.list_item_user_transition_type, users);
+        selectDevice.setUserAdapter(userAdapter, this);
     }
 
     @Override
@@ -231,8 +220,8 @@ public class CreateFenceDialog implements RequestResult, MultiSpinner.MultiSpinn
     @Override
     public void onSuccess(String result) {
         if (fence != null) {
-            fence.setId(Integer.parseInt(result));
-            db.saveFence(fence);
+            fence.setFenceId(Integer.parseInt(result));
+            db.saveFenceInformation(fence);
             mGeofenceList.add(fence);
             dialog.dismiss();
         }
@@ -243,35 +232,13 @@ public class CreateFenceDialog implements RequestResult, MultiSpinner.MultiSpinn
         Toast.makeText(activity, "Fence not created. Try again", Toast.LENGTH_SHORT).show();
     }
 
-    public int getTransitionType() {
-        // 1 - Entry
-        // 2 - Exit
-        // 4 - Dwell
 
-        if (chkEntry.isChecked() && chkExit.isChecked() && chkRoaming.isChecked())
-            return (1 | 2 | 4);
-        else if (chkEntry.isChecked() && chkExit.isChecked())
-            return 1 | 2;
-        else if (chkEntry.isChecked() && chkRoaming.isChecked())
-            return 1 | 4;
-        else if (chkExit.isChecked() && chkRoaming.isChecked())
-            return 2 | 4;
-        else if (chkEntry.isChecked())
-            return 1;
-        else if (chkExit.isChecked())
-            return 2;
-        else if (chkRoaming.isChecked())
-            return 4;
-        else
-            return -1; //Error
-    }
 
     @Override
-    public void onItemsSelected(boolean[] selected, List<String> selectedUserIds) {
-        this.selectedUserIds = new String[selectedUserIds.size()];
-        selectedUserIds.toArray(this.selectedUserIds);
+    public void onItemsSelected(JSONObject temp, List<String> selectedUserIds, List<String> selectedUserNames) {
+        this.assignment = temp;
         btnSaveFence.setEnabled(true);
-        FileLogger.e("Create fence on ",selectedUserIds.toString());
+        FileLogger.e("data", temp.toString());
 
 
     }

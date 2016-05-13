@@ -10,7 +10,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
-        android:layout_toLeftOf="@+id/btnRemoveFence">
+        android:layout_toLeftOf="@+fenceId/btnRemoveFence">
 
         <TextView
             android:id="@+id/txtFence"
@@ -18,8 +18,8 @@
             android:layout_height="wrap_content"
             android:text="Fence Name"
             android:textSize="15dp"
-            android:paddingLeft="10dp"
-            android:paddingRight="10dp"
+            android:paddingLeft="5dp"
+            android:paddingRight="5dp"
             android:paddingTop="5dp"
             android:ellipsize="end"
             android:singleLine="true"
@@ -30,8 +30,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Fence Description"
-            android:paddingLeft="20dp"
-            android:paddingRight="10dp"
+            android:paddingLeft="5dp"
+            android:paddingRight="5dp"
             android:singleLine="true"
             android:ellipsize="end"
             android:paddingTop="5dp" />
@@ -45,5 +45,12 @@
         android:background="@color/colorPrimaryDark"
         android:src="@drawable/ic_delete_white_24dp"
         android:layout_alignParentRight="true" />
+    <ImageButton
+        android:id="@+id/btnEditFence"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:background="@color/colorPrimaryDark"
+        android:src="@android:drawable/ic_menu_edit"
+        android:layout_toLeftOf="@id/btnRemoveFence" />
 
 </RelativeLayout>

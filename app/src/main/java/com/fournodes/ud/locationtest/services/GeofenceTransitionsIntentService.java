@@ -43,13 +43,13 @@ public class GeofenceTransitionsIntentService extends IntentService {
         int requestId = intent.getIntExtra("id", -1);
         FileLogger.e(TAG, "FENCE ID: " + String.valueOf(requestId));
         Event event = new Event();
-        event.requestId = requestId;
-        event.transitionType = geofenceTransition;
+        event.fenceId = requestId;
+        event.eventType = geofenceTransition;
         event.isVerified = 0;
         event.verifyCount = 0;
         event.retryCount = 0;
 
-        Event lastPendingEvent = db.getLastPendingEvent(event.requestId);
+        Event lastPendingEvent = db.getLastPendingEvent(event.fenceId);
         Fence fence = db.getFence(String.valueOf(requestId));
         FileLogger.e(TAG, getTransitionType(geofenceTransition) + " fence: " + fence.getTitle());
 
@@ -60,9 +60,9 @@ public class GeofenceTransitionsIntentService extends IntentService {
         *   3. Special case if the event is same as last event of fence but not same as the last pending event of the fence - Should be true
         */
 
-        if ((fence.getLastEvent() != event.transitionType && lastPendingEvent.id == -1)
-                || (fence.getLastEvent() != event.transitionType && lastPendingEvent.transitionType != event.transitionType)
-                || (fence.getLastEvent() == event.transitionType && lastPendingEvent.transitionType != event.transitionType)) {
+        if ((fence.getLastEvent() != event.eventType && lastPendingEvent.id == -1)
+                || (fence.getLastEvent() != event.eventType && lastPendingEvent.eventType != event.eventType)
+                || (fence.getLastEvent() == event.eventType && lastPendingEvent.eventType != event.eventType)) {
             FileLogger.e(TAG, "Event pending verification");
             int pendingEventsCount = SharedPrefs.getPendingEventCount();
             SharedPrefs.setPendingEventCount(pendingEventsCount + 1);

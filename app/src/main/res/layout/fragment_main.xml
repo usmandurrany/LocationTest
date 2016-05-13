@@ -61,12 +61,13 @@
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_toLeftOf="@id/btnSetVicinity">
+
         <android.support.design.widget.TextInputEditText
             android:id="@+id/edtVicinity"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="number"
-            android:hint="Vicinity"/>
+            android:hint="Vicinity"
+            android:inputType="number"/>
     </android.support.design.widget.TextInputLayout>
 
     <android.support.design.widget.TextInputLayout
@@ -77,15 +78,16 @@
         android:layout_below="@+id/tilVicinity"
         android:layout_toLeftOf="@+id/btnSetDistanceThreshold">
 
-    <android.support.design.widget.TextInputEditText
-        android:id="@+id/edtDistanceThreshold"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:inputType="number"
-        android:hint="Distance Threshold"/>
+        <android.support.design.widget.TextInputEditText
+            android:id="@+id/edtDistanceThreshold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:hint="Distance Threshold"
+            android:inputType="number"/>
 
-</android.support.design.widget.TextInputLayout>
+    </android.support.design.widget.TextInputLayout>
+
     <Button
         android:id="@+id/btnSetDistanceThreshold"
         android:layout_width="wrap_content"
@@ -107,15 +109,16 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
-            android:inputType="number"
-            android:hint="Fence Perimeter Percentage"/>
+            android:hint="Fence Perimeter Percentage"
+            android:inputType="number"/>
 
     </android.support.design.widget.TextInputLayout>
+
     <Button
         android:id="@+id/btnSetFencePerimeterPercentage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-                android:layout_above="@+id/lytScrollLog"
+        android:layout_above="@+id/lytScrollLog"
         android:layout_alignParentRight="true"
         android:text="Set"/>
 

@@ -191,7 +191,6 @@ public class MainActivity extends FragmentActivity implements RequestResult, Ser
 
     @Override
     public void userList(List<User> users) {
-
     }
 
     @Override
@@ -239,7 +238,7 @@ public class MainActivity extends FragmentActivity implements RequestResult, Ser
     public void listenerLocation(Location location) {
         if (fragmentAdapter.getItem(viewPager.getCurrentItem()) instanceof MapFragment) {
             if (mapDelegate != null)
-                mapDelegate.listenerLocation(location);
+                mapDelegate.simulate(location);
         }
     }
 

@@ -4,20 +4,25 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.support.v7.app.AlertDialog;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.Spinner;
 
 import com.fournodes.ud.locationtest.adapters.UserAdapter;
 
-import java.util.ArrayList;
+import org.json.JSONObject;
+
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 /**
  * Created by Usman on 10/5/2016.
  */
-public class MultiSpinner extends Spinner implements
-        DialogInterface.OnMultiChoiceClickListener, DialogInterface.OnCancelListener {
+public class MultiSpinner extends Spinner{
 
     private String[] items;
     private boolean[] selected;
@@ -25,6 +30,10 @@ public class MultiSpinner extends Spinner implements
     private MultiSpinnerListener listener;
     private UserAdapter userAdapter;
     private List<String> selectedUserIds;
+    private List<String> selectedUserNames;
+    private  ListView lstCommon;
+    private HashMap<String,String> selection;
+
 
     public MultiSpinner(Context context) {
         super(context);
@@ -38,80 +47,51 @@ public class MultiSpinner extends Spinner implements
         super(arg0, arg1, arg2);
     }
 
-    @Override
-    public void onClick(DialogInterface dialog, int which, boolean isChecked) {
-        if (isChecked){
-            selectedUserIds.add(String.valueOf(userAdapter.getItemId(which)));
-            selected[which] = true;
-        }else{
-            selectedUserIds.remove(selectedUserIds.indexOf(String.valueOf(userAdapter.getItemId(which))));
-            selected[which] = false;}
-    }
 
-    @Override
-    public void onCancel(DialogInterface dialog) {
-        // refresh text on spinner
-        StringBuffer spinnerBuffer = new StringBuffer();
-        boolean someUnselected = false;
-        for (int i = 0; i < items.length; i++) {
-            if (selected[i] == true) {
-                spinnerBuffer.append(items[i]);
-                spinnerBuffer.append(", ");
-            }
-            else {
-                someUnselected = true;
-            }
-        }
-        String spinnerText;
-        if (someUnselected) {
-            spinnerText = spinnerBuffer.toString();
-            if (spinnerText.length() > 2)
-                spinnerText = spinnerText.substring(0, spinnerText.length() - 2);
-        }
-        else {
-            spinnerText = defaultText;
-        }
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(getContext(),
-                android.R.layout.simple_spinner_item,
-                new String[]{spinnerText});
-        setAdapter(adapter);
-        listener.onItemsSelected(selected,selectedUserIds);
-    }
+
 
     @Override
     public boolean performClick() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setMultiChoiceItems(items, selected, this);
-        builder.setPositiveButton(android.R.string.ok,
-                new DialogInterface.OnClickListener() {
+        LayoutInflater inflater = LayoutInflater.from(getContext());
+        View dialog_layout = inflater.inflate(R.layout.list_view_common, null);
+        lstCommon = (ListView) dialog_layout.findViewById(R.id.lstCommon);
+        lstCommon.setAdapter(userAdapter);
+        AlertDialog.Builder db = new AlertDialog.Builder(getContext());
+        db.setView(dialog_layout);
+        db.setTitle("Select Users");
+        db.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                selection = userAdapter.getSelection();
+                if (selection != null) {
+                    JSONObject assignmentData = new JSONObject(selection);
+                    ArrayAdapter<String> adapter = new ArrayAdapter<>(getContext(),
+                            android.R.layout.simple_spinner_item, new String[]{Arrays.toString(userAdapter.getSelectedNames())});
+                    setAdapter(adapter);
+                    listener.onItemsSelected(assignmentData, selectedUserIds, selectedUserNames);
+                }else {
+                    ArrayAdapter<String> defaultAdapter = new ArrayAdapter<>(getContext(),
+                            android.R.layout.simple_spinner_item, new String[]{"Select User"});
+                    setAdapter(defaultAdapter);
 
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.cancel();
-                    }
-                });
-        builder.setOnCancelListener(this);
-        builder.show();
+                }
+            }
+        });
+        db.show();
+
         return true;
     }
 
 
     public void setUserAdapter(UserAdapter userAdapter, MultiSpinnerListener listener) {
-        this.userAdapter = userAdapter;
         this.listener = listener;
-        this.items = userAdapter.getNames();
-        selectedUserIds = new ArrayList<>();
-
-        selected = new boolean[userAdapter.getCount()];
-        Arrays.fill(selected, false);
-
-        // Show default text on spinner
-        ArrayAdapter<String> defaultAdapter = new ArrayAdapter<String>(getContext(),
+        this.userAdapter = userAdapter;
+        ArrayAdapter<String> defaultAdapter = new ArrayAdapter<>(getContext(),
                 android.R.layout.simple_spinner_item, new String[]{"Select User"});
         setAdapter(defaultAdapter);
     }
 
     public interface MultiSpinnerListener {
-        public void onItemsSelected(boolean[] selected, List<String> selectedUserIds);
+        void onItemsSelected(JSONObject payload, List<String> selectedUserIds, List<String> selectedUserNames);
     }
 }

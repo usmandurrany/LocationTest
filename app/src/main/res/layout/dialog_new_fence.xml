@@ -57,46 +57,6 @@
 
         </com.fournodes.ud.locationtest.MultiSpinner>
 
-        <TextView
-            android:id="@+id/textView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:padding="5dp"
-            android:text="Notify on:"
-            android:textAppearance="?android:attr/textAppearanceSmall"/>
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:orientation="horizontal"
-            android:weightSum="3">
-
-            <CheckBox
-                android:id="@+id/chkEntry"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="5dp"
-                android:layout_weight="1"
-                android:text="Entry"/>
-
-            <CheckBox
-                android:id="@+id/chkRoaming"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="5dp"
-                android:layout_weight="1"
-                android:text="Roaming"/>
-
-            <CheckBox
-                android:id="@+id/chkExit"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="5dp"
-                android:layout_weight="1"
-                android:text="Exit"/>
-        </LinearLayout>
 
 
         <LinearLayout

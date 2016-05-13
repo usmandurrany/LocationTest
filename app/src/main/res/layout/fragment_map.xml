@@ -272,6 +272,17 @@
             android:padding="10dp"
             android:textColor="#000"
             />
+        <TextView
+            android:layout_below="@id/txtInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/txtTime"
+            android:text=""
+            android:textStyle="bold"
+            android:layout_alignParentRight="true"
+            android:padding="10dp"
+            android:textColor="#000"
+            />
     </RelativeLayout>
 
 </android.support.design.widget.CoordinatorLayout>

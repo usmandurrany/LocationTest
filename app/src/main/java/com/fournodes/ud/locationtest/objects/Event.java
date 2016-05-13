@@ -5,8 +5,8 @@ package com.fournodes.ud.locationtest.objects;
  */
 public class Event {
     public int id = -1;
-    public int requestId;
-    public int transitionType;
+    public int fenceId;
+    public int eventType;
     public int isVerified;
     public int verifyCount;
     public int retryCount;

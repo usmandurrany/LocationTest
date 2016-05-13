@@ -1,8 +1,5 @@
 package com.fournodes.ud.locationtest.objects;
 
-import android.app.PendingIntent;
-
-import com.google.android.gms.location.Geofence;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.Marker;
 
@@ -10,118 +7,32 @@ import com.google.android.gms.maps.model.Marker;
  * Created by Usman on 16/2/2016.
  */
 public class Fence implements Comparable<Fence> {
-    private int id;
 
-    private String userId;
+    private int fenceId;
     private String title;
     private String description;
-    private String create_on;
+    private double centerLat;
+    private double centerLng;
+    private double edgeLat;
+    private double edgeLng;
+    private float radius;
+    private String assignment;
+    private int onDevice;
+    private Circle circle;
+    private int notifyId;
+    private int lastEvent = 2;
+    private int distanceFromUser;
+    private int isActive;
 
     private Marker centerMarker;
     private Marker edgeMarker;
 
-    private double center_lat;
-    private double center_lng;
-    private double edge_lat;
-    private double edge_lng;
-    private int radius;
-
-    private Circle visibleArea;
-    private PendingIntent pendingIntent;
-    private Geofence area;
-    private int transitionType;
-    private int onDevice;
-
-    private int lastEvent = 2;
-    private int distanceFrom;
-    private int isActive;
-
-    public int getIsActive() {
-        return isActive;
+    public Marker getEdgeMarker() {
+        return edgeMarker;
     }
 
-    public void setIsActive(int isActive) {
-        this.isActive = isActive;
-    }
-
-    public int getDistanceFrom() {
-        return distanceFrom;
-    }
-
-    public void setDistanceFrom(int distanceFrom) {
-        this.distanceFrom = distanceFrom;
-    }
-
-    public int getLastEvent() {
-        return lastEvent;
-    }
-
-    public void setLastEvent(int lastEvent) {
-        this.lastEvent = lastEvent;
-    }
-
-    public String getCreate_on() {
-        return create_on;
-    }
-
-    public void setCreate_on(String create_on) {
-        this.create_on = create_on;
-    }
-
-    public double getCenter_lat() {
-        return center_lat;
-    }
-
-    public void setCenter_lat(double center_lat) {
-        this.center_lat = center_lat;
-    }
-
-    public double getCenter_lng() {
-        return center_lng;
-    }
-
-    public void setCenter_lng(double center_lng) {
-        this.center_lng = center_lng;
-    }
-
-    public double getEdge_lat() {
-        return edge_lat;
-    }
-
-    public void setEdge_lat(double edge_lat) {
-        this.edge_lat = edge_lat;
-    }
-
-    public double getEdge_lng() {
-        return edge_lng;
-    }
-
-    public void setEdge_lng(double edge_lng) {
-        this.edge_lng = edge_lng;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public int getOnDevice() {
-        return onDevice;
-    }
-
-    public void setOnDevice(int onDevice) {
-        this.onDevice = onDevice;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
+    public void setEdgeMarker(Marker edgeMarker) {
+        this.edgeMarker = edgeMarker;
     }
 
     public Marker getCenterMarker() {
@@ -132,40 +43,102 @@ public class Fence implements Comparable<Fence> {
         this.centerMarker = centerMarker;
     }
 
-    public int getRadius() {
+    public int getNotifyId() {
+        return notifyId;
+    }
+
+    public void setNotifyId(int notifyId) {
+        this.notifyId = notifyId;
+    }
+
+    public String getAssignment() {return assignment;}
+
+    public void setAssignment(String assignment) {this.assignment = assignment;}
+
+    public int getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(int isActive) {
+        this.isActive = isActive;
+    }
+
+    public int getDistanceFromUser() {
+        return distanceFromUser;
+    }
+
+    public void setDistanceFromUser(int distanceFromUser) {this.distanceFromUser = distanceFromUser;}
+
+    public int getLastEvent() {
+        return lastEvent;
+    }
+
+    public void setLastEvent(int lastEvent) {
+        this.lastEvent = lastEvent;
+    }
+
+    public double getCenterLat() {
+        return centerLat;
+    }
+
+    public void setCenterLat(double centerLat) {
+        this.centerLat = centerLat;
+    }
+
+    public double getCenterLng() {
+        return centerLng;
+    }
+
+    public void setCenterLng(double centerLng) {
+        this.centerLng = centerLng;
+    }
+
+    public double getEdgeLat() {
+        return edgeLat;
+    }
+
+    public void setEdgeLat(double edgeLat) {
+        this.edgeLat = edgeLat;
+    }
+
+    public double getEdgeLng() {
+        return edgeLng;
+    }
+
+    public void setEdgeLng(double edgeLng) {
+        this.edgeLng = edgeLng;
+    }
+
+    public int getOnDevice() {
+        return onDevice;
+    }
+
+    public void setOnDevice(int onDevice) {
+        this.onDevice = onDevice;
+    }
+
+    public int getFenceId() {
+        return fenceId;
+    }
+
+    public void setFenceId(int fenceId) {
+        this.fenceId = fenceId;
+    }
+
+    public float getRadius() {
         return radius;
     }
 
-    public Circle getVisibleArea() {
-        return visibleArea;
+    public Circle getCircle() {
+        return circle;
     }
 
-    public void setVisibleArea(Circle visibleArea) {
-        this.visibleArea = visibleArea;
+    public void setCircle(Circle circle) {
+        this.circle = circle;
     }
 
     public void setRadius(float radius) {
-        this.radius = (int) Math.ceil(radius);
-    }
-
-    public Geofence getArea() {
-        return area;
-    }
-
-    public void setArea(Geofence area) {
-        this.area = area;
-    }
-
-    public Marker getEdgeMarker() {
-        return edgeMarker;
-    }
-
-    public void setEdgeMarker(Marker edgeMarker) {
-        this.edgeMarker = edgeMarker;
-    }
-
-    public PendingIntent getPendingIntent() {
-        return pendingIntent;
+        this.radius = radius;
     }
 
     public String getTitle() {
@@ -184,33 +157,22 @@ public class Fence implements Comparable<Fence> {
         this.description = description;
     }
 
-    public void setPendingIntent(PendingIntent pendingIntent) {this.pendingIntent = pendingIntent;}
-
-    public int getTransitionType() {
-        return transitionType;
-    }
-
-    public void setTransitionType(int transitionType) {
-        this.transitionType = transitionType;
-    }
 
     /****
      * Only removes the visible circle from the map, does not remove the actual geofence
      ***/
     public void removeFence() {
-        centerMarker.remove();
-        edgeMarker.remove();
-        visibleArea.remove();
+        circle.remove();
     }
 
 
     @Override
     public int compareTo(Fence fence) {
 
-        if (distanceFrom > fence.distanceFrom) {
+        if (distanceFromUser > fence.distanceFromUser) {
             return 1;
         }
-        else if (distanceFrom < fence.distanceFrom) {
+        else if (distanceFromUser < fence.distanceFromUser) {
             return -1;
         }
         else {

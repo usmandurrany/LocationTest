@@ -41,6 +41,7 @@ public class IncomingApi extends AsyncTask<String, String, String> {
         this.type = type;
 
         switch (type) {
+            case "edit_assignment":
             case "register":
             case "acknowledge":
             case "create_fence":
@@ -115,6 +116,14 @@ public class IncomingApi extends AsyncTask<String, String, String> {
                 Log.e(TAG, response.toString());
 
                 switch (type) {
+                    case "edit_assignment":
+                        if (!response.getString("result").equals("failed")) {
+                            if (delegate != null)
+                                delegate.onSuccess(response.getString("result"));
+                        }
+                        else if (delegate != null)
+                            delegate.onFailure();
+                        break;
                     case "register":
                         if (!response.getString("result").equals("failed")) {
                             SharedPrefs.setUserId(response.getString("result"));

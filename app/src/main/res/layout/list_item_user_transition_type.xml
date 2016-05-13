@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="horizontal"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
 
     <LinearLayout
         android:id="@+id/lytUserName"
@@ -10,7 +10,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
-        android:layout_toLeftOf="@+fenceId/lytUserActions">
+        android:layout_toLeftOf="@id/lytUserActions">
 
         <TextView
             android:id="@+id/txtName"
@@ -45,21 +45,25 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <ImageButton
+        <android.support.v7.widget.AppCompatCheckBox
             android:background="@color/colorPrimaryDark"
-            android:id="@+id/btnTrack"
-            android:minWidth="10dp"
-            android:layout_width="50dp"
+            android:id="@+id/chkEnter"
+            android:layout_width="wrap_content"
             android:layout_height="50dp"
-            android:src="@drawable/ic_person_pin_circle_white_24dp" />
+            android:text="Enter"
+            android:textColor="#fff"
+            android:padding="10dp"/>
 
-        <ImageButton
+        <android.support.v7.widget.AppCompatCheckBox
             android:background="@color/colorPrimaryDark"
-            android:id="@+id/btnHistory"
-            android:layout_width="50dp"
-            android:minWidth="10dp"
+            android:id="@+id/chkExit"
+            android:layout_width="wrap_content"
             android:layout_height="50dp"
-            android:src="@drawable/ic_timeline_white_24dp" />
+            android:textColor="#fff"
+
+            android:text="Exit"
+            android:padding="10dp"
+            />
 
     </LinearLayout>
 
