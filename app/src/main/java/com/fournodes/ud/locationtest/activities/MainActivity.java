@@ -236,10 +236,8 @@ public class MainActivity extends FragmentActivity implements RequestResult, Ser
 
     @Override
     public void listenerLocation(Location location) {
-        if (fragmentAdapter.getItem(viewPager.getCurrentItem()) instanceof MapFragment) {
-            if (mapDelegate != null)
-                mapDelegate.simulate(location);
-        }
+        if (mapDelegate != null)
+            mapDelegate.simulate(location);
     }
 
     @Override

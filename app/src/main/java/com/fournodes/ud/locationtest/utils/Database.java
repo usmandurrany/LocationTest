@@ -37,6 +37,7 @@ import java.util.List;
 public class Database extends SQLiteOpenHelper {
     private static final String TAG = "Database";
     private Context context;
+    private int rowCount = -1;
 
     public static final String DATABASE_NAME = "LocationTest";
     public static final String DATABASE_FILE_NAME = "LocationTest.db";
@@ -149,6 +150,7 @@ public class Database extends SQLiteOpenHelper {
     public long saveLocation(double lat, double lng, final long time) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
+
         Float displacement;
         String lastLat = SharedPrefs.getLastDeviceLatitude();
         String lastLng = SharedPrefs.getLastDeviceLongitude();
@@ -167,7 +169,9 @@ public class Database extends SQLiteOpenHelper {
         long rowId = db.insert(TABLE_LOCATION, null, values);
         db.close();
 
-        int rowCount = getLocEntriesCount();
+        if (rowCount == -1)
+            rowCount = getLocEntriesCount();
+        else rowCount++;
 
         FileLogger.e(TAG, "Row count: " + String.valueOf(rowCount));
         FileLogger.e(TAG, "Row threshold: " + String.valueOf(SharedPrefs.getUpdateServerRowThreshold()));
@@ -181,6 +185,7 @@ public class Database extends SQLiteOpenHelper {
                 @Override
                 public void onSuccess(String result) {
                     removeLocEntries(currentTimeMillis); //Remove from db after successfully sending to server
+                    rowCount = -1;
                     FileLogger.e(TAG, "Location update on server successful");
                 }
 
@@ -263,6 +268,7 @@ public class Database extends SQLiteOpenHelper {
             return count;
         }
         else {
+            cursor.close();
             db.close();
             return -1; //Error
         }
@@ -336,7 +342,6 @@ public class Database extends SQLiteOpenHelper {
        // final Cursor cursor = db.rawQuery("SELECT * FROM fence_information LEFT OUTER JOIN fence_parameter ON fence_information.fence_id = fence_parameter.fence_id WHERE " +selection,null);
 
 
-        Log.e(TAG,String.valueOf(cursor.getCount()));
         while (cursor.moveToNext()) {
             final int id = cursor.getInt(cursor.getColumnIndex(COLUMN_FENCE_ID));
             final String title = cursor.getString(cursor.getColumnIndex(COLUMN_TITLE));

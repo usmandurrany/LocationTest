@@ -40,6 +40,7 @@ import com.fournodes.ud.locationtest.objects.User;
 import com.fournodes.ud.locationtest.services.LocationService;
 import com.fournodes.ud.locationtest.utils.Database;
 import com.fournodes.ud.locationtest.utils.DistanceCalculator;
+import com.fournodes.ud.locationtest.utils.FileLogger;
 import com.fournodes.ud.locationtest.utils.LatLngInterpolator;
 import com.github.clans.fab.FloatingActionButton;
 import com.github.clans.fab.FloatingActionMenu;
@@ -67,6 +68,8 @@ import io.fabric.sdk.android.Fabric;
 
 public class MapFragment extends Fragment implements OnMapReadyCallback,
         ResultCallback, MapFragmentInterface, View.OnClickListener, RequestResult {
+    private static final String TAG = "MapFragment";
+
     MapView mMapView;
     private GoogleMap map;
     private FloatingActionButton fabAddFence;
@@ -107,7 +110,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
     private int elapsedTime;
     private Handler timerHandler;
     private Runnable timer;
-
 
 
     public MapFragment() {}
@@ -377,6 +379,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
     @Override
     public void simulate(Location location) {
         if (isSimulationRunning) {
+            FileLogger.e(TAG, "Timer reset");
             startTime = System.currentTimeMillis();
 
             currentLocation = location;
@@ -664,13 +667,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
                 }
                 else {
                     timerHandler = new Handler();
-                    timer= new Runnable() {
+                    timer = new Runnable() {
                         @Override
                         public void run() {
-                            currentTime=System.currentTimeMillis();
-                            elapsedTime=(int)(currentTime-startTime)/1000;
+                            currentTime = System.currentTimeMillis();
+                            elapsedTime = (int) (currentTime - startTime) / 1000;
                             txtTime.setText("Elapsed Time (s): " + String.valueOf(elapsedTime));
-                            timerHandler.postDelayed(this,1000);
+                            timerHandler.postDelayed(this, 1000);
                         }
                     };
                     timerHandler.post(timer);

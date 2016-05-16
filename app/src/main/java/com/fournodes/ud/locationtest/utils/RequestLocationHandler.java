@@ -11,6 +11,7 @@ public class RequestLocationHandler extends Handler {
     private static final String TAG = "RequestLocationHandler";
 
     public void clearQueue(Runnable runnable){
+        FileLogger.e(TAG, "Clearing queued requests");
         this.removeCallbacks(runnable);
     }
 

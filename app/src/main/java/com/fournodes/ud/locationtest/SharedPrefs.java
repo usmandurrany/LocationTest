@@ -59,6 +59,7 @@ public class SharedPrefs {
     private static String last100mLongitude;
 
     private static int locationRequestRunnableId;
+    private static int gpsPollTimeout;
 
 
     public void initialize() {
@@ -75,7 +76,7 @@ public class SharedPrefs {
         userName = pref.getString("userName", null);
         userEmail = pref.getString("userEmail", null);
         userPicture = pref.getString("userPicture", null);
-        locationRequestInterval = pref.getInt("locationRequestInterval", 80);//80 Seconds
+        locationRequestInterval = pref.getInt("locationRequestInterval", 60);//60 Seconds
         locLastUpdateMillis = pref.getLong("locLastUpdateMillis", System.currentTimeMillis());
         pendingEventCount = pref.getInt("pendingEventCount", 0);
         lastLocationAccuracy = pref.getFloat("lastLocationAccuracy", 999f);
@@ -96,6 +97,16 @@ public class SharedPrefs {
         last100mLatitude = pref.getString("last100mLatitude", null);
         last100mLongitude = pref.getString("last100mLongitude", null);
         locationRequestRunnableId = pref.getInt("locationRequestRunnableId", 0);
+        gpsPollTimeout = pref.getInt("gpsPollTimeout", 5000);
+    }
+
+    public static int getGpsPollTimeout() {
+        return gpsPollTimeout;
+    }
+
+    public static void setGpsPollTimeout(int gpsPollTimeout) {
+        pref.edit().putInt("gpsPollTimeout", gpsPollTimeout).apply();
+        SharedPrefs.gpsPollTimeout = gpsPollTimeout;
     }
 
     public static int getLocationRequestRunnableId() {
