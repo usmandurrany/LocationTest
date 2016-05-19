@@ -101,9 +101,8 @@ public class MainActivity extends FragmentActivity implements RequestResult, Ser
                     locationService.delegate = MainActivity.this;
                     if (mainDelegate != null)
                         mainDelegate.serviceStarted();
-
                 }
-                else {
+                else if (SharedPrefs.isLocationEnabled()){
                     startService(new Intent(MainActivity.this, LocationService.class));
                     handler.postDelayed(check, 2000);
                 }

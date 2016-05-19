@@ -65,11 +65,11 @@ public class SharedLocationListener implements LocationListener {
                     }
 
                 }
-                else {
+                /*else {
                     FileLogger.e(className, "Refining location");
                     FileLogger.e(className, "Location score: " + String.valueOf(locationScore));
                     delegate.lmLocation(location, locationScore);
-                }
+                }*/
             }
         }
     }
