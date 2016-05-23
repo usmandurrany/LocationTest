@@ -23,6 +23,7 @@ import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.interfaces.LocationUpdateListener;
 import com.fournodes.ud.locationtest.listeners.SharedLocationListener;
 import com.fournodes.ud.locationtest.services.LocationService;
+import com.fournodes.ud.locationtest.utils.Database;
 import com.fournodes.ud.locationtest.utils.FileLogger;
 
 /**
@@ -70,7 +71,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
                 if (bestLocation == null && networkLocation != null) {
                     FileLogger.e(TAG, "GPS fix failed, using network location");
-                    locationService.performCalculations(networkLocation);
+                    locationService.lmLocation(networkLocation,10);
                     quit();
                 }
                 else if (bestLocation == null && networkLocation == null) {
@@ -120,13 +121,14 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     @Override
     public void lmBestLocation(Location bestLocation, int locationScore) {
         this.bestLocation = bestLocation;
-        locationService.performCalculations(bestLocation);
+        locationService.lmLocation(bestLocation,10);
         quit();
     }
 
     @Override
     public void lmLocation(Location location, int locationScore) {
         this.networkLocation = location;
+
     }
 
     @Override

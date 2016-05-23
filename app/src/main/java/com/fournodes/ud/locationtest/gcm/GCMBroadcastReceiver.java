@@ -21,9 +21,6 @@ import com.fournodes.ud.locationtest.utils.Database;
 import com.fournodes.ud.locationtest.utils.FileLogger;
 import com.google.android.gms.gcm.GcmListenerService;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Created by Usman on 11/23/2015.
  */
@@ -101,6 +98,9 @@ public class GCMBroadcastReceiver extends GcmListenerService {
         FileLogger.e(TAG, "Description: " + data.getString("description"));
         FileLogger.e(TAG, "Center: Lat: " + data.getString("center_latitude") + " Long: " + data.getString("center_longitude"));
         FileLogger.e(TAG, "Radius: " + data.getString("radius"));
+
+/*        PathsenseWrapper pathsenseWrapper = new PathsenseWrapper(this);
+        pathsenseWrapper.addGeofence(fence);*/
 
         if (db.saveFenceInformation(fence) > 0)
             FileLogger.e(TAG, "Result: Success");

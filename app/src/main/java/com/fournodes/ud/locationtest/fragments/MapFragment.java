@@ -348,7 +348,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
                     + "\nActive fences: " + Arrays.toString(activeFences)
                     + "\nNearest fence: " + activeFences[0]
                     + "\nNearest perimeter distance (m): " + (fenceListActive != null && fenceListActive.size() > 0
-                    ? fenceListActive.get(0).getDistanceFromUser() - (fenceListActive.get(0).getRadius() - fencePerimeterInMeters) : "N/A")
+                    ? fenceListActive.get(0).getDistanceFromUser() - fencePerimeterInMeters : "N/A")
                     + "\nCurrent speed: " + String.valueOf(speedAtLocation) + " m/s - " + String.valueOf(speedInKmph) + " km/h"
                     + "\nLocation request after (s): " + String.valueOf(SharedPrefs.getLocationRequestInterval()));
 

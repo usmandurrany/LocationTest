@@ -8,7 +8,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.graphics.Color;
 import android.location.Location;
-import android.os.Handler;
 import android.util.Log;
 
 import com.fournodes.ud.locationtest.SharedPrefs;
@@ -329,17 +328,22 @@ public class Database extends SQLiteOpenHelper {
      */
     public List<Fence> onDeviceFence(String action) {
         List<Fence> mFenceList = new ArrayList<>();
+        //PathsenseWrapper pathsenseWrapper = new PathsenseWrapper(context);
+
 
         SQLiteDatabase db = this.getWritableDatabase();
         String selection = null;
 
-        if (action.equals("getActive"))
-            selection = TABLE_FENCE_INFORMATION+"."+COLUMN_ON_DEVICE + " = 1 AND " + TABLE_FENCE_PARAMETER+"."+COLUMN_IS_ACTIVE + " = 1";
-        else if (action.equals("getAll"))
-            selection = TABLE_FENCE_INFORMATION+"."+COLUMN_ON_DEVICE + " = 1";
+        if (action.equals("getActive")) {
+            selection = TABLE_FENCE_INFORMATION + "." + COLUMN_ON_DEVICE + " = 1 AND " + TABLE_FENCE_PARAMETER + "." + COLUMN_IS_ACTIVE + " = 1";
+        }
+        else if (action.equals("getAll")) {
+            //pathsenseWrapper.removeGeofences();
+            selection = TABLE_FENCE_INFORMATION + "." + COLUMN_ON_DEVICE + " = 1";
+        }
 
-        final Cursor cursor = db.query(TABLE_FENCE_INFORMATION + " LEFT OUTER JOIN "+TABLE_FENCE_PARAMETER+" ON "+ TABLE_FENCE_INFORMATION+"."+COLUMN_FENCE_ID+"="+TABLE_FENCE_PARAMETER+"."+COLUMN_FENCE_ID, null, selection, null, null, null, null, null);
-       // final Cursor cursor = db.rawQuery("SELECT * FROM fence_information LEFT OUTER JOIN fence_parameter ON fence_information.fence_id = fence_parameter.fence_id WHERE " +selection,null);
+        final Cursor cursor = db.query(TABLE_FENCE_INFORMATION + " LEFT OUTER JOIN " + TABLE_FENCE_PARAMETER + " ON " + TABLE_FENCE_INFORMATION + "." + COLUMN_FENCE_ID + "=" + TABLE_FENCE_PARAMETER + "." + COLUMN_FENCE_ID, null, selection, null, null, null, null, null);
+        // final Cursor cursor = db.rawQuery("SELECT * FROM fence_information LEFT OUTER JOIN fence_parameter ON fence_information.fence_id = fence_parameter.fence_id WHERE " +selection,null);
 
 
         while (cursor.moveToNext()) {
@@ -360,6 +364,9 @@ public class Database extends SQLiteOpenHelper {
             fence.setAssignment(cursor.getString(cursor.getColumnIndex(COLUMN_ASSIGNMENT)));
             fence.setDistanceFromUser((int) cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE_FROM_USER)));
             fence.setIsActive(cursor.getInt(cursor.getColumnIndex(COLUMN_IS_ACTIVE)));
+
+            //pathsenseWrapper.addGeofence(fence);
+
             mFenceList.add(fence);
         }
 
@@ -382,14 +389,16 @@ public class Database extends SQLiteOpenHelper {
             FileLogger.e(TAG, "Could not reset fences.");
 
         SharedPrefs.setPendingEventCount(0);
+
+        //onDeviceFence("getAll");
     }
 
 
     public List<Fence> drawOffDeviceFences(GoogleMap map) {
         SQLiteDatabase db = this.getWritableDatabase();
 
-        String selection = TABLE_FENCE_INFORMATION+"."+COLUMN_ON_DEVICE + " = 0";
-        final Cursor cursor = db.query(TABLE_FENCE_INFORMATION + " LEFT OUTER JOIN "+TABLE_FENCE_PARAMETER+" ON "+ TABLE_FENCE_INFORMATION+"."+COLUMN_FENCE_ID+"="+TABLE_FENCE_PARAMETER+"."+COLUMN_FENCE_ID, null, selection, null, null, null, null, null);
+        String selection = TABLE_FENCE_INFORMATION + "." + COLUMN_ON_DEVICE + " = 0";
+        final Cursor cursor = db.query(TABLE_FENCE_INFORMATION + " LEFT OUTER JOIN " + TABLE_FENCE_PARAMETER + " ON " + TABLE_FENCE_INFORMATION + "." + COLUMN_FENCE_ID + "=" + TABLE_FENCE_PARAMETER + "." + COLUMN_FENCE_ID, null, selection, null, null, null, null, null);
 
         List<Fence> mFenceList = new ArrayList<>();
 
@@ -408,8 +417,8 @@ public class Database extends SQLiteOpenHelper {
             fence.setAssignment(cursor.getString(cursor.getColumnIndex(COLUMN_ASSIGNMENT)));
             fence.setOnDevice(cursor.getInt(cursor.getColumnIndex(COLUMN_ON_DEVICE)));
 
-            LatLng latLngCenter = new LatLng(fence.getCenterLat(),fence.getCenterLng());
-            LatLng latLngEdge = new LatLng(fence.getEdgeLat(),fence.getEdgeLng());
+            LatLng latLngCenter = new LatLng(fence.getCenterLat(), fence.getCenterLng());
+            LatLng latLngEdge = new LatLng(fence.getEdgeLat(), fence.getEdgeLng());
 
             fence.setCenterMarker(
                     map.addMarker(new MarkerOptions()
@@ -445,8 +454,8 @@ public class Database extends SQLiteOpenHelper {
         Fence fence = new Fence();
         SQLiteDatabase db = this.getWritableDatabase();
 
-        String selection = TABLE_FENCE_INFORMATION+"."+COLUMN_FENCE_ID + " = " + fenceId;
-        final Cursor cursor = db.query(TABLE_FENCE_INFORMATION + " LEFT OUTER JOIN "+TABLE_FENCE_PARAMETER+" ON "+ TABLE_FENCE_INFORMATION+"."+COLUMN_FENCE_ID+"="+TABLE_FENCE_PARAMETER+"."+COLUMN_FENCE_ID, null, selection,null, null, null, null, null);
+        String selection = TABLE_FENCE_INFORMATION + "." + COLUMN_FENCE_ID + " = " + fenceId;
+        final Cursor cursor = db.query(TABLE_FENCE_INFORMATION + " LEFT OUTER JOIN " + TABLE_FENCE_PARAMETER + " ON " + TABLE_FENCE_INFORMATION + "." + COLUMN_FENCE_ID + "=" + TABLE_FENCE_PARAMETER + "." + COLUMN_FENCE_ID, null, selection, null, null, null, null, null);
         //final Cursor cursor = db.rawQuery("SELECT * FROM fence_information LEFT OUTER JOIN fence_parameter ON fence_information.fence_id = fence_parameter.fence_id WHERE fence_information.fence_id=?",new String[]{fenceId});
 
 

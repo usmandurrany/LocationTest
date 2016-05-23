@@ -11,6 +11,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
     <application
         android:name=".MyApplication"
@@ -61,10 +62,9 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </receiver>
-
         <receiver android:name=".receivers.ProviderChangedReceiver">
             <intent-filter>
-                <action android:name="android.location.PROVIDERS_CHANGED" />
+                <action android:name="android.location.PROVIDERS_CHANGED"/>
             </intent-filter>
         </receiver>
 
@@ -99,6 +99,12 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key"/>
+        <meta-data
+            android:name="com.pathsense.android.sdk.CLIENT_ID"
+            android:value="xsJ8nWWCOQpG5CnuHXwws4XXqTbE1FcoEomwxUjT"/>
+        <meta-data
+            android:name="com.pathsense.android.sdk.API_KEY"
+            android:value="PlFFZN5YjC1mIfSHraw1Ea1RQUuyzZYU7SiWwLRq"/>
 
         <service
             android:name=".services.GeofenceTransitionsIntentService"
@@ -108,6 +114,16 @@
             android:name="io.fabric.ApiKey"
             android:value="490387366699b5598577fc72b165d728cf8f936f"/>
 
+        <receiver
+            android:name=".PathsenseGeofenceReceiver"
+            android:enabled="true"
+            android:exported="true">
+        </receiver>
+
+        <service
+            android:name=".services.AlarmManagerLocationRequestIS"
+            android:exported="false">
+        </service>
     </application>
 
 </manifest>
