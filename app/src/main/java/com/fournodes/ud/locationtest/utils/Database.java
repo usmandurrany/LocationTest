@@ -172,54 +172,56 @@ public class Database extends SQLiteOpenHelper {
             rowCount = getLocEntriesCount();
         else rowCount++;
 
-        FileLogger.e(TAG, "Row count: " + String.valueOf(rowCount));
-        FileLogger.e(TAG, "Row threshold: " + String.valueOf(SharedPrefs.getUpdateServerRowThreshold()));
+        //FileLogger.e(TAG, "Row count: " + String.valueOf(rowCount));
+        //FileLogger.e(TAG, "Row threshold: " + String.valueOf(SharedPrefs.getUpdateServerRowThreshold()));
+        try {
+            if (SharedPrefs.getLastLocationProvider() == null || rowCount >= SharedPrefs.getUpdateServerRowThreshold()) {
+                //FileLogger.e(TAG, "Updating location on server");
+                final long currentTimeMillis = System.currentTimeMillis();
+                String payload = "payload=" + getLocEntries(currentTimeMillis).toString() + "&user_id=" + SharedPrefs.getUserId();
+                IncomingApi incomingApi = new IncomingApi(null, "location_update", payload, 0);
+                incomingApi.delegate = new RequestResult() {
+                    @Override
+                    public void onSuccess(String result) {
+                        removeLocEntries(currentTimeMillis); //Remove from db after successfully sending to server
+                        rowCount = -1;
+                        //FileLogger.e(TAG, "Location update on server successful");
+                    }
 
-        if (SharedPrefs.getLastLocationProvider() == null || rowCount >= SharedPrefs.getUpdateServerRowThreshold()) {
-            FileLogger.e(TAG, "Updating location on server");
-            final long currentTimeMillis = System.currentTimeMillis();
-            String payload = "payload=" + getLocEntries(currentTimeMillis).toString() + "&user_id=" + SharedPrefs.getUserId();
-            IncomingApi incomingApi = new IncomingApi(null, "location_update", payload, 0);
-            incomingApi.delegate = new RequestResult() {
-                @Override
-                public void onSuccess(String result) {
-                    removeLocEntries(currentTimeMillis); //Remove from db after successfully sending to server
-                    rowCount = -1;
-                    FileLogger.e(TAG, "Location update on server successful");
-                }
+                    @Override
+                    public void onFailure() {
+                        //FileLogger.e(TAG, "Location update on server failed");
 
-                @Override
-                public void onFailure() {
-                    FileLogger.e(TAG, "Location update on server failed");
+                    }
 
-                }
+                    @Override
+                    public void userList(List<User> users) {
 
-                @Override
-                public void userList(List<User> users) {
+                    }
 
-                }
+                    @Override
+                    public void trackEnabled() {
 
-                @Override
-                public void trackEnabled() {
+                    }
 
-                }
+                    @Override
+                    public void trackDisabled() {
 
-                @Override
-                public void trackDisabled() {
+                    }
 
-                }
+                    @Override
+                    public void liveLocationUpdate(String lat, String lng, String time, String trackId) {
 
-                @Override
-                public void liveLocationUpdate(String lat, String lng, String time, String trackId) {
+                    }
 
-                }
+                    @Override
+                    public void locationHistory(List<Coordinate> coordinates) {
 
-                @Override
-                public void locationHistory(List<Coordinate> coordinates) {
-
-                }
-            };
-            incomingApi.execute();
+                    }
+                };
+                incomingApi.execute();
+            }
+        } catch (IllegalStateException e) {
         }
         return rowId;
     }
@@ -232,7 +234,8 @@ public class Database extends SQLiteOpenHelper {
         return result[0];
     }
 
-    public JSONArray getLocEntries(long time) {
+    public JSONArray getLocEntries(long time) throws IllegalStateException {
+
         SQLiteDatabase db = getWritableDatabase();
         Cursor cursor = db.query(TABLE_LOCATION, null, COLUMN_TIME + "<?", new String[]{String.valueOf(time)}, null, null, null);
         List<JSONObject> rowList = new ArrayList<>();
@@ -309,7 +312,7 @@ public class Database extends SQLiteOpenHelper {
         values.put(COLUMN_FENCE_ID, fence.getFenceId());
         values.put(COLUMN_NOTIFY_ID, fence.getNotifyId());
         values.put(COLUMN_LAST_EVENT, fence.getLastEvent());
-        values.put(COLUMN_DISTANCE_FROM_USER, fence.getDistanceFromUser());
+        values.put(COLUMN_DISTANCE_FROM_USER, fence.getDistanceFromEdge());
         values.put(COLUMN_IS_ACTIVE, fence.getIsActive());
 
         long rowId = db.insert(TABLE_FENCE_PARAMETER, null, values);
@@ -362,7 +365,7 @@ public class Database extends SQLiteOpenHelper {
             fence.setOnDevice(cursor.getInt(cursor.getColumnIndex(COLUMN_ON_DEVICE)));
             fence.setLastEvent(cursor.getInt(cursor.getColumnIndex(COLUMN_LAST_EVENT)));
             fence.setAssignment(cursor.getString(cursor.getColumnIndex(COLUMN_ASSIGNMENT)));
-            fence.setDistanceFromUser((int) cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE_FROM_USER)));
+            fence.setDistanceFromEdge((int) cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE_FROM_USER)));
             fence.setIsActive(cursor.getInt(cursor.getColumnIndex(COLUMN_IS_ACTIVE)));
 
             //pathsenseWrapper.addGeofence(fence);
@@ -473,7 +476,7 @@ public class Database extends SQLiteOpenHelper {
             fence.setLastEvent(cursor.getInt(cursor.getColumnIndex(COLUMN_LAST_EVENT)));
             fence.setIsActive(cursor.getInt(cursor.getColumnIndex(COLUMN_IS_ACTIVE)));
             fence.setAssignment(cursor.getString(cursor.getColumnIndex(COLUMN_ASSIGNMENT)));
-            fence.setDistanceFromUser((int) cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE_FROM_USER)));
+            fence.setDistanceFromEdge((int) cursor.getDouble(cursor.getColumnIndex(COLUMN_DISTANCE_FROM_USER)));
         }
 
         cursor.close();
@@ -514,7 +517,7 @@ public class Database extends SQLiteOpenHelper {
         values.put(COLUMN_FENCE_ID, fence.getFenceId());
         values.put(COLUMN_NOTIFY_ID, fence.getNotifyId());
         values.put(COLUMN_LAST_EVENT, fence.getLastEvent());
-        values.put(COLUMN_DISTANCE_FROM_USER, fence.getDistanceFromUser());
+        values.put(COLUMN_DISTANCE_FROM_USER, fence.getDistanceFromEdge());
         values.put(COLUMN_IS_ACTIVE, fence.getIsActive());
         int result = db.update(TABLE_FENCE_PARAMETER, values, COLUMN_FENCE_ID + "=?", new String[]{String.valueOf(fence.getFenceId())});
         db.close();
@@ -526,7 +529,7 @@ public class Database extends SQLiteOpenHelper {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues values = new ContentValues();
         values.put(COLUMN_IS_ACTIVE, fence.getIsActive());
-        values.put(COLUMN_DISTANCE_FROM_USER, fence.getDistanceFromUser());
+        values.put(COLUMN_DISTANCE_FROM_USER, fence.getDistanceFromEdge());
         int result = db.update(TABLE_FENCE_PARAMETER, values, COLUMN_FENCE_ID + "=?", new String[]{String.valueOf(fence.getFenceId())});
         db.close();
         return result > 0;

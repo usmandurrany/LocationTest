@@ -8,13 +8,9 @@ import android.util.Log;
 
 
 public class AlarmManagerLocationRequestIS extends IntentService {
-    /**
-     * Creates an IntentService.  Invoked by your subclass's constructor.
-     *
-     * @param name Used to name the worker thread, important only for debugging.
-     */
-    public AlarmManagerLocationRequestIS(String name) {
-        super(name);
+private static final String TAG = "AMLocationRequestIS";
+    public AlarmManagerLocationRequestIS() {
+        super(TAG);
     }
 
     @Override

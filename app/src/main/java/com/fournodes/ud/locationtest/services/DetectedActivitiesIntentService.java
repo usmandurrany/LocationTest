@@ -60,24 +60,24 @@ public class DetectedActivitiesIntentService extends IntentService {
         ArrayList<DetectedActivity> detectedActivities = (ArrayList) result.getProbableActivities();
 
         // Log each activity.
-        FileLogger.e(TAG, " -- Activities detected --");
+        //FileLogger.e(TAG, " -- Activities detected --");
         for (DetectedActivity da : detectedActivities) {
             FileLogger.e(TAG, getActivityString(da) + " Confidence: " + da.getConfidence() + "%");
         }
         if (fastMovement >= 50) {
-            FileLogger.e(TAG, "Fast Movement Detected.");
+            //FileLogger.e(TAG, "Fast Movement Detected.");
             serviceMessage("fastMovement");
         }
         else if (slowMovement >= 50) {
-            FileLogger.e(TAG, "Slow Movement Detected.");
+            //FileLogger.e(TAG, "Slow Movement Detected.");
             serviceMessage("slowMovement");
         }
         else if (noMovement >= 50) {
-            FileLogger.e(TAG, "No Movement Detected.");
+            //FileLogger.e(TAG, "No Movement Detected.");
             serviceMessage("noMovement");
         }
         else
-            FileLogger.e(TAG, "No enough data to change interval. Using last value of " + SharedPrefs.getLocationRequestInterval() + " seconds");
+            FileLogger.e(TAG, "Not confident enough to change interval");
     }
 
     public String getActivityString(DetectedActivity detectedActivity) {
@@ -91,17 +91,17 @@ public class DetectedActivitiesIntentService extends IntentService {
             case DetectedActivity.ON_FOOT:
                 slowMovement += detectedActivity.getConfidence();
                 return "On Foot";
-            case DetectedActivity.RUNNING:
-                return "Running";
+/*            case DetectedActivity.RUNNING:
+                return "Running";*/
             case DetectedActivity.STILL:
                 noMovement += detectedActivity.getConfidence();
                 return "Still";
             case DetectedActivity.TILTING:
                 return "Tilting";
-            case DetectedActivity.UNKNOWN:
+/*            case DetectedActivity.UNKNOWN:
                 return "Unknown";
             case DetectedActivity.WALKING:
-                return "Walking";
+                return "Walking";*/
             default:
                 return "Undefined";
         }

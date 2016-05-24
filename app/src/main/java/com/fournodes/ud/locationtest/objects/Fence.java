@@ -21,7 +21,7 @@ public class Fence implements Comparable<Fence> {
     private Circle circle;
     private int notifyId;
     private int lastEvent = 2;
-    private int distanceFromUser;
+    private int distanceFromEdge;
     private int isActive;
 
     private Marker centerMarker;
@@ -63,11 +63,11 @@ public class Fence implements Comparable<Fence> {
         this.isActive = isActive;
     }
 
-    public int getDistanceFromUser() {
-        return distanceFromUser;
+    public int getDistanceFromEdge() {
+        return distanceFromEdge;
     }
 
-    public void setDistanceFromUser(int distanceFromUser) {this.distanceFromUser = distanceFromUser;}
+    public void setDistanceFromEdge(int distanceFromEdge) {this.distanceFromEdge = distanceFromEdge;}
 
     public int getLastEvent() {
         return lastEvent;
@@ -169,10 +169,10 @@ public class Fence implements Comparable<Fence> {
     @Override
     public int compareTo(Fence fence) {
 
-        if (distanceFromUser > fence.distanceFromUser) {
+        if (distanceFromEdge > fence.distanceFromEdge) {
             return 1;
         }
-        else if (distanceFromUser < fence.distanceFromUser) {
+        else if (distanceFromEdge < fence.distanceFromEdge) {
             return -1;
         }
         else {

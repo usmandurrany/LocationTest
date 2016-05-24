@@ -90,21 +90,21 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
 
         if (isGpsEnabled) {
-            FileLogger.e(TAG, "GPS available, waiting for fix");
+            //FileLogger.e(TAG, "GPS available, waiting for fix");
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener, getLooper());
         }
         else {
             notifyLocationDisabled("GPS");
-            FileLogger.e(TAG, "Network unavailable");
+            FileLogger.e(TAG, "GPS unavailable");
         }
 
         if (isNetworkEnabled) {
-            FileLogger.e(TAG, "Network available, requesting location");
+            //FileLogger.e(TAG, "Network available, requesting location");
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener, getLooper());
         }
         else {
             notifyLocationDisabled("Network");
-            FileLogger.e(TAG, "GPS unavailable");
+            FileLogger.e(TAG, "Network unavailable");
         }
 
         if (!isGpsEnabled && !isNetworkEnabled) {
@@ -133,7 +133,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
     @Override
     public void lmRemoveUpdates() {
-        FileLogger.e(TAG, "Stopping location manager location updates");
+        //FileLogger.e(TAG, "Stopping location manager location updates");
         locationManager.removeUpdates(locationListener);
     }
 
@@ -188,14 +188,14 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
                 SharedPrefs.setLocationPollTimeout(5000);
                 FileLogger.e(TAG, "Resetting location timeout value to 5 seconds");
             }
-            serviceMessage("switchToPassiveMode");
+            serviceMessage("locationRequestSuccess");
         }
         else if (bestLocation == null && networkLocation == null && (isNetworkEnabled || isGpsEnabled)) {
             if (SharedPrefs.getLocationPollTimeout() < 60000) {
                 SharedPrefs.setLocationPollTimeout(60000);
                 FileLogger.e(TAG, "Increasing location timeout value to 60 seconds");
             }
-            serviceMessage("locationRequestThreadFailed");
+            serviceMessage("locationRequestFailed");
         }
         else {
             SharedPrefs.setIsLocationEnabled(false);

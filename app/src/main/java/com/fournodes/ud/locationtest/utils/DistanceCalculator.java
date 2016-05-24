@@ -32,9 +32,9 @@ public class DistanceCalculator {
             fenceCenter.setLongitude(fence.getCenterLng());
 
             newCenterDistance = calcHaversine(location1, fenceCenter);
-            newEdgeDistance = (int)(newCenterDistance - fence.getRadius());
+            newEdgeDistance = (int) (newCenterDistance - fence.getRadius());
 
-            int fencePerimeterInMeters = (int) (((float)SharedPrefs.getFencePerimeterPercentage() / 100) * fence.getRadius());
+            int fencePerimeterInMeters = (int) (((float) SharedPrefs.getFencePerimeterPercentage() / 100) * fence.getRadius());
 
 
             // Enter will trigger once user is inside the outer perimeter perimeter of the fence
@@ -54,18 +54,19 @@ public class DistanceCalculator {
 
             // Fence will be active if half of it lies inside the users (vicinity + fence perimeter)
             // OR if the center of the fences lies inside the users (vicinity + fence perimeter)
-            if (newEdgeDistance <= SharedPrefs.getVicinity() + fencePerimeterInMeters) {
+            if ((newEdgeDistance + fencePerimeterInMeters) <= SharedPrefs.getVicinity()) {
                 fence.setIsActive(1);
                 fenceListActive.add(fence);
-            }else if (newEdgeDistance >= SharedPrefs.getVicinity() + fencePerimeterInMeters)
+                FileLogger.e(TAG, "Fence: " + fence.getTitle());
+                FileLogger.e(TAG, "Last event: " + String.valueOf(fence.getLastEvent()));
+                FileLogger.e(TAG, "Old Distance: " + String.valueOf(fence.getDistanceFromEdge()));
+                FileLogger.e(TAG, "New Distance: " + String.valueOf(newEdgeDistance));
+                FileLogger.e(TAG, "Is Active: " + String.valueOf(fence.getIsActive()));
+            }
+            else if ((newEdgeDistance + fencePerimeterInMeters) >= SharedPrefs.getVicinity())
                 fence.setIsActive(0);
 
-            FileLogger.e(TAG, "Fence: " + fence.getTitle());
-            FileLogger.e(TAG, "Last event: " + String.valueOf(fence.getLastEvent()));
-            FileLogger.e(TAG, "Old Distance: " + String.valueOf(fence.getDistanceFromUser()));
-            FileLogger.e(TAG, "New Distance: " + String.valueOf(newEdgeDistance));
-            FileLogger.e(TAG, "Is Active: " + String.valueOf(fence.getIsActive()));
-            fence.setDistanceFromUser(newEdgeDistance);
+            fence.setDistanceFromEdge(newEdgeDistance);
 
             if (updateDb)
                 db.updateFenceDistance(fence);
