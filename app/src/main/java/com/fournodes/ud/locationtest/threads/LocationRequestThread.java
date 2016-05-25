@@ -23,8 +23,9 @@ import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.interfaces.LocationUpdateListener;
 import com.fournodes.ud.locationtest.listeners.SharedLocationListener;
 import com.fournodes.ud.locationtest.services.LocationService;
-import com.fournodes.ud.locationtest.utils.Database;
 import com.fournodes.ud.locationtest.utils.FileLogger;
+
+import java.io.File;
 
 /**
  * Created by Usman on 9/4/2016.
@@ -50,6 +51,10 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
         this.locationService = locationService;
         if (SharedPrefs.pref == null)
             new SharedPrefs(context).initialize();
+        if (SharedPrefs.getLocationPollTimeout() < 60000)
+            SharedPrefs.setLocationPollTimeout(60000);
+        if (locationService.fenceListActive != null && locationService.fenceListActive.size() == 0)
+            FileLogger.e(TAG,"No fences active polling only network for location");
     }
 
 
@@ -71,7 +76,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
                 if (bestLocation == null && networkLocation != null) {
                     FileLogger.e(TAG, "GPS fix failed, using network location");
-                    locationService.lmLocation(networkLocation,10);
+                    locationService.lmLocation(networkLocation, 10);
                     quit();
                 }
                 else if (bestLocation == null && networkLocation == null) {
@@ -85,19 +90,19 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
     private void requestCurrentLocation() {
         locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-         isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-         isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
-
-        if (isGpsEnabled) {
-            //FileLogger.e(TAG, "GPS available, waiting for fix");
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener, getLooper());
+        if (locationService.fenceListActive == null || locationService.fenceListActive.size() > 0) {
+            if (isGpsEnabled) {
+                //FileLogger.e(TAG, "GPS available, waiting for fix");
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener, getLooper());
+            }
+            else {
+                notifyLocationDisabled("GPS");
+                FileLogger.e(TAG, "GPS unavailable");
+            }
         }
-        else {
-            notifyLocationDisabled("GPS");
-            FileLogger.e(TAG, "GPS unavailable");
-        }
-
         if (isNetworkEnabled) {
             //FileLogger.e(TAG, "Network available, requesting location");
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener, getLooper());
@@ -121,13 +126,18 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     @Override
     public void lmBestLocation(Location bestLocation, int locationScore) {
         this.bestLocation = bestLocation;
-        locationService.lmLocation(bestLocation,10);
+        locationService.lmLocation(bestLocation, 10);
         quit();
     }
 
     @Override
     public void lmLocation(Location location, int locationScore) {
         this.networkLocation = location;
+        if (locationService.fenceListActive != null && locationService.fenceListActive.size() == 0){
+            locationUpdateTimeout.removeCallbacks(timeout);
+            locationService.lmLocation(networkLocation, 10);
+            quit();
+        }
 
     }
 
@@ -183,7 +193,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     public boolean quit() {
         FileLogger.e(TAG, "Thread killed");
         // Only switch to passive if this thread was successful in obtaining location
-        if (bestLocation != null || networkLocation != null){
+        if (bestLocation != null || networkLocation != null) {
 /*            if (SharedPrefs.getLocationPollTimeout() > 5000) {
                 SharedPrefs.setLocationPollTimeout(5000);
                 FileLogger.e(TAG, "Resetting location timeout value to 5 seconds");

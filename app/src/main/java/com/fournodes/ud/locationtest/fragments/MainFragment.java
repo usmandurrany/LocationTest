@@ -44,7 +44,7 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
     private boolean isServiceRunning = false;
     private Button btnService;
     private ScrollView lytScrollLog;
-    private TextView txtCameraPermission;
+    private Button btnToggleActivity;
 
 
     public MainFragment() { }
@@ -84,8 +84,8 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
         Button btnSetVicinity = (Button) getView().findViewById(R.id.btnSetVicinity);
         Button btnSetDistanceThreshold = (Button) getView().findViewById(R.id.btnSetDistanceThreshold);
         Button btnSetFencePerimeterPercentage = (Button) getView().findViewById(R.id.btnSetFencePerimeterPercentage);
-        txtCameraPermission = (TextView) getView().findViewById(R.id.txtCameraPermission);
-        txtCameraPermission.append(String.valueOf(isPermissionGranted()));
+        btnToggleActivity = (Button) getView().findViewById(R.id.btnToggleActivity);
+
 
         final EditText edtVicinity = (EditText) getView().findViewById(R.id.edtVicinity);
         final EditText edtDistanceThreshold = (EditText) getView().findViewById(R.id.edtDistanceThreshold);
@@ -105,6 +105,15 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
             btnService.setText("Stop Service");
         }
 
+        btnToggleActivity.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (SharedPrefs.isMoving())
+                    serviceMessage("noMovement");
+                else
+                    serviceMessage("fastMovement");
+            }
+        });
 
         btnService.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -188,23 +197,6 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
 
     }
 
-
-    public boolean isPermissionGranted() {
-
-
-        Log.e("Camera Permission", String.valueOf(PermissionChecker.checkCallingOrSelfPermission(getContext(), Manifest.permission.CAMERA)));
-
-        if (ContextCompat.checkSelfPermission(getContext(),
-                Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(getContext(), "Camera permission denied", Toast.LENGTH_SHORT).show();
-            return false;
-
-        } else
-            return true;
-
-
-    }
 
     @Override
     public void mapDragStart() {

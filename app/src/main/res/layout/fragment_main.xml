@@ -46,6 +46,17 @@
         android:layout_toRightOf="@+id/view2"
         android:text="Reset All"/>
 
+    <Button
+        android:id="@+id/btnToggleActivity"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/btnShareLogFile"
+        android:layout_toEndOf="@+id/btnRemoveAll"
+        android:layout_toRightOf="@+id/btnRemoveAll"
+        android:layout_toLeftOf="@id/btnService"
+        android:layout_toStartOf="@id/btnService"
+        android:text="Toggle Activity"/>
+
 
     <Button
         android:id="@+id/btnSetVicinity"
@@ -141,16 +152,6 @@
             android:textAppearance="?android:attr/textAppearanceSmall"/>
     </ScrollView>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/txtCameraPermission"
-        android:text="Camera: "
-        android:layout_toRightOf="@id/btnRemoveAll"
-        android:layout_below="@id/lytScrollLog"
-        android:layout_above="@id/btnClearLogFile"
-        android:padding="10dp"
-        />
     <android.support.design.widget.TextInputLayout
         android:id="@+id/view"
         android:layout_width="wrap_content"

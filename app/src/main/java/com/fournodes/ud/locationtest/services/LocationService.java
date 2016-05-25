@@ -61,10 +61,11 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
     private Database db;
     private LocationManager locationManager;
     private SharedLocationListener mainLocationListener;
-    private List<Fence> fenceListActive;
+    public List<Fence> fenceListActive;
     private boolean isSimulationRunning = false;
     private Handler liveLocationUpdate;
     private Runnable locationUpdate;
+    private Runnable liveUpdateTimeout;
     private SharedLocationListener liveLocationListener;
     private RequestLocationHandler requestLocationHandler;
     private RequestLocationRunnable requestLocationRunnable;
@@ -91,8 +92,6 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                     isLocationRequestRunning = false;
                     SharedPrefs.setLocationRequestInterval(5);
                     requestLocationRunnable.setValues(TAG);
-                    wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
-                    wakeLock.acquire();
                     requestLocationHandler.runAfterSeconds(requestLocationRunnable, 5);
                     break;
 
@@ -109,22 +108,18 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                         SharedPrefs.setLocationRequestInterval(5);
                         requestLocationHandler.clearQueue(requestLocationRunnable);
                         requestLocationRunnable.setValues("DetectedActivitiesIS");
-                        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
-                        wakeLock.acquire();
                         requestLocationHandler.runAfterSeconds(requestLocationRunnable, 5);
                     }
                     break;
 
 
                 case "noMovement":
-                    if (SharedPrefs.getLocationRequestInterval() != 900 && !isSimulationRunning) {
+                    if (SharedPrefs.getLocationRequestInterval() != 900) {// && !isSimulationRunning) {
                         SharedPrefs.setIsMoving(false);
                         FileLogger.e("DetectedActivitiesIS", "No movement detected, interval increased to 900 seconds");
                         SharedPrefs.setLocationRequestInterval(900);
                         requestLocationHandler.clearQueue(requestLocationRunnable);
                         requestLocationRunnable.setValues("DetectedActivitiesIS");
-                        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
-                        wakeLock.acquire();
                         requestLocationHandler.runAfterSeconds(requestLocationRunnable, 900);
                     }
                     break;
@@ -160,12 +155,6 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
                 case "simulationStarted":
                     isSimulationRunning = true;
-                    SharedPrefs.setIsMoving(true);
-                    SharedPrefs.setLocationRequestInterval(5);
-                    requestLocationHandler.clearQueue(requestLocationRunnable);
-                    requestLocationRunnable.setValues(TAG);
-                    requestLocationHandler.runAfterSeconds(requestLocationRunnable, 5);
-
                     break;
 
                 case "verificationComplete":
@@ -235,6 +224,9 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         // Initialize power manager
         powerManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
 
+        // Initialize wake lock
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
+
         // Initialize alarm manager
         alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
@@ -277,8 +269,6 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
         // Request current location
         requestLocationRunnable.setValues(TAG);
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
-        wakeLock.acquire();
         requestLocationHandler.run(requestLocationRunnable);
 
         return super.onStartCommand(intent, START_STICKY, startId);
@@ -496,8 +486,6 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
             }
             else {
-                wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
-                wakeLock.acquire();
                 requestLocationHandler.runAfterSeconds(requestLocationRunnable, timeInSec);
             }
         }
@@ -587,6 +575,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
             @Override
             public void lmLocation(Location location, int locationScore) {
                 locationManager.removeUpdates(liveLocationListener);
+                liveLocationUpdate.removeCallbacks(liveUpdateTimeout);
                 FileLogger.e("LiveLocationCheck", "Location received");
 
                 if (SharedPrefs.isLive()) {
@@ -607,6 +596,15 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         };
 
         liveLocationUpdate = new Handler();
+        liveUpdateTimeout = new Runnable() {
+            @Override
+            public void run() {
+                FileLogger.e(TAG, "Failed acquire location form GPS. Retry after 5 mins");
+                locationManager.removeUpdates(liveLocationListener);
+                //liveLocationUpdate.postDelayed(locationUpdate, 300000);
+
+            }
+        };
         locationUpdate = new Runnable() {
             @Override
             public void run() {
@@ -615,7 +613,17 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastLocationTime > 5000) {
                     FileLogger.e("LiveLocationCheck", "Last location is stale, requesting new one");
+                   /* Criteria bestProvider = new Criteria();
+                    bestProvider.setCostAllowed(true);
+                    bestProvider.setAccuracy(Criteria.ACCURACY_FINE);
+                    bestProvider.setPowerRequirement(Criteria.NO_REQUIREMENT);
+                    bestProvider.setAltitudeRequired(false);
+                    bestProvider.setBearingRequired(false);
+                    bestProvider.setSpeedRequired(false);
+                    String provider = locationManager.getBestProvider(bestProvider,true);
+                    FileLogger.e(TAG,"Live location provider: "+ provider);*/
                     locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, liveLocationListener);
+                    liveLocationUpdate.postDelayed(liveUpdateTimeout, 60000);
                 }
                 else {
                     FileLogger.e("LiveLocationCheck", "Sending last location. Will check again after 5 seconds");
@@ -639,6 +647,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         private long schedulingTime;
 
         public void setValues(String scheduledBy) {
+            if (wakeLock != null && !wakeLock.isHeld())
+                wakeLock.acquire();
 
             // Initialize shared prefs if null
             if (SharedPrefs.pref == null) {
