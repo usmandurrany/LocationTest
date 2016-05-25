@@ -184,17 +184,17 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
         FileLogger.e(TAG, "Thread killed");
         // Only switch to passive if this thread was successful in obtaining location
         if (bestLocation != null || networkLocation != null){
-            if (SharedPrefs.getLocationPollTimeout() > 5000) {
+/*            if (SharedPrefs.getLocationPollTimeout() > 5000) {
                 SharedPrefs.setLocationPollTimeout(5000);
                 FileLogger.e(TAG, "Resetting location timeout value to 5 seconds");
-            }
+            }*/
             serviceMessage("locationRequestSuccess");
         }
         else if (bestLocation == null && networkLocation == null && (isNetworkEnabled || isGpsEnabled)) {
-            if (SharedPrefs.getLocationPollTimeout() < 60000) {
+/*            if (SharedPrefs.getLocationPollTimeout() < 60000) {
                 SharedPrefs.setLocationPollTimeout(60000);
                 FileLogger.e(TAG, "Increasing location timeout value to 60 seconds");
-            }
+            }*/
             serviceMessage("locationRequestFailed");
         }
         else {

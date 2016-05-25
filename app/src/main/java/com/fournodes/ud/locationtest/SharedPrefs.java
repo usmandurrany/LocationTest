@@ -72,7 +72,7 @@ public class SharedPrefs {
         last100mLatitude = pref.getString("last100mLatitude", null);
         last100mLongitude = pref.getString("last100mLongitude", null);
         locationRequestRunnableId = pref.getInt("locationRequestRunnableId", 0);
-        locationPollTimeout = pref.getInt("locationPollTimeout", 5000);
+        locationPollTimeout = pref.getInt("locationPollTimeout", 60000);
         isLocationEnabled = pref.getBoolean("isLocationEnabled", true);
 
     }

@@ -1,13 +1,17 @@
 package com.fournodes.ud.locationtest.fragments;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v4.content.PermissionChecker;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -40,6 +44,7 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
     private boolean isServiceRunning = false;
     private Button btnService;
     private ScrollView lytScrollLog;
+    private TextView txtCameraPermission;
 
 
     public MainFragment() { }
@@ -79,6 +84,8 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
         Button btnSetVicinity = (Button) getView().findViewById(R.id.btnSetVicinity);
         Button btnSetDistanceThreshold = (Button) getView().findViewById(R.id.btnSetDistanceThreshold);
         Button btnSetFencePerimeterPercentage = (Button) getView().findViewById(R.id.btnSetFencePerimeterPercentage);
+        txtCameraPermission = (TextView) getView().findViewById(R.id.txtCameraPermission);
+        txtCameraPermission.append(String.valueOf(isPermissionGranted()));
 
         final EditText edtVicinity = (EditText) getView().findViewById(R.id.edtVicinity);
         final EditText edtDistanceThreshold = (EditText) getView().findViewById(R.id.edtDistanceThreshold);
@@ -178,6 +185,24 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
 
             }
         });
+
+    }
+
+
+    public boolean isPermissionGranted() {
+
+
+        Log.e("Camera Permission", String.valueOf(PermissionChecker.checkCallingOrSelfPermission(getContext(), Manifest.permission.CAMERA)));
+
+        if (ContextCompat.checkSelfPermission(getContext(),
+                Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(getContext(), "Camera permission denied", Toast.LENGTH_SHORT).show();
+            return false;
+
+        } else
+            return true;
+
 
     }
 

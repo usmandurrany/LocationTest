@@ -91,6 +91,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                     isLocationRequestRunning = false;
                     SharedPrefs.setLocationRequestInterval(5);
                     requestLocationRunnable.setValues(TAG);
+                    wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
+                    wakeLock.acquire();
                     requestLocationHandler.runAfterSeconds(requestLocationRunnable, 5);
                     break;
 
@@ -107,6 +109,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                         SharedPrefs.setLocationRequestInterval(5);
                         requestLocationHandler.clearQueue(requestLocationRunnable);
                         requestLocationRunnable.setValues("DetectedActivitiesIS");
+                        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
+                        wakeLock.acquire();
                         requestLocationHandler.runAfterSeconds(requestLocationRunnable, 5);
                     }
                     break;
@@ -119,6 +123,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                         SharedPrefs.setLocationRequestInterval(900);
                         requestLocationHandler.clearQueue(requestLocationRunnable);
                         requestLocationRunnable.setValues("DetectedActivitiesIS");
+                        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
+                        wakeLock.acquire();
                         requestLocationHandler.runAfterSeconds(requestLocationRunnable, 900);
                     }
                     break;
@@ -271,6 +277,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
         // Request current location
         requestLocationRunnable.setValues(TAG);
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
+        wakeLock.acquire();
         requestLocationHandler.run(requestLocationRunnable);
 
         return super.onStartCommand(intent, START_STICKY, startId);
@@ -504,7 +512,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, 900 * 1000, alarmIntent);
         }
 
-        FileLogger.e(TAG, "Activity: " + (SharedPrefs.isMoving() ? "Moving" : "Still") +". Next request after "+ String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
+        FileLogger.e(TAG, "Activity: " + (SharedPrefs.isMoving() ? "Moving" : "Still") + ". Next request after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
 
     }
 
@@ -523,11 +531,14 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         // Not enough data calculate again after 5 seconds
 
         //int distanceFromCenter = fence.getDistanceFromEdge();
-        int radius = (int) fence.getRadius();
-        int fencePerimeterInMeters = (int) ((float) SharedPrefs.getFencePerimeterPercentage() / 100) * radius;
-        int distanceFromPerimeter = fence.getDistanceFromEdge() - fencePerimeterInMeters;
+        float radius = fence.getRadius();
+        float fencePerimeterPercentage = SharedPrefs.getFencePerimeterPercentage();
+        float fencePerimeterInMeters = (fencePerimeterPercentage / 100) * radius;
+        float distanceFromPerimeter = fence.getDistanceFromEdge() - fencePerimeterInMeters;
+        //FileLogger.e(TAG,"DistanceFromPerimeter: "+ String.valueOf(distanceFromPerimeter));
+        //FileLogger.e(TAG,"AverageSpeed: "+ String.valueOf(avgSpeed));
         // To avoid division by 0 exception
-        int timeInSec = (int) Math.ceil(Math.abs(distanceFromPerimeter) / avgSpeed == 0 ? 1 : avgSpeed);
+        int timeInSec = (int) (Math.abs(distanceFromPerimeter) / (avgSpeed == 0 ? 1 : avgSpeed));
         // Speed brackets 3 to 10 = 11 m/s, 10 onwards = 22 m/s
         //int maxTimeInSec = (int) Math.ceil(Math.abs(distanceFromEdge) / avgSpeed > 3 && avgSpeed <= 10 ? 11 : 22);
 
@@ -535,7 +546,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         // Enter distance
         if (distanceFromPerimeter > 0) {
             if (avgSpeed < 3.0) {
-                FileLogger.e(TAG, "Average speed below 3 m/s. Next request after 5 seconds");
+                FileLogger.e(TAG, "Average speed below 3 m/s.");
                 return 5;
             }
             /*else if (timeInSec > maxTimeInSec) {
@@ -545,8 +556,9 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                 return timeInSec;
             }*/
             else if (timeInSec < 5) {
+                timeInSec = 5;
                 FileLogger.e(TAG, "Time to enter fence: " + String.valueOf(timeInSec));
-                return 5;
+                return timeInSec;
             }
             else {
                 FileLogger.e(TAG, "Time to enter fence: " + String.valueOf(timeInSec));
@@ -557,7 +569,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         // Exit distance
         else if (distanceFromPerimeter < 0) {
             if (avgSpeed < 3.0) {
-                FileLogger.e(TAG, "Average speed below 3 m/s. Next request after 15 seconds");
+                FileLogger.e(TAG, "Average speed below 3 m/s.");
                 return 15;
             }
             FileLogger.e(TAG, "Time to exit fence: " + String.valueOf(timeInSec));
