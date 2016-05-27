@@ -22,6 +22,7 @@ public interface MapFragmentInterface extends FenceListInterface{
     void trackUser(LatLng coordinates, String time, String track_id);
     void trackDisabled();
     void trackEnabled();
+    void trackLost();
     void userList(List<User> userList);
 
     }

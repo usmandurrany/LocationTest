@@ -729,7 +729,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
     public void onSuccess(String result) {}
 
     @Override
-    public void onFailure() {}
+    public void onFailure() {
+
+    }
 
     @Override
     public void userList(List<User> users) {
@@ -740,6 +742,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
         SharedPrefs.setTrackingEnabled(true);
         updateLocation.postDelayed(update, 5000);
         showFabStopTrack();
+    }
+
+    @Override
+    public void trackLost() {
+        Toast.makeText(getContext(), "Device not available", Toast.LENGTH_SHORT).show();
+        trackDisabled();
     }
 
     public void showFabStopTrack() {

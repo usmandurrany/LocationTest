@@ -185,7 +185,9 @@ public class MainActivity extends FragmentActivity implements RequestResult, Ser
 
     @Override
     public void onFailure() {
-
+        Log.e(TAG,"Failure");
+        if (mapDelegate!=null)
+            mapDelegate.trackLost();
     }
 
     @Override

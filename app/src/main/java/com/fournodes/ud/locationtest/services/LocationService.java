@@ -42,6 +42,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.logging.SocketHandler;
 
 import io.fabric.sdk.android.Fabric;
 
@@ -102,9 +103,9 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
                 case "fastMovement":
                 case "slowMovement":
-                    SharedPrefs.setIsMoving(true);
-                    if (SharedPrefs.getLocationRequestInterval() > 5) {
+                    if (SharedPrefs.getLocationRequestInterval() > 5 && !SharedPrefs.isMoving()) {
                         FileLogger.e("DetectedActivitiesIS", "Movement detected, interval changed to 5 seconds");
+                        SharedPrefs.setIsMoving(true);
                         SharedPrefs.setLocationRequestInterval(5);
                         requestLocationHandler.clearQueue(requestLocationRunnable);
                         requestLocationRunnable.setValues("DetectedActivitiesIS");
@@ -114,7 +115,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
 
                 case "noMovement":
-                    if (SharedPrefs.getLocationRequestInterval() != 900) {// && !isSimulationRunning) {
+                    if (SharedPrefs.getLocationRequestInterval() != 900 && SharedPrefs.isMoving()) {// && !isSimulationRunning) {
                         SharedPrefs.setIsMoving(false);
                         FileLogger.e("DetectedActivitiesIS", "No movement detected, interval increased to 900 seconds");
                         SharedPrefs.setLocationRequestInterval(900);
@@ -341,7 +342,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                 speedList.add(location.getSpeed());
             }
             else {
-                if (speedList.size() == 5) {
+                if (speedList.size() == 10) {
                     speedList.remove();
                     speedList.add(location.getSpeed());
                 }
@@ -647,8 +648,10 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         private long schedulingTime;
 
         public void setValues(String scheduledBy) {
-            if (wakeLock != null && !wakeLock.isHeld())
+            if (wakeLock != null && !wakeLock.isHeld() &&
+                SharedPrefs.isMoving() && fenceListActive != null && fenceListActive.size() > 0) {
                 wakeLock.acquire();
+            }
 
             // Initialize shared prefs if null
             if (SharedPrefs.pref == null) {

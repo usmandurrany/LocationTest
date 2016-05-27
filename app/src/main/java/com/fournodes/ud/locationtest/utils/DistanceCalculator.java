@@ -37,6 +37,18 @@ public class DistanceCalculator {
             int fencePerimeterInMeters = (int) (((float) SharedPrefs.getFencePerimeterPercentage() / 100) * fence.getRadius());
 
 
+            // Fence will be active if half of it lies inside the users (vicinity + fence perimeter)
+            // OR if the center of the fences lies inside the users (vicinity + fence perimeter)
+            if ((newEdgeDistance + fencePerimeterInMeters) <= SharedPrefs.getVicinity()) {
+                fence.setIsActive(1);
+                fenceListActive.add(fence);
+                FileLogger.e(TAG, "Fence: " + fence.getTitle());
+                FileLogger.e(TAG, "Last event: " + String.valueOf(fence.getLastEvent()));
+                FileLogger.e(TAG, "Old Distance: " + String.valueOf(fence.getDistanceFromEdge()));
+                FileLogger.e(TAG, "New Distance: " + String.valueOf(newEdgeDistance));
+                FileLogger.e(TAG, "Is Active: " + String.valueOf(fence.getIsActive()));
+            }
+
             // Enter will trigger once user is inside the outer perimeter perimeter of the fence
             if (newCenterDistance <= fence.getRadius() + fencePerimeterInMeters && fence.getLastEvent() != 1 && fence.getIsActive() == 1) {
                 Intent triggerFence = new Intent(context, GeofenceTransitionsIntentService.class);
@@ -52,18 +64,8 @@ public class DistanceCalculator {
                 context.startService(triggerFence);
             }
 
-            // Fence will be active if half of it lies inside the users (vicinity + fence perimeter)
-            // OR if the center of the fences lies inside the users (vicinity + fence perimeter)
-            if ((newEdgeDistance + fencePerimeterInMeters) <= SharedPrefs.getVicinity()) {
-                fence.setIsActive(1);
-                fenceListActive.add(fence);
-                FileLogger.e(TAG, "Fence: " + fence.getTitle());
-                FileLogger.e(TAG, "Last event: " + String.valueOf(fence.getLastEvent()));
-                FileLogger.e(TAG, "Old Distance: " + String.valueOf(fence.getDistanceFromEdge()));
-                FileLogger.e(TAG, "New Distance: " + String.valueOf(newEdgeDistance));
-                FileLogger.e(TAG, "Is Active: " + String.valueOf(fence.getIsActive()));
-            }
-            else if ((newEdgeDistance + fencePerimeterInMeters) >= SharedPrefs.getVicinity())
+
+            if ((newEdgeDistance + fencePerimeterInMeters) >= SharedPrefs.getVicinity())
                 fence.setIsActive(0);
 
             fence.setDistanceFromEdge(newEdgeDistance);

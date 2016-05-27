@@ -25,8 +25,6 @@ import com.fournodes.ud.locationtest.listeners.SharedLocationListener;
 import com.fournodes.ud.locationtest.services.LocationService;
 import com.fournodes.ud.locationtest.utils.FileLogger;
 
-import java.io.File;
-
 /**
  * Created by Usman on 9/4/2016.
  */
@@ -44,6 +42,8 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     private Location networkLocation;
     private SharedLocationListener locationListener;
     private LocationService locationService;
+/*    private boolean isGpsRequested = false;
+    private boolean isNoFenceActive = false;*/
 
     public LocationRequestThread(Context context, LocationService locationService) {
         super(TAG);
@@ -51,10 +51,6 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
         this.locationService = locationService;
         if (SharedPrefs.pref == null)
             new SharedPrefs(context).initialize();
-        if (SharedPrefs.getLocationPollTimeout() < 60000)
-            SharedPrefs.setLocationPollTimeout(60000);
-        if (locationService.fenceListActive != null && locationService.fenceListActive.size() == 0)
-            FileLogger.e(TAG,"No fences active polling only network for location");
     }
 
 
@@ -80,11 +76,26 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
                     quit();
                 }
                 else if (bestLocation == null && networkLocation == null) {
+/*                    if (isNoFenceActive && !isGpsRequested) {
+                        requestGps();
+                        isGpsRequested = true;
+
+                        locationUpdateTimeout.postDelayed(timeout, SharedPrefs.getLocationPollTimeout());
+                    }
+                    else {*/
                     FileLogger.e(TAG, "Location not available. Will retry");
+                    //isGpsRequested = false;
                     quit();
+                    // }
                 }
             }
         };
+
+/*        if (locationService.fenceListActive != null && locationService.fenceListActive.size() == 0) {
+            FileLogger.e(TAG, "No fences active polling only network for location");
+            isNoFenceActive = true;
+        }*/
+
         requestCurrentLocation();
     }
 
@@ -93,24 +104,11 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
         isGpsEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
-        if (locationService.fenceListActive == null || locationService.fenceListActive.size() > 0) {
-            if (isGpsEnabled) {
-                //FileLogger.e(TAG, "GPS available, waiting for fix");
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener, getLooper());
-            }
-            else {
-                notifyLocationDisabled("GPS");
-                FileLogger.e(TAG, "GPS unavailable");
-            }
-        }
-        if (isNetworkEnabled) {
-            //FileLogger.e(TAG, "Network available, requesting location");
-            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener, getLooper());
-        }
-        else {
-            notifyLocationDisabled("Network");
-            FileLogger.e(TAG, "Network unavailable");
-        }
+        // if (!isNoFenceActive) {
+        requestGps();
+        //}
+
+        requestNetwork();
 
         if (!isGpsEnabled && !isNetworkEnabled) {
             notifyLocationDisabled("Location");
@@ -122,6 +120,27 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
     }
 
+    private void requestGps() {
+        if (isGpsEnabled) {
+            //FileLogger.e(TAG, "GPS available, waiting for fix");
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener, getLooper());
+        }
+        else {
+            notifyLocationDisabled("GPS");
+            FileLogger.e(TAG, "GPS unavailable");
+        }
+    }
+
+    private void requestNetwork() {
+        if (isNetworkEnabled) {
+            //FileLogger.e(TAG, "Network available, requesting location");
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener, getLooper());
+        }
+        else {
+            notifyLocationDisabled("Network");
+            FileLogger.e(TAG, "Network unavailable");
+        }
+    }
 
     @Override
     public void lmBestLocation(Location bestLocation, int locationScore) {
@@ -133,11 +152,11 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     @Override
     public void lmLocation(Location location, int locationScore) {
         this.networkLocation = location;
-        if (locationService.fenceListActive != null && locationService.fenceListActive.size() == 0){
+/*        if (isNoFenceActive) {
             locationUpdateTimeout.removeCallbacks(timeout);
             locationService.lmLocation(networkLocation, 10);
             quit();
-        }
+        }*/
 
     }
 
