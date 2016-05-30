@@ -38,6 +38,7 @@ import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.ActivityRecognition;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -464,13 +465,13 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
             // No active fences
             FileLogger.e(TAG, "No active fences.");
 
-            if (avgSpeed == 0f)
+/*            if (avgSpeed == 0f)
                 timeInSec = 60;
-            else {
-                timeInSec = (int) Math.ceil(SharedPrefs.getDistanceThreshold() / avgSpeed);
-                if (timeInSec > 60)
+            else {*/
+                timeInSec = (int) (SharedPrefs.getDistanceThreshold() / (avgSpeed == 0 ? 1 : avgSpeed));
+/*                if (timeInSec > 60)
                     timeInSec = 60;
-            }
+            }*/
 
         }
 
@@ -479,14 +480,18 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
             requestLocationHandler.clearQueue(requestLocationRunnable);
             requestLocationRunnable.setValues(TAG);
             if (timeInSec > 60) {
+                FileLogger.e(TAG,"Scheduling using alarm manager");
+
+                alarmManager.cancel(alarmIntent);
 
                 if (Build.VERSION.SDK_INT < 19)
-                    alarmManager.set(AlarmManager.RTC_WAKEUP, timeInSec * 1000, alarmIntent);
+                    alarmManager.set(AlarmManager.RTC_WAKEUP, (System.currentTimeMillis() + (timeInSec * 1000)), alarmIntent);
                 else if (Build.VERSION.SDK_INT >= 19)
-                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, timeInSec * 1000, alarmIntent);
+                    alarmManager.setExact(AlarmManager.RTC_WAKEUP, (System.currentTimeMillis() + (timeInSec * 1000)), alarmIntent);
 
             }
             else {
+                FileLogger.e(TAG,"Scheduling using handler");
                 requestLocationHandler.runAfterSeconds(requestLocationRunnable, timeInSec);
             }
         }
@@ -496,9 +501,9 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
             requestLocationRunnable.setValues(TAG);
 
             if (Build.VERSION.SDK_INT < 19)
-                alarmManager.set(AlarmManager.RTC_WAKEUP, 900 * 1000, alarmIntent);
+                alarmManager.set(AlarmManager.RTC_WAKEUP,(System.currentTimeMillis() + (900 * 1000)), alarmIntent);
             else if (Build.VERSION.SDK_INT >= 19)
-                alarmManager.setExact(AlarmManager.RTC_WAKEUP, 900 * 1000, alarmIntent);
+                alarmManager.setExact(AlarmManager.RTC_WAKEUP, (System.currentTimeMillis() + (900 * 1000)), alarmIntent);
         }
 
         FileLogger.e(TAG, "Activity: " + (SharedPrefs.isMoving() ? "Moving" : "Still") + ". Next request after " + String.valueOf(SharedPrefs.getLocationRequestInterval()) + " seconds");
