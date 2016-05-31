@@ -38,12 +38,11 @@ import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.ActivityRecognition;
 
-import java.io.File;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.logging.SocketHandler;
 
 import io.fabric.sdk.android.Fabric;
 
@@ -77,8 +76,13 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
     private PowerManager.WakeLock wakeLock;
     private AlarmManager alarmManager;
     private PendingIntent alarmIntent;
+    private PendingIntent logUploadIntent;
+    private int inFenceCoordinateCount = 0;
+    private boolean isInsideFence = false;
+    private boolean isInFenceActivityDetection = false;
+    private PendingIntent inFenceActivityPendingIntent;
 
-    // public static PathsenseLocationProviderApi psLocationProviderApi;
+    //public static PathsenseLocationProviderApi psLocationProviderApi;
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -104,7 +108,15 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
                 case "fastMovement":
                 case "slowMovement":
-                    if (SharedPrefs.getLocationRequestInterval() > 5 && !SharedPrefs.isMoving()) {
+                    long delay = SharedPrefs.getLocationRequestInterval() * 1000;
+                    if (((requestLocationRunnable.schedulingTime + delay) - System.currentTimeMillis() > 5000)
+                            && SharedPrefs.getLocationRequestInterval() > 5) {
+
+                        if (isInFenceActivityDetection) {
+                            ActivityRecognition.ActivityRecognitionApi.removeActivityUpdates(mGoogleApiClient, inFenceActivityPendingIntent);
+                            FileLogger.e(TAG, "Inside fence activity detection stopped");
+
+                        }
                         FileLogger.e("DetectedActivitiesIS", "Movement detected, interval changed to 5 seconds");
                         SharedPrefs.setIsMoving(true);
                         SharedPrefs.setLocationRequestInterval(5);
@@ -117,6 +129,10 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
                 case "noMovement":
                     if (SharedPrefs.getLocationRequestInterval() != 900 && SharedPrefs.isMoving()) {// && !isSimulationRunning) {
+                        if (isInFenceActivityDetection) {
+                            ActivityRecognition.ActivityRecognitionApi.removeActivityUpdates(mGoogleApiClient, inFenceActivityPendingIntent);
+                            FileLogger.e(TAG, "Inside fence activity detection stopped");
+                        }
                         SharedPrefs.setIsMoving(false);
                         FileLogger.e("DetectedActivitiesIS", "No movement detected, interval increased to 900 seconds");
                         SharedPrefs.setLocationRequestInterval(900);
@@ -235,12 +251,25 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         // Initialize pending intent for alarm
         alarmIntent = PendingIntent.getService(this, 0, new Intent(this, AlarmManagerLocationRequestIS.class), PendingIntent.FLAG_CANCEL_CURRENT);
 
+        // Initialize pending intent for log uploader
+        logUploadIntent = PendingIntent.getService(this, 0, new Intent(this, LogUploadIntentService.class), PendingIntent.FLAG_UPDATE_CURRENT);
+
+        // Set alarm to upload log
+
+        // Set the alarm to start at approximately 2:00 p.m.
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(System.currentTimeMillis());
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 5);
+
+        alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), AlarmManager.INTERVAL_DAY, logUploadIntent);
 
         // Initialize local broadcast manager
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver,
                 new IntentFilter("LOCATION_TEST_SERVICE"));
 
-        //psLocationProviderApi = PathsenseLocationProviderApi.getInstance(this);
+        /*psLocationProviderApi = PathsenseLocationProviderApi.getInstance(this);
+        psLocationProviderApi.requestActivityChanges(PathsenseActivityDetection.class);*/
 
     }
 
@@ -378,8 +407,31 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                 SharedPrefs.setLast100mLongitude(String.valueOf(location.getLongitude()));
 
                 performCalculations(location);
-            }
 
+                inFenceCoordinateCount = 0; //reset
+            }
+            else if (isInsideFence) {
+                inFenceCoordinateCount++;
+                if (inFenceCoordinateCount >= 10) {
+                    isInFenceActivityDetection = true;
+
+                    Intent intent = new Intent(this, DetectedActivitiesIntentService.class);
+                    inFenceActivityPendingIntent = PendingIntent.getService(this, 1, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+                    ActivityRecognition.ActivityRecognitionApi
+                            .requestActivityUpdates(mGoogleApiClient, 1000, inFenceActivityPendingIntent)
+                            .setResultCallback(new ResultCallback<Status>() {
+                                @Override
+                                public void onResult(Status status) {
+                                    if (status.isSuccess())
+                                        FileLogger.e(TAG, "Inside fence activity detection started");
+                                    else
+                                        FileLogger.e(TAG, "Inside fence activity request failed. " + status.getStatusCode());
+                                }
+                            });
+                    inFenceCoordinateCount = 0;
+                }
+            }
             // Send location to MapFragment for simulation
             if (delegate != null)
                 delegate.listenerLocation(location);
@@ -468,10 +520,10 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 /*            if (avgSpeed == 0f)
                 timeInSec = 60;
             else {*/
-                timeInSec = (int) (SharedPrefs.getDistanceThreshold() / (avgSpeed == 0 ? 1 : avgSpeed));
-/*                if (timeInSec > 60)
-                    timeInSec = 60;
-            }*/
+            timeInSec = (int) (SharedPrefs.getDistanceThreshold() / (avgSpeed == 0 ? 1 : avgSpeed));
+            if (timeInSec > 120)
+                timeInSec = 120;
+            // }
 
         }
 
@@ -480,7 +532,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
             requestLocationHandler.clearQueue(requestLocationRunnable);
             requestLocationRunnable.setValues(TAG);
             if (timeInSec > 60) {
-                FileLogger.e(TAG,"Scheduling using alarm manager");
+                FileLogger.e(TAG, "Scheduling using alarm manager");
 
                 alarmManager.cancel(alarmIntent);
 
@@ -491,7 +543,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
             }
             else {
-                FileLogger.e(TAG,"Scheduling using handler");
+                FileLogger.e(TAG, "Scheduling using handler");
                 requestLocationHandler.runAfterSeconds(requestLocationRunnable, timeInSec);
             }
         }
@@ -501,7 +553,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
             requestLocationRunnable.setValues(TAG);
 
             if (Build.VERSION.SDK_INT < 19)
-                alarmManager.set(AlarmManager.RTC_WAKEUP,(System.currentTimeMillis() + (900 * 1000)), alarmIntent);
+                alarmManager.set(AlarmManager.RTC_WAKEUP, (System.currentTimeMillis() + (900 * 1000)), alarmIntent);
             else if (Build.VERSION.SDK_INT >= 19)
                 alarmManager.setExact(AlarmManager.RTC_WAKEUP, (System.currentTimeMillis() + (900 * 1000)), alarmIntent);
         }
@@ -539,6 +591,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
         // Enter distance
         if (distanceFromPerimeter > 0) {
+            isInsideFence = false;
+
             if (avgSpeed < 3.0) {
                 FileLogger.e(TAG, "Average speed below 3 m/s.");
                 return 5;
@@ -562,12 +616,18 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         }
         // Exit distance
         else if (distanceFromPerimeter < 0) {
-            if (avgSpeed < 3.0) {
+            isInsideFence = true;
+/*            if (avgSpeed < 3.0) {
                 FileLogger.e(TAG, "Average speed below 3 m/s.");
                 return 15;
-            }
+            }*/
+            if (timeInSec > 90)
+                timeInSec = 90;
+            else if (timeInSec < 5)
+                timeInSec = 5;
+
             FileLogger.e(TAG, "Time to exit fence: " + String.valueOf(timeInSec));
-            return timeInSec < 5 ? 5 : timeInSec;
+            return timeInSec;
         }
         else return 5;
     }
@@ -650,11 +710,11 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         private static final String TAG = "RequestLocationRunnable";
         private int id;
         private String scheduledBy;
-        private long schedulingTime;
+        public long schedulingTime;
 
         public void setValues(String scheduledBy) {
             if (wakeLock != null && !wakeLock.isHeld() &&
-                SharedPrefs.isMoving() && fenceListActive != null && fenceListActive.size() > 0) {
+                    SharedPrefs.isMoving() && fenceListActive != null && fenceListActive.size() > 0) {
                 wakeLock.acquire();
             }
 

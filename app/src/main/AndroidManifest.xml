@@ -14,7 +14,6 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.CAMERA"/>
 
-
     <application
         android:name=".MyApplication"
         android:allowBackup="true"
@@ -117,13 +116,17 @@
             android:value="490387366699b5598577fc72b165d728cf8f936f"/>
 
         <receiver
-            android:name=".PathsenseGeofenceReceiver"
+            android:name=".PathsenseActivityDetection"
             android:enabled="true"
             android:exported="true">
         </receiver>
 
         <service
             android:name=".services.AlarmManagerLocationRequestIS"
+            android:exported="false">
+        </service>
+        <service
+            android:name=".services.LogUploadIntentService"
             android:exported="false">
         </service>
     </application>

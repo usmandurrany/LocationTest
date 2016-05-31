@@ -17,24 +17,29 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Locale;
 
 public class FileLogger {
     private static final String TAG = "FileLogger";
     public static File logFile;
 
     private static Calendar c = Calendar.getInstance();
-    private static SimpleDateFormat df = new SimpleDateFormat("yyyyMMdd");
+    private static SimpleDateFormat df = new SimpleDateFormat("yyyyMMdd", Locale.US);
     private static final String LOG_FILE_PREFIX = "location_log_";
-    public static final String LOG_FILE_NAME = LOG_FILE_PREFIX + df.format(c.getTime());
+    public static  String LOG_FILE_NAME;
     public static final String LOG_FILE_EXT = ".txt";
 
     public static BufferedWriter buf;
 
+    private static String newFile(){
+        LOG_FILE_NAME = LOG_FILE_PREFIX + df.format(c.getTime());
+        return LOG_FILE_NAME + LOG_FILE_EXT;
+    }
 
     private static void openFile() {
         try {
 
-            logFile = new File("sdcard/" + LOG_FILE_NAME + LOG_FILE_EXT);
+            logFile = new File("sdcard/" + newFile());
 
             if (!logFile.exists())
                 logFile.createNewFile();
@@ -47,34 +52,18 @@ public class FileLogger {
         }
     }
 
-    private static boolean dateChanged() {
-        String[] fileName = LOG_FILE_NAME.split("_");
-        if (Long.parseLong(fileName[2]) < Long.parseLong(df.format(c.getTime()))) {
-            deleteOldFile();
-            return true;
-        }
-        else
-            return false;
-    }
-
-    private static boolean deleteOldFile() {
-        long yesterday = Long.parseLong(df.format(c.getTime())) - 1;
-        String oldLogFileName = LOG_FILE_PREFIX + String.valueOf(yesterday) + LOG_FILE_EXT;
-        File oldLogFile = new File("sdcard/" + oldLogFileName);
-        return oldLogFile.exists() && oldLogFile.delete();
-    }
-
     public static boolean deleteFile(){
+        logFile = null;
         File deleteFile = new File("sdcard/" + LOG_FILE_NAME + LOG_FILE_EXT);
         return deleteFile.exists() && deleteFile.delete();
     }
 
     public static void e(String TAG, String message) {
-        if (logFile == null || buf == null || dateChanged())
+        if (logFile == null || buf == null)
             openFile();
 
         try {
-            String formattedDate = SimpleDateFormat.getDateTimeInstance().format(Calendar.getInstance().getTime());
+            String formattedDate = new SimpleDateFormat("HH:mm:ss",Locale.US).format(c.getTime());
             buf.append(formattedDate).append(": ").append(TAG).append(": ").append(message);
             buf.newLine();
             buf.flush();

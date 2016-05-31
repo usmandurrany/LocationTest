@@ -91,17 +91,17 @@ public class DetectedActivitiesIntentService extends IntentService {
             case DetectedActivity.ON_FOOT:
                 slowMovement += detectedActivity.getConfidence();
                 return "On Foot";
-/*            case DetectedActivity.RUNNING:
-                return "Running";*/
+            case DetectedActivity.RUNNING:
+                return "Running";
             case DetectedActivity.STILL:
                 noMovement += detectedActivity.getConfidence();
                 return "Still";
             case DetectedActivity.TILTING:
                 return "Tilting";
-/*            case DetectedActivity.UNKNOWN:
+            case DetectedActivity.UNKNOWN:
                 return "Unknown";
             case DetectedActivity.WALKING:
-                return "Walking";*/
+                return "Walking";
             default:
                 return "Undefined";
         }
