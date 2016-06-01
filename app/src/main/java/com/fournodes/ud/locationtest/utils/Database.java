@@ -340,7 +340,7 @@ public class Database extends SQLiteOpenHelper {
         if (action.equals("getActive")) {
             selection = TABLE_FENCE_INFORMATION + "." + COLUMN_ON_DEVICE + " = 1 AND " + TABLE_FENCE_PARAMETER + "." + COLUMN_IS_ACTIVE + " = 1";
         }
-        else if (action.equals("getAll")) {
+        else if (action.equals("getAll") || action.equals("logAll")) {
             //pathsenseWrapper.removeGeofences();
             selection = TABLE_FENCE_INFORMATION + "." + COLUMN_ON_DEVICE + " = 1";
         }
@@ -370,7 +370,12 @@ public class Database extends SQLiteOpenHelper {
 
             //pathsenseWrapper.addGeofence(fence);
 
-            mFenceList.add(fence);
+            if (action.equals("logAll")) {
+                FileLogger.e(TAG, "Center: Lat: " + String.valueOf(fence.getCenterLat()) + " Long: " + String.valueOf(fence.getCenterLng()));
+                FileLogger.e(TAG, "Radius: " + String.valueOf(fence.getRadius()));
+            }
+            else
+                mFenceList.add(fence);
         }
 
         cursor.close();

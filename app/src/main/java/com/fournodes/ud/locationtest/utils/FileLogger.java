@@ -35,7 +35,7 @@ public class FileLogger {
         return LOG_FILE_NAME + LOG_FILE_EXT;
     }
 
-    private static void openFile() {
+    public static void openFile() {
         try {
 
             logFile = new File("sdcard/" + newFile());

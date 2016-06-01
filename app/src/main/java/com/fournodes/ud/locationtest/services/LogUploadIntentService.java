@@ -12,6 +12,7 @@ import android.util.Log;
 
 import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
+import com.fournodes.ud.locationtest.utils.Database;
 import com.fournodes.ud.locationtest.utils.FileLogger;
 
 import java.io.DataOutputStream;
@@ -97,6 +98,7 @@ public class LogUploadIntentService extends IntentService {
             if (serverResponseCode == 200) {
                 FileLogger.deleteFile();
                 removeNotification();
+                new Database(this).onDeviceFence("logAll");
 
             }
 
