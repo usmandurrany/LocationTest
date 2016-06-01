@@ -23,7 +23,6 @@ public class FileLogger {
     private static final String TAG = "FileLogger";
     public static File logFile;
 
-    private static Calendar c = Calendar.getInstance();
     private static SimpleDateFormat df = new SimpleDateFormat("yyyyMMdd", Locale.US);
     private static final String LOG_FILE_PREFIX = "location_log_";
     public static  String LOG_FILE_NAME;
@@ -32,7 +31,7 @@ public class FileLogger {
     public static BufferedWriter buf;
 
     private static String newFile(){
-        LOG_FILE_NAME = LOG_FILE_PREFIX + df.format(c.getTime());
+        LOG_FILE_NAME = LOG_FILE_PREFIX + df.format(Calendar.getInstance().getTime());
         return LOG_FILE_NAME + LOG_FILE_EXT;
     }
 
@@ -63,7 +62,7 @@ public class FileLogger {
             openFile();
 
         try {
-            String formattedDate = new SimpleDateFormat("HH:mm:ss",Locale.US).format(c.getTime());
+            String formattedDate = new SimpleDateFormat("HH:mm:ss",Locale.US).format(Calendar.getInstance().getTime());
             buf.append(formattedDate).append(": ").append(TAG).append(": ").append(message);
             buf.newLine();
             buf.flush();

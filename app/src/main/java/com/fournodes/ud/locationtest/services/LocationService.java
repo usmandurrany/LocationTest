@@ -88,7 +88,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         @Override
         public void onReceive(Context context, Intent intent) {
             //FileLogger.e(TAG, "Broadcast Received");
-            //FileLogger.e(TAG, "Command received: " + intent.getStringExtra("message"));
+            FileLogger.e(TAG, "Command received: " + intent.getStringExtra("message"));
             switch (intent.getStringExtra("message")) {
                 case "locationRequestSuccess":
                     isLocationRequestRunning = false;
@@ -108,10 +108,9 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
                 case "fastMovement":
                 case "slowMovement":
-                    long delay = SharedPrefs.getLocationRequestInterval() * 1000;
-                    if (((requestLocationRunnable.schedulingTime + delay) - System.currentTimeMillis() > 5000)
-                            && SharedPrefs.getLocationRequestInterval() > 5) {
-
+                    //long delay = SharedPrefs.getLocationRequestInterval() * 1000;
+                    //if (((requestLocationRunnable.schedulingTime + delay) - System.currentTimeMillis() > 5000)
+                    if (SharedPrefs.getLocationRequestInterval() > 5) {
                         if (isInFenceActivityDetection) {
                             ActivityRecognition.ActivityRecognitionApi.removeActivityUpdates(mGoogleApiClient, inFenceActivityPendingIntent);
                             FileLogger.e(TAG, "Inside fence activity detection stopped");
@@ -261,6 +260,10 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         calendar.setTimeInMillis(System.currentTimeMillis());
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 5);
+        if (calendar.getTime().before(Calendar.getInstance().getTime())) {
+            FileLogger.e(TAG, "Upload time has passed scheduling for tomorrow");
+            calendar.add(Calendar.DAY_OF_MONTH, 1);
+        }
 
         alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), AlarmManager.INTERVAL_DAY, logUploadIntent);
 
