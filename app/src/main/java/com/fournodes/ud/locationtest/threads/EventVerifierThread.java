@@ -20,6 +20,7 @@ import com.fournodes.ud.locationtest.R;
 import com.fournodes.ud.locationtest.SharedPrefs;
 import com.fournodes.ud.locationtest.activities.MainActivity;
 import com.fournodes.ud.locationtest.apis.IncomingApi;
+import com.fournodes.ud.locationtest.interfaces.FenceListInterface;
 import com.fournodes.ud.locationtest.interfaces.LocationUpdateListener;
 import com.fournodes.ud.locationtest.listeners.SharedLocationListener;
 import com.fournodes.ud.locationtest.objects.Event;
@@ -29,8 +30,11 @@ import com.fournodes.ud.locationtest.utils.DistanceCalculator;
 import com.fournodes.ud.locationtest.utils.FileLogger;
 import com.google.android.gms.location.Geofence;
 
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -38,6 +42,7 @@ import java.util.List;
  */
 public class EventVerifierThread extends HandlerThread implements LocationUpdateListener {
     private static final String TAG = "EventVerifierThread";
+    public FenceListInterface delegate;
 
     private Context context;
     private boolean isGpsEnabled;
@@ -46,8 +51,8 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
     private Runnable timeout;
     private Location bestLocation;
     private int locationScore = 0;
-    private int pendingEventCount;
     private SharedLocationListener locationListener;
+    private Fence exitedFence;
 
 
     public EventVerifierThread(Context context) {
@@ -137,6 +142,7 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
 
         Database db = new Database(context);
         List<Event> pendingEvents = db.getAllPendingEvents();
+        List<Fence> fenceListActive;
 
         for (Event event : pendingEvents) {
 
@@ -218,7 +224,7 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                                 // Update the fence in the database so active fence list can be refreshed to account for the last verified event
                                 if (db.updateFenceInformation(fence))
                                     serviceMessage("updateFenceListActive");
-
+                                exitedFence = fence;
                                 FileLogger.e(TAG, "Event verified.");
 
                                 // Create local notification about the event as well as inform the owner of the fence through server
@@ -254,16 +260,33 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
 
             }
 
-            /*
-            *   If the check fails then discard the event completely
-            *   This will ensure that exit never triggers without enter
-            */
+            /**
+             *   If the check fails then discard the event completely
+             *   This will ensure that exit never triggers without enter
+             */
 
             else {
                 db.removeEvent(event.id);
                 FileLogger.e(TAG, "Event discarded due to invalidation");
             }
+
+
         }
+        fenceListActive = db.onDeviceFence("getActive");
+        FileLogger.e(TAG,"Active list size: " + String.valueOf(fenceListActive.size()));
+        if (fenceListActive.size() > 1) {
+            Collections.sort(fenceListActive);
+            FileLogger.e(TAG, "Exited fence position: " + String.valueOf(fenceListActive.indexOf(exitedFence)));
+            if (exitedFence != null && fenceListActive.get(0).getFenceId() == exitedFence.getFenceId()) {
+                FileLogger.e(TAG, "Moving exited fence to down in list");
+                fenceListActive.remove(0);
+                fenceListActive.add(1, exitedFence);
+            }
+        }
+        //Return the new active fence list to the caller
+        if (delegate != null)
+            delegate.activeFenceList(fenceListActive, TAG);
+
         FileLogger.e(TAG, "Verification complete");
         quit();
 
@@ -343,6 +366,8 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
         intent.putExtra("message", message);
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
     }
+
+
 
     @Override
     public boolean quit() {

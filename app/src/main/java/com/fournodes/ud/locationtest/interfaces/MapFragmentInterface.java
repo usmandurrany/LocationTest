@@ -16,9 +16,8 @@ import java.util.List;
  */
 public interface MapFragmentInterface extends FenceListInterface{
     void moveToFence(LatLng fence);
-    void viewLiveLocation(LatLng coordinates, String track_id);
     void viewLocationHistory(List<Coordinate> coordinates);
-    void simulate(Location location);
+    void simulationData(Location location, float avgSpeed, int timeInSec, List<Fence> fenceListActive);
     void trackUser(LatLng coordinates, String time, String track_id);
     void trackDisabled();
     void trackEnabled();

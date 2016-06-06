@@ -25,6 +25,8 @@ import com.fournodes.ud.locationtest.listeners.SharedLocationListener;
 import com.fournodes.ud.locationtest.services.LocationService;
 import com.fournodes.ud.locationtest.utils.FileLogger;
 
+import java.text.DateFormat;
+
 /**
  * Created by Usman on 9/4/2016.
  */
@@ -42,8 +44,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     private Location networkLocation;
     private SharedLocationListener locationListener;
     private LocationService locationService;
-/*    private boolean isGpsRequested = false;
-    private boolean isNoFenceActive = false;*/
+
 
     public LocationRequestThread(Context context, LocationService locationService) {
         super(TAG);
@@ -76,25 +77,13 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
                     quit();
                 }
                 else if (bestLocation == null && networkLocation == null) {
-/*                    if (isNoFenceActive && !isGpsRequested) {
-                        requestGps();
-                        isGpsRequested = true;
 
-                        locationUpdateTimeout.postDelayed(timeout, SharedPrefs.getLocationPollTimeout());
-                    }
-                    else {*/
                     FileLogger.e(TAG, "Location not available. Will retry");
-                    //isGpsRequested = false;
                     quit();
-                    // }
                 }
             }
         };
 
-/*        if (locationService.fenceListActive != null && locationService.fenceListActive.size() == 0) {
-            FileLogger.e(TAG, "No fences active polling only network for location");
-            isNoFenceActive = true;
-        }*/
 
         requestCurrentLocation();
     }
@@ -145,6 +134,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     @Override
     public void lmBestLocation(Location bestLocation, int locationScore) {
         this.bestLocation = bestLocation;
+
         locationService.lmLocation(bestLocation, 10);
         quit();
     }
@@ -152,12 +142,6 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     @Override
     public void lmLocation(Location location, int locationScore) {
         this.networkLocation = location;
-/*        if (isNoFenceActive) {
-            locationUpdateTimeout.removeCallbacks(timeout);
-            locationService.lmLocation(networkLocation, 10);
-            quit();
-        }*/
-
     }
 
     @Override
@@ -211,21 +195,13 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
     @Override
     public boolean quit() {
         FileLogger.e(TAG, "Thread killed");
-        // Only switch to passive if this thread was successful in obtaining location
-        if (bestLocation != null || networkLocation != null) {
-/*            if (SharedPrefs.getLocationPollTimeout() > 5000) {
-                SharedPrefs.setLocationPollTimeout(5000);
-                FileLogger.e(TAG, "Resetting location timeout value to 5 seconds");
-            }*/
+        //Location obtained successfully
+        if (bestLocation != null || networkLocation != null)
             serviceMessage("locationRequestSuccess");
-        }
-        else if (bestLocation == null && networkLocation == null && (isNetworkEnabled || isGpsEnabled)) {
-/*            if (SharedPrefs.getLocationPollTimeout() < 60000) {
-                SharedPrefs.setLocationPollTimeout(60000);
-                FileLogger.e(TAG, "Increasing location timeout value to 60 seconds");
-            }*/
+        //Location not obtained retry again
+        else if (bestLocation == null && networkLocation == null && (isNetworkEnabled || isGpsEnabled))
             serviceMessage("locationRequestFailed");
-        }
+        //Location is disabled in settings
         else {
             SharedPrefs.setIsLocationEnabled(false);
             serviceMessage("quit");

@@ -305,58 +305,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
         moveToLocation(fence, 15);
     }
 
-    @Override
-    public void viewLiveLocation(LatLng coordinates, final String track_id) {
-        if (map != null) {
-
-            if (currPos != null) {
-
-                currPos.setSnippet("Lat: " + String.valueOf(coordinates.latitude)
-                        + "\nLng: " + String.valueOf(coordinates.longitude));
-                animateMarker(currPos, coordinates, false);
-                curPosArea.remove();
-                curPosArea = map.addCircle(new CircleOptions()
-                        .center(coordinates)
-                        .radius(SharedPrefs.getVicinity())
-                        .fillColor(Color.parseColor("#9903A9F4"))
-                        .strokeColor(Color.parseColor("#000000"))
-                        .strokeWidth(3f));
-            }
-            else {
-                currPos = map.addMarker(new MarkerOptions()
-                        .position(coordinates)
-                        .title("Current Coordinates")
-                        .snippet("Lat: " + String.valueOf(coordinates.latitude)
-                                + "\nLng: " + String.valueOf(coordinates.longitude)));
-                curPosArea = map.addCircle(new CircleOptions()
-                        .center(coordinates)
-                        .radius(SharedPrefs.getVicinity())
-                        .fillColor(Color.parseColor("#9903A9F4"))
-                        .strokeColor(Color.parseColor("#000000"))
-                        .strokeWidth(3f));
-            }
-            float fencePerimeterInMeters = 0;
-
-            if (fenceListActive != null && fenceListActive.size() > 0) {
-                fencePerimeterInMeters = ((float) SharedPrefs.getFencePerimeterPercentage() / 100)
-                        * fenceListActive.get(0).getRadius();
-            }
-
-            int speedInKmph = (int) (speedAtLocation * 18) / 5;
-            txtInfo.setText("Recalculation After (m): " + String.valueOf(SharedPrefs.getDistanceThreshold() - distanceSinceLastRecalc)
-                    + "\nActivity type: " + (SharedPrefs.isMoving() ? "Moving" : "Still")
-                    + "\nActive fences: " + Arrays.toString(activeFences)
-                    + "\nNearest fence: " + activeFences[0]
-                    + "\nNearest perimeter distance (m): " + (fenceListActive != null && fenceListActive.size() > 0
-                    ? fenceListActive.get(0).getDistanceFromEdge() - fencePerimeterInMeters : "N/A")
-                    + "\nCurrent speed: " + String.valueOf(speedAtLocation) + " m/s - " + String.valueOf(speedInKmph) + " km/h"
-                    + "\nLocation request after (s): " + String.valueOf(SharedPrefs.getLocationRequestInterval()));
-
-            moveToLocation(coordinates, 15);
-
-
-        }
-    }
 
     @Override
     public void viewLocationHistory(List<Coordinate> coordinates) {
@@ -377,8 +325,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
     }
 
     @Override
-    public void simulate(Location location) {
+    public void simulationData(Location location, float avgSpeed, int timeInSec, List<Fence> fenceListActive) {
         if (isSimulationRunning) {
+
+            this.fenceListActive = fenceListActive;
+            if (fenceListActive != null && fenceListActive.size() > 0) {
+                activeFences = new String[fenceListActive.size()];
+                for (int i = 0; i < fenceListActive.size(); i++) {
+                    activeFences[i] = fenceListActive.get(i).getTitle();
+                }
+            }
+            else {
+                activeFences = new String[1];
+                activeFences[0] = "No fences active";
+            }
+
+
             FileLogger.e(TAG, "Timer reset");
             startTime = System.currentTimeMillis();
 
@@ -401,8 +363,63 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
             distanceSinceLastRecalc = DistanceCalculator.calcDistanceFromLocation(reCalcDistanceLocation, currentLocation);
             speedAtLocation = (int) Math.ceil(currentLocation.getSpeed());
 
-            serviceMessage("getFenceListActive");
+            LatLng coordinates = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+
+            if (map != null) {
+
+                if (currPos != null) {
+
+                    currPos.setSnippet("Lat: " + String.valueOf(coordinates.latitude)
+                            + "\nLng: " + String.valueOf(coordinates.longitude));
+                    animateMarker(currPos, coordinates, false);
+                    curPosArea.remove();
+                    curPosArea = map.addCircle(new CircleOptions()
+                            .center(coordinates)
+                            .radius(SharedPrefs.getVicinity())
+                            .fillColor(Color.parseColor("#9903A9F4"))
+                            .strokeColor(Color.parseColor("#000000"))
+                            .strokeWidth(3f));
+                }
+                else {
+                    currPos = map.addMarker(new MarkerOptions()
+                            .position(coordinates)
+                            .title("Current Coordinates")
+                            .snippet("Lat: " + String.valueOf(coordinates.latitude)
+                                    + "\nLng: " + String.valueOf(coordinates.longitude)));
+                    curPosArea = map.addCircle(new CircleOptions()
+                            .center(coordinates)
+                            .radius(SharedPrefs.getVicinity())
+                            .fillColor(Color.parseColor("#9903A9F4"))
+                            .strokeColor(Color.parseColor("#000000"))
+                            .strokeWidth(3f));
+                }
+                float fencePerimeterInMeters = 0;
+
+                if (fenceListActive != null && fenceListActive.size() > 0) {
+                    fencePerimeterInMeters = ((float) SharedPrefs.getFencePerimeterPercentage() / 100)
+                            * fenceListActive.get(0).getRadius();
+                }
+
+
+                txtInfo.setText("Recalculation After (m): " + String.valueOf(SharedPrefs.getDistanceThreshold() - distanceSinceLastRecalc)
+                        + "\nActivity type: " + (SharedPrefs.isMoving() ? "Moving" : "Still")
+                        + "\nActive fences: " + String.valueOf(activeFences.length) + ": " + Arrays.toString(activeFences)
+                        + "\nNearest fence: " + activeFences[0]
+                        + "\nNearest perimeter distance (m): " + (fenceListActive != null && fenceListActive.size() > 0 ? fenceListActive.get(0).getDistanceFromEdge() - fencePerimeterInMeters : "N/A")
+                        + "\nCurrent speed: " + String.valueOf(Math.round(currentLocation.getSpeed())) + " m/s - " + String.valueOf(mpsToKph(currentLocation.getSpeed())) + " km/h"
+                        + "\nAverage speed: " + String.valueOf(Math.round(avgSpeed)) + " m/s - " + String.valueOf(mpsToKph(avgSpeed)) + " km/h"
+                        + "\nLocation request after (s): " + String.valueOf(timeInSec));
+
+                moveToLocation(coordinates, 15);
+
+
+            }
+
         }
+    }
+
+    private float mpsToKph(float speed) {
+        return Math.round((speed * 18) / 5);
     }
 
     @Override
@@ -705,7 +722,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
 
                         }
                     }
-                    simulate(null);
+                    simulationData(null, 0, SharedPrefs.getLocationRequestInterval(), null);
 
                 }
                 break;
@@ -721,6 +738,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
             currPos.remove();
         }
         txtInfo.setText("");
+        txtTime.setText("");
         serviceMessage("simulationStopped");
     }
 
@@ -764,19 +782,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
 
     @Override
     public void activeFenceList(List<Fence> fenceListActive, String className) {
-        this.fenceListActive = fenceListActive;
-        if (fenceListActive != null && fenceListActive.size() > 0) {
-            activeFences = new String[fenceListActive.size()];
-            for (int i = 0; i < fenceListActive.size(); i++) {
-                activeFences[i] = fenceListActive.get(i).getTitle();
-            }
-        }
-        else {
-            activeFences = new String[1];
-            activeFences[0] = "No fences active";
-        }
 
-        viewLiveLocation(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()), SharedPrefs.getUserId());
     }
 
     @Override

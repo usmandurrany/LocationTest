@@ -53,11 +53,10 @@ public class GeofenceTransitionsIntentService extends IntentService {
         Fence fence = db.getFence(String.valueOf(requestId));
         FileLogger.e(TAG, getTransitionType(geofenceTransition) + " fence: " + fence.getTitle());
 
-        /*
-        *   Perform two checks if the first one fails it will be rechecked by event verifier
-        *   1. Check if triggered event is same as last event of the fence and has pending events - Should be false
-        *   2. Check if triggered event is same as the last event of the fence and same as the last pending event for the fence - Should be false
-        *   3. Special case if the event is same as last event of fence but not same as the last pending event of the fence - Should be true
+        /**   Perform two checks if the first one fails it will be rechecked by event verifier
+ *   1. Triggered event is not the same as the last event of the fence AND fence does not have any pending events OR
+ *   2. Triggered event is not the same as the last event of the fence AND fence and fence's pending event is not the same as current event OR
+ *   3. Triggered event is same as the last event of the fence AND fence and fence's pending event is not the same as current event
         */
 
         if ((fence.getLastEvent() != event.eventType && lastPendingEvent.id == -1)

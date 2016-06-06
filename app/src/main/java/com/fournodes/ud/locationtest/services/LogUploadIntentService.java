@@ -43,7 +43,7 @@ public class LogUploadIntentService extends IntentService {
     protected void onHandleIntent(Intent intent) {
         this.context = getApplicationContext();
         try {
-            createNotification();
+            createNotification("Upload in progress..","Uploading log to server");
             File selectedFile = new File("sdcard/" + FileLogger.LOG_FILE_NAME + FileLogger.LOG_FILE_EXT);
             FileInputStream fileInputStream = new FileInputStream(selectedFile);
             URL url = new URL(SharedPrefs.SERVER_ADDRESS + "logUpload.php?user=" + SharedPrefs.getUserEmail());
@@ -97,10 +97,11 @@ public class LogUploadIntentService extends IntentService {
             //response code of 200 indicates the server status OK
             if (serverResponseCode == 200) {
                 FileLogger.deleteFile();
-                removeNotification();
+                createNotification("Upload successful","Uploaded log to server successfully");
                 new Database(this).onDeviceFence("logAll");
 
-            }
+            }else
+                createNotification("Upload failed",serverResponseMessage + ": " + String.valueOf(serverResponseCode));
 
             //closing the input and output streams
             fileInputStream.close();
@@ -119,7 +120,7 @@ public class LogUploadIntentService extends IntentService {
         }
     }
 
-    private void createNotification() {
+    private void createNotification(String title, String message) {
         // Create an explicit content Intent that starts the main Activity.
         // Get a notification builder that's compatible with platform versions >= 4
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
@@ -131,8 +132,8 @@ public class LogUploadIntentService extends IntentService {
                 .setLargeIcon(BitmapFactory.decodeResource(context.getResources(),
                         R.mipmap.ic_launcher))
                 .setColor(Color.RED)
-                .setContentTitle("Uploading log..")
-                .setContentText("Log file is being uploaded to the server")
+                .setContentTitle(title)
+                .setContentText(message)
                 .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION));
 
         // Dismiss notification once the user touches it.

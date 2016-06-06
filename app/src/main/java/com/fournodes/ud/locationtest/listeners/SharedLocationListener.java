@@ -28,7 +28,8 @@ public class SharedLocationListener implements LocationListener {
     @Override
     public void onLocationChanged(Location location) {
         float accuracy = location.getAccuracy();
-        // Discard anything above 250m
+
+        // Discard anything above 250m accuracy
         if (accuracy < 250) {
 
             if ((className.equals("Location Service") && !location.getProvider().equals("network"))
@@ -65,11 +66,7 @@ public class SharedLocationListener implements LocationListener {
                     }
 
                 }
-                /*else {
-                    FileLogger.e(className, "Refining location");
-                    FileLogger.e(className, "Location score: " + String.valueOf(locationScore));
-                    delegate.lmLocation(location, locationScore);
-                }*/
+
             }
         }
     }

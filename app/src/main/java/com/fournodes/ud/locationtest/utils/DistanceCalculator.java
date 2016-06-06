@@ -10,6 +10,7 @@ import com.fournodes.ud.locationtest.objects.Fence;
 import com.fournodes.ud.locationtest.services.GeofenceTransitionsIntentService;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -23,57 +24,72 @@ public class DistanceCalculator {
     public static List<Fence> updateDistanceFromFences(Context context, Location location1, List<Fence> fenceList, boolean updateDb) {
         int newCenterDistance;
         int newEdgeDistance;
+        int oldEdgeDistance;
         List<Fence> fenceListActive = new ArrayList<>();
         Database db = new Database(context);
         for (Fence fence : fenceList) {
+            //Old distance from edge for logging purpose
+            oldEdgeDistance = fence.getDistanceFromEdge();
 
+            //Location object for fence center coordinate
             Location fenceCenter = new Location("");
             fenceCenter.setLatitude(fence.getCenterLat());
             fenceCenter.setLongitude(fence.getCenterLng());
 
+            //Distances from fence center and edge
             newCenterDistance = calcHaversine(location1, fenceCenter);
             newEdgeDistance = (int) (newCenterDistance - fence.getRadius());
 
+            //Fence perimeter value in meters
             int fencePerimeterInMeters = (int) (((float) SharedPrefs.getFencePerimeterPercentage() / 100) * fence.getRadius());
 
+            //Update the distance from edge in fence object
+            fence.setDistanceFromEdge(newEdgeDistance);
 
-            // Fence will be active if half of it lies inside the users (vicinity + fence perimeter)
-            // OR if the center of the fences lies inside the users (vicinity + fence perimeter)
-            if ((newEdgeDistance + fencePerimeterInMeters) <= SharedPrefs.getVicinity()) {
+            // Fence will be active if its edge distance is less than user vicinity in meters
+            if (newEdgeDistance <= SharedPrefs.getVicinity() + fencePerimeterInMeters) {
                 fence.setIsActive(1);
                 fenceListActive.add(fence);
                 FileLogger.e(TAG, "Fence: " + fence.getTitle());
                 FileLogger.e(TAG, "Last event: " + String.valueOf(fence.getLastEvent()));
-                FileLogger.e(TAG, "Old Distance: " + String.valueOf(fence.getDistanceFromEdge()));
+                FileLogger.e(TAG, "Old Distance: " + String.valueOf(oldEdgeDistance));
                 FileLogger.e(TAG, "New Distance: " + String.valueOf(newEdgeDistance));
                 FileLogger.e(TAG, "Is Active: " + String.valueOf(fence.getIsActive()));
             }
 
-            // Enter will trigger once user is inside the outer perimeter perimeter of the fence
-            if (newCenterDistance <= fence.getRadius() + fencePerimeterInMeters && fence.getLastEvent() != 1 && fence.getIsActive() == 1) {
+            // Enter will trigger once user is inside the fence
+            if (newCenterDistance <= fence.getRadius() && fence.getLastEvent() != 1 && fence.getIsActive() == 1) {
                 Intent triggerFence = new Intent(context, GeofenceTransitionsIntentService.class);
+                triggerFence.putExtra("latitude", location1.getLatitude());
+                triggerFence.putExtra("longitude", location1.getLongitude());
                 triggerFence.putExtra(LocationManager.KEY_PROXIMITY_ENTERING, true);
                 triggerFence.putExtra("id", fence.getFenceId());
                 context.startService(triggerFence);
             }
-            // Exit will trigger once user is outside the outer perimeter of the fence
-            else if (newCenterDistance >= fence.getRadius() + fencePerimeterInMeters && fence.getLastEvent() != 2 && fence.getIsActive() == 1) {
+            // Exit will trigger once user is outside the fence
+            else if (newCenterDistance >= fence.getRadius() && fence.getLastEvent() != 2 && fence.getIsActive() == 1) {
                 Intent triggerFence = new Intent(context, GeofenceTransitionsIntentService.class);
                 triggerFence.putExtra(LocationManager.KEY_PROXIMITY_ENTERING, false);
                 triggerFence.putExtra("id", fence.getFenceId());
                 context.startService(triggerFence);
             }
 
-
-            if ((newEdgeDistance + fencePerimeterInMeters) >= SharedPrefs.getVicinity())
+            //Fence deactivate condition is the opposite of active condition
+            if (newEdgeDistance >= SharedPrefs.getVicinity())
                 fence.setIsActive(0);
 
-            fence.setDistanceFromEdge(newEdgeDistance);
-
+            //Update the fence in database if update flag is true
             if (updateDb)
                 db.updateFenceDistance(fence);
 
         }
+
+        // Sort the active fence list
+        if (fenceListActive.size() > 0)
+            Collections.sort(fenceListActive);
+        else
+            FileLogger.e(TAG, "No active fences.");
+
         return fenceListActive;
     }
 

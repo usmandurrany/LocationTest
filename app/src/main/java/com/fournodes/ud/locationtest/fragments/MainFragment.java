@@ -240,7 +240,7 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
     }
 
     @Override
-    public void listenerLocation(Location location) {
+    public void simulationData(Location location, float avgSpeed, int timeInSec, List<Fence> fenceListActive) {
 
     }
 
