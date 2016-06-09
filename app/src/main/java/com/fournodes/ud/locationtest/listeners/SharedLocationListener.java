@@ -7,6 +7,7 @@ import android.os.Bundle;
 import com.fournodes.ud.locationtest.interfaces.LocationUpdateListener;
 import com.fournodes.ud.locationtest.utils.FileLogger;
 
+import java.io.File;
 import java.text.DateFormat;
 
 /**
@@ -66,6 +67,7 @@ public class SharedLocationListener implements LocationListener {
                     }
 
                 }
+                FileLogger.e(className, "Location requested by thread");
 
             }
         }
@@ -74,17 +76,16 @@ public class SharedLocationListener implements LocationListener {
     private void calculateLocationScore(float accuracy) {
         if (accuracy < 20.0)
             locationScore += 10;
-        else if (accuracy >= 20.0 && accuracy < 40.0)
-            locationScore += 5;
-        else if (accuracy >= 40.0 && accuracy < 50.0)
-            locationScore += 3;
+        else if (accuracy >= 20.0 && accuracy < 50.0)
+            locationScore += 7;
         else if (accuracy >= 50.0)
-            locationScore += 1;
+            locationScore += 4;
         // FileLogger.e(className, "Location score: " + String.valueOf(locationScore));
     }
 
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {
+        FileLogger.e(className,provider + gpsStatus(status));
 
     }
 
@@ -96,5 +97,18 @@ public class SharedLocationListener implements LocationListener {
     @Override
     public void onProviderDisabled(String provider) {
 
+    }
+
+    public String gpsStatus(int statusCode){
+        switch (statusCode){
+            case 0:
+                return "OUT_OF_SERVICE";
+            case 1:
+                return "TEMPORARILY_UNAVAILABLE";
+            case 2:
+                return "AVAILABLE";
+            default:
+                return "UNKNOWN";
+        }
     }
 }

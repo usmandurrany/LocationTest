@@ -132,7 +132,7 @@ public class MainFragment extends Fragment implements MainFragmentInterface {
         btnClearLogFile.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (FileLogger.deleteFile())
+                if (FileLogger.clearLog())
                     Toast.makeText(getActivity(), "Log cleared", Toast.LENGTH_SHORT).show();
                 else if (LocationService.isServiceRunning)
                     Toast.makeText(getActivity(), "Cant clear log while service is running", Toast.LENGTH_SHORT).show();

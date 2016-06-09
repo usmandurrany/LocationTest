@@ -334,7 +334,7 @@ public class Database extends SQLiteOpenHelper {
         //PathsenseWrapper pathsenseWrapper = new PathsenseWrapper(context);
 
 
-        SQLiteDatabase db = this.getWritableDatabase();
+        SQLiteDatabase db = getWritableDatabase();
         String selection = null;
 
         if (action.equals("getActive")) {

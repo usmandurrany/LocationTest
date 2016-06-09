@@ -42,9 +42,12 @@ public class LogUploadIntentService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         this.context = getApplicationContext();
+        FileLogger.openFile();
+        new Database(this).onDeviceFence("logAll");
+
         try {
             createNotification("Upload in progress..","Uploading log to server");
-            File selectedFile = new File("sdcard/" + FileLogger.LOG_FILE_NAME + FileLogger.LOG_FILE_EXT);
+            File selectedFile = FileLogger.lastLogFile; //new File("sdcard/" + FileLogger.LOG_FILE_NAME + FileLogger.LOG_FILE_EXT);
             FileInputStream fileInputStream = new FileInputStream(selectedFile);
             URL url = new URL(SharedPrefs.SERVER_ADDRESS + "logUpload.php?user=" + SharedPrefs.getUserEmail());
             connection = (HttpURLConnection) url.openConnection();
@@ -98,7 +101,6 @@ public class LogUploadIntentService extends IntentService {
             if (serverResponseCode == 200) {
                 FileLogger.deleteFile();
                 createNotification("Upload successful","Uploaded log to server successfully");
-                new Database(this).onDeviceFence("logAll");
 
             }else
                 createNotification("Upload failed",serverResponseMessage + ": " + String.valueOf(serverResponseCode));

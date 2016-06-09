@@ -91,11 +91,11 @@ public class DetectedActivitiesIntentService extends IntentService {
             case DetectedActivity.ON_FOOT:
                 slowMovement += detectedActivity.getConfidence();
                 return "On Foot";
-            case DetectedActivity.RUNNING:
-                return "Running";
             case DetectedActivity.STILL:
                 noMovement += detectedActivity.getConfidence();
                 return "Still";
+            case DetectedActivity.RUNNING:
+                return "Running";
             case DetectedActivity.TILTING:
                 return "Tilting";
             case DetectedActivity.UNKNOWN:

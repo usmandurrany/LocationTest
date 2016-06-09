@@ -27,6 +27,7 @@ public class FileLogger {
     private static final String LOG_FILE_PREFIX = "location_log_";
     public static  String LOG_FILE_NAME;
     public static final String LOG_FILE_EXT = ".txt";
+    public static File lastLogFile;
 
     public static BufferedWriter buf;
 
@@ -37,7 +38,7 @@ public class FileLogger {
 
     public static void openFile() {
         try {
-
+            lastLogFile = logFile;
             logFile = new File("sdcard/" + newFile());
 
             if (!logFile.exists())
@@ -52,10 +53,13 @@ public class FileLogger {
     }
 
     public static boolean deleteFile(){
-        logFile = null;
-        File deleteFile = new File("sdcard/" + LOG_FILE_NAME + LOG_FILE_EXT);
-        return deleteFile.exists() && deleteFile.delete();
+        return lastLogFile != null && lastLogFile.exists() && lastLogFile.delete();
     }
+
+    public static boolean clearLog(){
+        return logFile.exists() && logFile.delete();
+    }
+
 
     public static void e(String TAG, String message) {
         if (logFile == null || buf == null)

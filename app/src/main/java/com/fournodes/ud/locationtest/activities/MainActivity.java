@@ -237,7 +237,7 @@ public class MainActivity extends FragmentActivity implements RequestResult, Ser
 
     @Override
     public void simulationData(Location location, float avgSpeed, int timeInSec, List<Fence> fenceListActive) {
-        if (mapDelegate != null)
+       // if (mapDelegate != null)
             mapDelegate.simulationData(location, avgSpeed, timeInSec,  fenceListActive);
 
     }

@@ -35,6 +35,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -53,12 +54,15 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
     private int locationScore = 0;
     private SharedLocationListener locationListener;
     private Fence exitedFence;
+    private List<Fence> fenceListActive;
+    private Database db;
 
 
-    public EventVerifierThread(Context context) {
+    public EventVerifierThread(Context context, List<Fence> fenceListActive) {
         super(TAG);
         this.context = context;
-
+        this.fenceListActive = fenceListActive;
+        FileLogger.e(TAG,"Active fences: " + String.valueOf(fenceListActive.size()));
         if (SharedPrefs.pref == null)
             new SharedPrefs(context).initialize();
     }
@@ -66,7 +70,7 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
     @Override
     public synchronized void start() {
         super.start();
-
+        db = new Database(context);
         locationListener = new SharedLocationListener(TAG);
         locationListener.delegate = this;
 
@@ -136,18 +140,25 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
         this.locationScore = locationScore;
         bestLocation = location;
     }
+    private Fence getFence(int fenceId){
+        for (Fence activeFence : fenceListActive) {
+            if (activeFence.getFenceId() == fenceId){
+                FileLogger.e(TAG,"Event for active fence: " + activeFence.getTitle());
+                return activeFence;}
+        }
+        return db.getFence(String.valueOf(fenceId));
+    }
 
     public void verifyEvent(Location bestLocation) {
         FileLogger.e(TAG, "Verifying pending events");
 
-        Database db = new Database(context);
         List<Event> pendingEvents = db.getAllPendingEvents();
-        List<Fence> fenceListActive;
+        HashSet<Fence> fenceHashSetActive = new HashSet<>();
 
         for (Event event : pendingEvents) {
 
             // Get the fence from the database of whose event needs to be verified
-            Fence fence = db.getFence(String.valueOf(event.fenceId));
+            Fence fence = getFence(event.fenceId);
 
             // Convert the fence center coordinates into a location object
             Location fenceLocation = new Location("");
@@ -181,6 +192,8 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                                     serviceMessage("updateFenceListActive");
 
                                 FileLogger.e(TAG, "Event verified.");
+                                if (fence.getIsActive() == 1)
+                                fenceHashSetActive.add(fence);
 
                                 // Create local notification about the event as well as inform the owner of the fence through server
                                 sendNotification("Event verified. Entered fence: " + fence.getTitle(), fence.getNotifyId(), String.valueOf(bestLocation.getLatitude()), String.valueOf(bestLocation.getLongitude()));
@@ -224,8 +237,14 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
                                 // Update the fence in the database so active fence list can be refreshed to account for the last verified event
                                 if (db.updateFenceInformation(fence))
                                     serviceMessage("updateFenceListActive");
+
                                 exitedFence = fence;
+
                                 FileLogger.e(TAG, "Event verified.");
+
+                                if (fence.getIsActive() == 1)
+                                    fenceHashSetActive.add(fence);
+
 
                                 // Create local notification about the event as well as inform the owner of the fence through server
                                 sendNotification("Event verified. Exited fence: " + fence.getTitle(), fence.getNotifyId(), String.valueOf(bestLocation.getLatitude()), String.valueOf(bestLocation.getLongitude()));
@@ -272,7 +291,9 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
 
 
         }
-        fenceListActive = db.onDeviceFence("getActive");
+        fenceHashSetActive.addAll(fenceListActive);
+        fenceListActive.clear();
+        fenceListActive.addAll(fenceHashSetActive);
         FileLogger.e(TAG,"Active list size: " + String.valueOf(fenceListActive.size()));
         if (fenceListActive.size() > 1) {
             Collections.sort(fenceListActive);

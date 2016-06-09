@@ -9,6 +9,7 @@ import android.graphics.Point;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
@@ -181,6 +182,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
         //Toast.makeText(getContext(), String.valueOf(argsSize), Toast.LENGTH_SHORT).show();
 
         ((MainActivity) getActivity()).mapDelegate = this;
+
         Fabric.with(getContext(), new Crashlytics());
         updateLocation = new Handler();
         update = new Runnable() {
@@ -325,7 +327,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
     }
 
     @Override
-    public void simulationData(Location location, float avgSpeed, int timeInSec, List<Fence> fenceListActive) {
+    public void simulationData(Location location, final float avgSpeed, final int timeInSec, final List<Fence> fenceListActive) {
         if (isSimulationRunning) {
 
             this.fenceListActive = fenceListActive;
@@ -363,57 +365,62 @@ public class MapFragment extends Fragment implements OnMapReadyCallback,
             distanceSinceLastRecalc = DistanceCalculator.calcDistanceFromLocation(reCalcDistanceLocation, currentLocation);
             speedAtLocation = (int) Math.ceil(currentLocation.getSpeed());
 
-            LatLng coordinates = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+            final LatLng coordinates = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+            new Handler().post(new Runnable() {
+                @Override
+                public void run() {
+                    if (map != null) {
 
-            if (map != null) {
+                        if (currPos != null) {
 
-                if (currPos != null) {
+                            currPos.setSnippet("Lat: " + String.valueOf(coordinates.latitude)
+                                    + "\nLng: " + String.valueOf(coordinates.longitude));
+                            animateMarker(currPos, coordinates, false);
+                            curPosArea.remove();
+                            curPosArea = map.addCircle(new CircleOptions()
+                                    .center(coordinates)
+                                    .radius(SharedPrefs.getVicinity())
+                                    .fillColor(Color.parseColor("#9903A9F4"))
+                                    .strokeColor(Color.parseColor("#000000"))
+                                    .strokeWidth(3f));
+                        }
+                        else {
+                            currPos = map.addMarker(new MarkerOptions()
+                                    .position(coordinates)
+                                    .title("Current Coordinates")
+                                    .snippet("Lat: " + String.valueOf(coordinates.latitude)
+                                            + "\nLng: " + String.valueOf(coordinates.longitude)));
+                            curPosArea = map.addCircle(new CircleOptions()
+                                    .center(coordinates)
+                                    .radius(SharedPrefs.getVicinity())
+                                    .fillColor(Color.parseColor("#9903A9F4"))
+                                    .strokeColor(Color.parseColor("#000000"))
+                                    .strokeWidth(3f));
+                        }
+                        float fencePerimeterInMeters = 0;
 
-                    currPos.setSnippet("Lat: " + String.valueOf(coordinates.latitude)
-                            + "\nLng: " + String.valueOf(coordinates.longitude));
-                    animateMarker(currPos, coordinates, false);
-                    curPosArea.remove();
-                    curPosArea = map.addCircle(new CircleOptions()
-                            .center(coordinates)
-                            .radius(SharedPrefs.getVicinity())
-                            .fillColor(Color.parseColor("#9903A9F4"))
-                            .strokeColor(Color.parseColor("#000000"))
-                            .strokeWidth(3f));
+                        if (fenceListActive != null && fenceListActive.size() > 0) {
+                            fencePerimeterInMeters = ((float) SharedPrefs.getFencePerimeterPercentage() / 100)
+                                    * fenceListActive.get(0).getRadius();
+                        }
+
+
+                        txtInfo.setText("Recalculation After (m): " + String.valueOf(SharedPrefs.getDistanceThreshold() - distanceSinceLastRecalc)
+                                + "\nActivity type: " + (SharedPrefs.isMoving() ? "Moving" : "Still")
+                                + "\nActive fences: " + Arrays.toString(activeFences)
+                                + "\nNearest fence: " + activeFences[0]
+                                + "\nNearest perimeter distance (m): " + (fenceListActive != null && fenceListActive.size() > 0 ? fenceListActive.get(0).getDistanceFromEdge() - fencePerimeterInMeters : "N/A")
+                                + "\nCurrent speed: " + String.valueOf(Math.round(currentLocation.getSpeed())) + " m/s - " + String.valueOf(mpsToKph(currentLocation.getSpeed())) + " km/h"
+                                + "\nAverage speed: " + String.valueOf(Math.round(avgSpeed)) + " m/s - " + String.valueOf(mpsToKph(avgSpeed)) + " km/h"
+                                + "\nLocation request after (s): " + String.valueOf(timeInSec));
+
+                        moveToLocation(coordinates, 15);
+
+
+                    }
                 }
-                else {
-                    currPos = map.addMarker(new MarkerOptions()
-                            .position(coordinates)
-                            .title("Current Coordinates")
-                            .snippet("Lat: " + String.valueOf(coordinates.latitude)
-                                    + "\nLng: " + String.valueOf(coordinates.longitude)));
-                    curPosArea = map.addCircle(new CircleOptions()
-                            .center(coordinates)
-                            .radius(SharedPrefs.getVicinity())
-                            .fillColor(Color.parseColor("#9903A9F4"))
-                            .strokeColor(Color.parseColor("#000000"))
-                            .strokeWidth(3f));
-                }
-                float fencePerimeterInMeters = 0;
+            });
 
-                if (fenceListActive != null && fenceListActive.size() > 0) {
-                    fencePerimeterInMeters = ((float) SharedPrefs.getFencePerimeterPercentage() / 100)
-                            * fenceListActive.get(0).getRadius();
-                }
-
-
-                txtInfo.setText("Recalculation After (m): " + String.valueOf(SharedPrefs.getDistanceThreshold() - distanceSinceLastRecalc)
-                        + "\nActivity type: " + (SharedPrefs.isMoving() ? "Moving" : "Still")
-                        + "\nActive fences: " + String.valueOf(activeFences.length) + ": " + Arrays.toString(activeFences)
-                        + "\nNearest fence: " + activeFences[0]
-                        + "\nNearest perimeter distance (m): " + (fenceListActive != null && fenceListActive.size() > 0 ? fenceListActive.get(0).getDistanceFromEdge() - fencePerimeterInMeters : "N/A")
-                        + "\nCurrent speed: " + String.valueOf(Math.round(currentLocation.getSpeed())) + " m/s - " + String.valueOf(mpsToKph(currentLocation.getSpeed())) + " km/h"
-                        + "\nAverage speed: " + String.valueOf(Math.round(avgSpeed)) + " m/s - " + String.valueOf(mpsToKph(avgSpeed)) + " km/h"
-                        + "\nLocation request after (s): " + String.valueOf(timeInSec));
-
-                moveToLocation(coordinates, 15);
-
-
-            }
 
         }
     }

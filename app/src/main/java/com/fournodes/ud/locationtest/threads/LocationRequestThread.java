@@ -146,7 +146,7 @@ public class LocationRequestThread extends HandlerThread implements LocationUpda
 
     @Override
     public void lmRemoveUpdates() {
-        //FileLogger.e(TAG, "Stopping location manager location updates");
+        FileLogger.e(TAG, "Stopping location manager location updates");
         locationManager.removeUpdates(locationListener);
     }
 
