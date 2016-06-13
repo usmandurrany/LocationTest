@@ -109,7 +109,7 @@ public class EventVerifierThread extends HandlerThread implements LocationUpdate
         if (isGpsEnabled) {
             FileLogger.e(TAG, "GPS available waiting for fix");
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener, getLooper());
-            locationUpdateTimeout.postDelayed(timeout, Constants.GPS_TIMEOUT_INTERVAL);
+            locationUpdateTimeout.postDelayed(timeout, SharedPrefs.getLocationPollTimeout());
         }
         else {
             gpsNotAvailableFallback();

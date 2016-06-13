@@ -85,7 +85,7 @@ public class SharedLocationListener implements LocationListener {
 
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {
-        FileLogger.e(className,provider + gpsStatus(status));
+        FileLogger.e(className,provider.toUpperCase() + gpsStatus(status));
 
     }
 
@@ -102,13 +102,13 @@ public class SharedLocationListener implements LocationListener {
     public String gpsStatus(int statusCode){
         switch (statusCode){
             case 0:
-                return "OUT_OF_SERVICE";
+                return "_OUT_OF_SERVICE";
             case 1:
-                return "TEMPORARILY_UNAVAILABLE";
+                return "_TEMPORARILY_UNAVAILABLE";
             case 2:
-                return "AVAILABLE";
+                return "_AVAILABLE";
             default:
-                return "UNKNOWN";
+                return "_UNKNOWN_STATUS";
         }
     }
 }

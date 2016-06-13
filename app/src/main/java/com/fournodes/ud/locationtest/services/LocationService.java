@@ -72,7 +72,7 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
     private PowerManager.WakeLock wakeLock;
     private AlarmManager alarmManager;
     private PendingIntent alarmIntent;
-    private int inFenceCoordinateCount = 0;
+    private int nPointCount = 0;
     private boolean isInsideFence = false;
     private boolean nPointsActivityDetection = false;
     private PendingIntent npActivityDetectionPI;
@@ -111,6 +111,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                         if (nPointsActivityDetection) {
                             ActivityRecognition.ActivityRecognitionApi.removeActivityUpdates(mGoogleApiClient, npActivityDetectionPI);
                             FileLogger.e(TAG, "N points activity detection complete");
+                            nPointCount = 0;
+                            nPointsActivityDetection = false;
 
                         }
                         FileLogger.e("DetectedActivitiesIS", "Movement detected, interval changed to 5 seconds");
@@ -128,6 +130,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                         if (nPointsActivityDetection) {
                             ActivityRecognition.ActivityRecognitionApi.removeActivityUpdates(mGoogleApiClient, npActivityDetectionPI);
                             FileLogger.e(TAG, "N points activity detection complete");
+                            nPointCount = 0;
+                            nPointsActivityDetection = false;
                         }
                         SharedPrefs.setIsMoving(false);
                         FileLogger.e(TAG, "No movement detected, location request stopped");
@@ -411,12 +415,16 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
             SharedPrefs.setLastLocationAccuracy(location.getAccuracy());
             SharedPrefs.setLastLocationProvider(location.getProvider());
 
-            // Create location of coordinates from last 100m ago
-            Location last100mLocation = new Location("");
-            last100mLocation.setLatitude(Double.parseDouble(SharedPrefs.getLast100mLatitude()));
-            last100mLocation.setLongitude(Double.parseDouble(SharedPrefs.getLast100mLongitude()));
+            int distance = 0;
 
-            int distance = DistanceCalculator.calcDistanceFromLocation(location, last100mLocation);
+            if (SharedPrefs.getLast100mLatitude() != null) {
+                // Create location of coordinates from last 100m ago
+                Location last100mLocation = new Location("");
+                last100mLocation.setLatitude(Double.parseDouble(SharedPrefs.getLast100mLatitude()));
+                last100mLocation.setLongitude(Double.parseDouble(SharedPrefs.getLast100mLongitude()));
+
+                distance = DistanceCalculator.calcDistanceFromLocation(location, last100mLocation);
+            }
 
             if ((distance >= 100 && !isLocationRequestRunning)
                     || locationScore == 10
@@ -428,11 +436,11 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
                 performCalculations(location);
 
-                inFenceCoordinateCount = 0; //reset
+                //nPointCount = 0; //reset
             }
             if (distance < 100 && location.getSpeed() < 10.0){//||isInsideFence) {
-                inFenceCoordinateCount++;
-            if (inFenceCoordinateCount >= 10 && !nPointsActivityDetection) {
+                nPointCount++;
+            if (nPointCount >= 10 && !nPointsActivityDetection) {
                 nPointsActivityDetection = true;
 
                 Intent intent = new Intent(this, DetectedActivitiesIntentService.class);
@@ -449,7 +457,6 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
                                     FileLogger.e(TAG, "N points activity detection failed. " + status.getStatusCode());
                             }
                         });
-                inFenceCoordinateCount = 0;
             }
         }
         // Send location to MapFragment for simulation
@@ -579,8 +586,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
             isInsideFence = false;
 
             if (avgSpeed < 3.0) {
-                FileLogger.e(TAG, "Average speed below 3 m/s.");
-                return 5;
+                FileLogger.e(TAG, "Average speed below 3 m/s. Using max speed value");
+                return Math.round(Math.abs(distanceFromPerimeter) / 22f);
 
             }
             else if (timeInSec < 1) {
